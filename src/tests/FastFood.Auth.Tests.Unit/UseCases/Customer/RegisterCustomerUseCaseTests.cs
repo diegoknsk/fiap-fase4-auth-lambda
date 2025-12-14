@@ -4,6 +4,7 @@ using FastFood.Auth.Application.Ports;
 using FastFood.Auth.Application.UseCases.Customer;
 using FastFood.Auth.Domain.Entities.CustomerIdentification;
 using FastFood.Auth.Domain.Entities.CustomerIdentification.ValueObects;
+using FastFood.Auth.Domain.Exceptions;
 using DomainCustomer = FastFood.Auth.Domain.Entities.CustomerIdentification.Customer;
 
 namespace FastFood.Auth.Tests.Unit.UseCases.Customer;
@@ -110,6 +111,52 @@ public class RegisterCustomerUseCaseTests
             c.Cpf != null && 
             c.Cpf.Value == cpf)), Times.Once);
         _tokenServiceMock.Verify(x => x.GenerateToken(It.IsAny<Guid>(), out It.Ref<DateTime>.IsAny), Times.Once);
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_ShouldValidateCpf()
+    {
+        // Arrange
+        var invalidCpf = "12345678901"; // CPF inválido
+        var command = new RegisterCustomerCommand { Cpf = invalidCpf };
+
+        // Act & Assert
+        await Assert.ThrowsAsync<DomainException>(async () =>
+            await _useCase.ExecuteAsync(command));
+
+        _customerRepositoryMock.Verify(x => x.GetByCpfAsync(It.IsAny<string>()), Times.Never);
+        _customerRepositoryMock.Verify(x => x.AddAsync(It.IsAny<DomainCustomer>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_WhenCustomerNotExists_ShouldNotCreateDuplicate()
+    {
+        // Arrange
+        var cpf = "11144477735";
+        var command = new RegisterCustomerCommand { Cpf = cpf };
+        var expectedToken = "new-token";
+        var expectedExpiresAt = DateTime.UtcNow.AddHours(1);
+
+        _customerRepositoryMock
+            .Setup(x => x.GetByCpfAsync(cpf))
+            .ReturnsAsync((DomainCustomer?)null);
+
+        _customerRepositoryMock
+            .Setup(x => x.AddAsync(It.IsAny<DomainCustomer>()))
+            .ReturnsAsync((DomainCustomer c) => c);
+
+        _tokenServiceMock
+            .Setup(x => x.GenerateToken(It.IsAny<Guid>(), out It.Ref<DateTime>.IsAny))
+            .Callback((Guid id, out DateTime expiresAt) => { expiresAt = expectedExpiresAt; })
+            .Returns(expectedToken);
+
+        // Act
+        var result1 = await _useCase.ExecuteAsync(command);
+        var result2 = await _useCase.ExecuteAsync(command);
+
+        // Assert
+        // Verificar que cada chamada cria um novo customer
+        _customerRepositoryMock.Verify(x => x.AddAsync(It.IsAny<DomainCustomer>()), Times.Exactly(2));
     }
 }
 

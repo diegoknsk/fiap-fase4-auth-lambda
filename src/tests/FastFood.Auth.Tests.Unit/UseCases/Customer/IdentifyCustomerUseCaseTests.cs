@@ -4,6 +4,7 @@ using FastFood.Auth.Application.Ports;
 using FastFood.Auth.Application.UseCases.Customer;
 using FastFood.Auth.Domain.Entities.CustomerIdentification;
 using FastFood.Auth.Domain.Entities.CustomerIdentification.ValueObects;
+using FastFood.Auth.Domain.Exceptions;
 using DomainCustomer = FastFood.Auth.Domain.Entities.CustomerIdentification.Customer;
 
 namespace FastFood.Auth.Tests.Unit.UseCases.Customer;
@@ -82,6 +83,87 @@ public class IdentifyCustomerUseCaseTests
 
         _customerRepositoryMock.Verify(x => x.GetByCpfAsync(cpf), Times.Once);
         _tokenServiceMock.Verify(x => x.GenerateToken(It.IsAny<Guid>(), out It.Ref<DateTime>.IsAny), Times.Never);
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_ShouldValidateCpf()
+    {
+        // Arrange
+        var invalidCpf = "12345678901"; // CPF inválido
+        var command = new IdentifyCustomerCommand { Cpf = invalidCpf };
+
+        // Act & Assert
+        await Assert.ThrowsAsync<DomainException>(async () =>
+            await _useCase.ExecuteAsync(command));
+
+        _customerRepositoryMock.Verify(x => x.GetByCpfAsync(It.IsAny<string>()), Times.Never);
+        _tokenServiceMock.Verify(x => x.GenerateToken(It.IsAny<Guid>(), out It.Ref<DateTime>.IsAny), Times.Never);
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_ShouldCallRepositoryGetByCpfAsync()
+    {
+        // Arrange
+        var cpf = "11144477735";
+        var customerId = Guid.NewGuid();
+        var existingCustomer = new DomainCustomer(
+            customerId,
+            null,
+            null,
+            new Cpf(cpf),
+            CustomerTypeEnum.Registered);
+
+        var command = new IdentifyCustomerCommand { Cpf = cpf };
+        var expectedToken = "test-token";
+        var expectedExpiresAt = DateTime.UtcNow.AddHours(1);
+
+        _customerRepositoryMock
+            .Setup(x => x.GetByCpfAsync(cpf))
+            .ReturnsAsync((DomainCustomer?)existingCustomer);
+
+        _tokenServiceMock
+            .Setup(x => x.GenerateToken(customerId, out It.Ref<DateTime>.IsAny))
+            .Callback((Guid id, out DateTime expiresAt) => { expiresAt = expectedExpiresAt; })
+            .Returns(expectedToken);
+
+        // Act
+        await _useCase.ExecuteAsync(command);
+
+        // Assert
+        _customerRepositoryMock.Verify(x => x.GetByCpfAsync(cpf), Times.Once);
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_ShouldCallTokenServiceWhenCustomerFound()
+    {
+        // Arrange
+        var cpf = "11144477735";
+        var customerId = Guid.NewGuid();
+        var existingCustomer = new DomainCustomer(
+            customerId,
+            null,
+            null,
+            new Cpf(cpf),
+            CustomerTypeEnum.Registered);
+
+        var command = new IdentifyCustomerCommand { Cpf = cpf };
+        var expectedToken = "test-token";
+        var expectedExpiresAt = DateTime.UtcNow.AddHours(1);
+
+        _customerRepositoryMock
+            .Setup(x => x.GetByCpfAsync(cpf))
+            .ReturnsAsync((DomainCustomer?)existingCustomer);
+
+        _tokenServiceMock
+            .Setup(x => x.GenerateToken(customerId, out It.Ref<DateTime>.IsAny))
+            .Callback((Guid id, out DateTime expiresAt) => { expiresAt = expectedExpiresAt; })
+            .Returns(expectedToken);
+
+        // Act
+        await _useCase.ExecuteAsync(command);
+
+        // Assert
+        _tokenServiceMock.Verify(x => x.GenerateToken(customerId, out It.Ref<DateTime>.IsAny), Times.Once);
     }
 }
 

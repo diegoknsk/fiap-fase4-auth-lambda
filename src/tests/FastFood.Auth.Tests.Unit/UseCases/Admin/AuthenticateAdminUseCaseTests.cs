@@ -77,5 +77,104 @@ public class AuthenticateAdminUseCaseTests
 
         _cognitoServiceMock.Verify(x => x.AuthenticateAsync(username, password), Times.Once);
     }
+
+    [Fact]
+    public async Task ExecuteAsync_ShouldCallCognitoServiceAuthenticateAsync()
+    {
+        // Arrange
+        var username = "admin@example.com";
+        var password = "SecurePassword123!";
+        var command = new AuthenticateAdminCommand
+        {
+            Username = username,
+            Password = password
+        };
+
+        var expectedResult = new AuthenticateAdminResult
+        {
+            AccessToken = "access-token-123",
+            IdToken = "id-token-456",
+            ExpiresIn = 3600,
+            TokenType = "Bearer"
+        };
+
+        _cognitoServiceMock
+            .Setup(x => x.AuthenticateAsync(username, password))
+            .ReturnsAsync(expectedResult);
+
+        // Act
+        await _useCase.ExecuteAsync(command);
+
+        // Assert
+        _cognitoServiceMock.Verify(x => x.AuthenticateAsync(username, password), Times.Once);
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_WhenCredentialsValid_ShouldReturnAccessTokenAndIdToken()
+    {
+        // Arrange
+        var username = "admin@example.com";
+        var password = "SecurePassword123!";
+        var command = new AuthenticateAdminCommand
+        {
+            Username = username,
+            Password = password
+        };
+
+        var expectedResult = new AuthenticateAdminResult
+        {
+            AccessToken = "access-token-123",
+            IdToken = "id-token-456",
+            ExpiresIn = 3600,
+            TokenType = "Bearer"
+        };
+
+        _cognitoServiceMock
+            .Setup(x => x.AuthenticateAsync(username, password))
+            .ReturnsAsync(expectedResult);
+
+        // Act
+        var result = await _useCase.ExecuteAsync(command);
+
+        // Assert
+        Assert.NotNull(result);
+        Assert.Equal("access-token-123", result.AccessToken);
+        Assert.Equal("id-token-456", result.IdToken);
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_ShouldPassUsernameAndPasswordToCognitoService()
+    {
+        // Arrange
+        var username = "admin@example.com";
+        var password = "SecurePassword123!";
+        var command = new AuthenticateAdminCommand
+        {
+            Username = username,
+            Password = password
+        };
+
+        var expectedResult = new AuthenticateAdminResult
+        {
+            AccessToken = "access-token-123",
+            IdToken = "id-token-456",
+            ExpiresIn = 3600,
+            TokenType = "Bearer"
+        };
+
+        _cognitoServiceMock
+            .Setup(x => x.AuthenticateAsync(username, password))
+            .ReturnsAsync(expectedResult);
+
+        // Act
+        await _useCase.ExecuteAsync(command);
+
+        // Assert
+        _cognitoServiceMock.Verify(
+            x => x.AuthenticateAsync(
+                It.Is<string>(u => u == username),
+                It.Is<string>(p => p == password)),
+            Times.Once);
+    }
 }
 
