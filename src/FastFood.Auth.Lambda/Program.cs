@@ -24,6 +24,7 @@ builder.Services.AddScoped<ITokenService, TokenService>();
 
 // Registrar UseCases
 builder.Services.AddScoped<CreateAnonymousCustomerUseCase>();
+builder.Services.AddScoped<RegisterCustomerUseCase>();
 
 var app = builder.Build();
 

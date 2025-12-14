@@ -1,5 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
 using FastFood.Auth.Application.UseCases.Customer;
+using FastFood.Auth.Application.Commands.Customer;
+using FastFood.Auth.Lambda.Models.Customer;
 
 namespace FastFood.Auth.Lambda.Controllers;
 
@@ -10,11 +12,15 @@ namespace FastFood.Auth.Lambda.Controllers;
 [Route("api/[controller]")]
 public class CustomerController : ControllerBase
 {
-    private readonly CreateAnonymousCustomerUseCase _useCase;
+    private readonly CreateAnonymousCustomerUseCase _createAnonymousUseCase;
+    private readonly RegisterCustomerUseCase _registerUseCase;
 
-    public CustomerController(CreateAnonymousCustomerUseCase useCase)
+    public CustomerController(
+        CreateAnonymousCustomerUseCase createAnonymousUseCase,
+        RegisterCustomerUseCase registerUseCase)
     {
-        _useCase = useCase;
+        _createAnonymousUseCase = createAnonymousUseCase;
+        _registerUseCase = registerUseCase;
     }
 
     /// <summary>
@@ -30,13 +36,45 @@ public class CustomerController : ControllerBase
     {
         try
         {
-            var result = await _useCase.ExecuteAsync();
+            var result = await _createAnonymousUseCase.ExecuteAsync();
             return Ok(result);
         }
         catch (Exception ex)
         {
             // Log do erro (pode ser melhorado com ILogger)
             return StatusCode(500, new { message = "Erro ao criar customer anônimo", error = ex.Message });
+        }
+    }
+
+    /// <summary>
+    /// Registra um customer através do CPF e retorna um token JWT válido para autenticação.
+    /// Se o customer já existir, retorna o token do customer existente.
+    /// </summary>
+    /// <param name="request">Request contendo o CPF do customer</param>
+    /// <returns>Token JWT e informações do customer registrado</returns>
+    /// <response code="200">Customer registrado ou identificado com sucesso</response>
+    /// <response code="400">CPF inválido</response>
+    /// <response code="500">Erro interno do servidor</response>
+    [HttpPost("register")]
+    [ProducesResponseType(typeof(Application.Responses.Customer.RegisterCustomerResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+    public async Task<IActionResult> Register([FromBody] RegisterCustomerRequest request)
+    {
+        try
+        {
+            var command = new RegisterCustomerCommand
+            {
+                Cpf = request.Cpf
+            };
+
+            var result = await _registerUseCase.ExecuteAsync(command);
+            return Ok(result);
+        }
+        catch (Exception ex)
+        {
+            // Log do erro (pode ser melhorado com ILogger)
+            return StatusCode(500, new { message = "Erro ao registrar customer", error = ex.Message });
         }
     }
 }
