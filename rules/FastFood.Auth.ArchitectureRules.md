@@ -34,13 +34,12 @@ builder.Services.AddAWSLambdaHosting(LambdaEventSource.HttpApi);
 - Swagger é obrigatório para padronização e inspeção de contrato.
 
 ## Estrutura de projetos
-- AuthFastFood.Api (ASP.NET Core)
-- AuthFastFood.Application
-- AuthFastFood.Domain
-- AuthFastFood.Infra.Persistence (se houver persistência)
-- AuthFastFood.Infra.Messaging (se publicar eventos)
-- AuthFastFood.Tests.Unit
-- AuthFastFood.Tests.Bdd
+- FastFood.Auth.Lambda (ASP.NET Core - API/Lambda host)
+- FastFood.Auth.Application
+- FastFood.Auth.Domain
+- FastFood.Auth.Infra.Persistence (PostgreSQL com EF Core)
+- FastFood.Auth.Tests.Unit
+- FastFood.Auth.Tests.Bdd
 
 ## Regras de dependência
 - Api -> Application
@@ -71,32 +70,89 @@ mudando apenas o tipo de hosting.
   - regra de negócio no controller
   - acesso direto a banco ou SDKs
 
+### Endpoints Customer
+- `POST /customer/identify` - Identificar customer por CPF
+- `POST /customer/register` - Registrar novo customer
+- `POST /customer/anonymous` - Criar customer anônimo
+
+### Endpoints Admin
+- `POST /admin/login` - Autenticar admin via AWS Cognito
+
 ## Application
 - UseCases pequenos e focados:
-  - IdentifyCustomer
-  - RegisterCustomer
-  - IssueToken
-  - ValidateToken
+  - IdentifyCustomerUseCase
+  - RegisterCustomerUseCase
+  - CreateAnonymousCustomerUseCase
+  - AuthenticateAdminUseCase
 - UseCases recebem apenas Commands/Queries da Application.
 - Ports (interfaces) ficam aqui:
-  - IAuthRepository
+  - ICustomerRepository
   - ITokenService
+  - ICognitoService
   - IMessageBus / IEventPublisher (se necessário)
 
 ## Domain
 - Entidades, Value Objects e validações.
 - Exceções de domínio para regras inválidas.
 - Nenhuma dependência externa.
+- **Entidade Customer:**
+  - Id (Guid)
+  - Name (string?, nullable)
+  - Email (Email?, Value Object, nullable)
+  - Cpf (Cpf?, Value Object, nullable)
+  - CustomerType (EnumCustomerType)
+  - CreatedAt (DateTime)
+- **CustomerType:**
+  - Registered = 1
+  - Anonymous = 2
+- **Value Objects:**
+  - Cpf: validação de CPF brasileiro (11 dígitos, algoritmo de validação)
+  - Email: validação de formato de email
 
 ## Persistência
-- Se houver banco:
-  - Infra.Persistence implementa IAuthRepository
-  - Entidades de banco são separadas das entidades de domínio
-  - DbContext nunca é acessado fora da Infra.
+- Banco de dados: **PostgreSQL**
+- Infra.Persistence implementa ICustomerRepository
+- Entidades de banco são separadas das entidades de domínio
+- DbContext nunca é acessado fora da Infra.
+- **Tabela Customers:**
+  - Id (Guid, PK)
+  - Name (varchar 500, nullable)
+  - Email (varchar 255, nullable)
+  - Cpf (varchar 11, nullable)
+  - CustomerType (int) - 1 = Registered, 2 = Anonymous
+  - CreatedAt (datetime)
+- Value Objects (Cpf, Email) são mapeados como strings no banco
+- Usar Entity Framework Core com Npgsql.EntityFrameworkCore.PostgreSQL
 
 ## Message Bus
 - Comunicação assíncrona via port IMessageBus/IEventPublisher.
 - Implementação concreta (SNS/SQS/EventBridge) fica na Infra.
+
+## Autenticação e Tokens
+
+### Customer Authentication
+- Tokens JWT gerados para customers (identificados ou anônimos)
+- Claims obrigatórias:
+  - `sub`: CustomerId (Guid)
+  - `customerId`: CustomerId (Guid)
+  - `jti`: JWT ID (Guid)
+  - `iat`: Issued At (Unix timestamp)
+- Configuração via appsettings.json:
+  - JwtSettings:Secret
+  - JwtSettings:Issuer
+  - JwtSettings:Audience
+  - JwtSettings:ExpirationHours
+
+### Admin Authentication
+- Autenticação via AWS Cognito
+- Usar AdminInitiateAuthRequest com AuthFlowType.ADMIN_USER_PASSWORD_AUTH
+- Configuração via variáveis de ambiente:
+  - COGNITO__REGION
+  - COGNITO__USERPOOLID
+  - COGNITO__CLIENTID
+- Retornar AccessToken, IdToken, ExpiresIn, TokenType
+- Port ICognitoService na Application
+- Implementação concreta na Infra usando AWSSDK.CognitoIdentityProvider
 
 ## Testes e Qualidade
 - Testes unitários para:
