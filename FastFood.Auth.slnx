@@ -5,6 +5,6 @@
   <Project Path="src/FastFood.Auth.Infra.Persistence/FastFood.Auth.Infra.Persistence.csproj" />
   <Project Path="src/FastFood.Auth.Lambda/FastFood.Auth.Lambda.csproj" />
   <Project Path="src/FastFood.Auth.Migrator/FastFood.Auth.Migrator.csproj" />
-  <Project Path="tests/FastFood.Auth.Tests.Bdd/FastFood.Auth.Tests.Bdd.csproj" />
-  <Project Path="tests/FastFood.Auth.Tests.Unit/FastFood.Auth.Tests.Unit.csproj" />
+  <Project Path="src/tests/FastFood.Auth.Tests.Bdd/FastFood.Auth.Tests.Bdd.csproj" />
+  <Project Path="src/tests/FastFood.Auth.Tests.Unit/FastFood.Auth.Tests.Unit.csproj" />
 </Solution>

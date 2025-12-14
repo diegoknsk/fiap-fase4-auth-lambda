@@ -18,8 +18,8 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\src\FastFood.Auth.Domain\FastFood.Auth.Domain.csproj" />
-    <ProjectReference Include="..\..\src\FastFood.Auth.Application\FastFood.Auth.Application.csproj" />
+    <ProjectReference Include="..\..\FastFood.Auth.Domain\FastFood.Auth.Domain.csproj" />
+    <ProjectReference Include="..\..\FastFood.Auth.Application\FastFood.Auth.Application.csproj" />
   </ItemGroup>
 
   <ItemGroup>
