@@ -2,7 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using FastFood.Auth.Infra.Persistence;
 using FastFood.Auth.Application.Ports;
 using FastFood.Auth.Infra.Persistence.Repositories;
-using FastFood.Auth.Infra.Persistence.Services;
+using FastFood.Auth.Infra.Services;
 using FastFood.Auth.Application.UseCases.Customer;
 
 var builder = WebApplication.CreateBuilder(args);

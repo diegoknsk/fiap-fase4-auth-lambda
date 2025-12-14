@@ -1,12 +1,11 @@
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
-using System.Security.Cryptography;
 using System.Text;
 using Microsoft.Extensions.Configuration;
 using Microsoft.IdentityModel.Tokens;
 using FastFood.Auth.Application.Ports;
 
-namespace FastFood.Auth.Infra.Persistence.Services;
+namespace FastFood.Auth.Infra.Services;
 
 /// <summary>
 /// Implementação do serviço de geração de tokens JWT.

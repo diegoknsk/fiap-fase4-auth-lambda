@@ -30,6 +30,7 @@ Implementar o endpoint `/customer/anonymous` que permite criar um customer anôn
 - [Subtask 06: Criar Controller CustomerController com endpoint anonymous](./subtask/Subtask-06-Criar_Controller_CustomerController.md)
 - [Subtask 07: Registrar serviços no Program.cs](./subtask/Subtask-07-Registrar_servicos_Program.md)
 - [Subtask 08: Criar testes unitários para UseCase](./subtask/Subtask-08-Criar_testes_unitarios_UseCase.md)
+- [Subtask 09: Refatorar TokenService para Infra](./subtask/Subtask-09-Refatorar_TokenService_para_Infra.md)
 
 ## Critérios de Aceite da História
 

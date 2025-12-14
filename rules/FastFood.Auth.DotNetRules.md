@@ -51,6 +51,18 @@ You are a senior .NET backend developer and an expert in C#, ASP.NET Core, and E
 - Use AutoMapper for object-to-object mapping if needed.
 - Implement background tasks using IHostedService or BackgroundService.
 
+## Solution Management
+- **SEMPRE adicionar novos projetos ao arquivo de solução (.sln/.slnx) após criá-los**
+- Ao criar um novo projeto class library ou qualquer projeto .NET, executar: `dotnet sln <arquivo-solucao> add <caminho-projeto>`
+- **Organização correta no arquivo de solução:**
+  - Projetos devem estar na raiz da solução, não dentro de pastas virtuais desnecessárias
+  - Manter a mesma estrutura de diretórios físicos (src/, tests/) mas sem criar pastas virtuais no .slnx
+  - Projetos em `src/` devem aparecer diretamente na raiz da solução no Solution Explorer
+  - Projetos em `tests/` também devem aparecer diretamente na raiz da solução
+- Verificar que o projeto aparece no Solution Explorer do Visual Studio após adicionar
+- Se o projeto aparecer dentro de uma pasta virtual incorreta, remover e readicionar sem especificar pasta
+- Isso garante que o projeto seja visível no IDE e possa ser gerenciado corretamente
+
 ## Testing
 - Write unit tests using xUnit, NUnit, or MSTest.
 - Use Moq or NSubstitute for mocking dependencies.

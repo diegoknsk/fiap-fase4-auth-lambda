@@ -1,6 +1,7 @@
 <Solution>
   <Project Path="src/FastFood.Auth.Application/FastFood.Auth.Application.csproj" />
   <Project Path="src/FastFood.Auth.Domain/FastFood.Auth.Domain.csproj" />
+  <Project Path="src/FastFood.Auth.Infra/FastFood.Auth.Infra.csproj" />
   <Project Path="src/FastFood.Auth.Infra.Persistence/FastFood.Auth.Infra.Persistence.csproj" />
   <Project Path="src/FastFood.Auth.Lambda/FastFood.Auth.Lambda.csproj" />
   <Project Path="src/FastFood.Auth.Migrator/FastFood.Auth.Migrator.csproj" />

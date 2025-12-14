@@ -122,6 +122,19 @@ REGRAS DE .NET E CLEAN CODE
   - Feita na borda (Api e Lambda), injetando UseCases e Gateways concretos.
   - Core (Domain/UseCases/Gateways) não usa container DI diretamente.
 
+### Gerenciamento de Solução (.sln/.slnx)
+- **SEMPRE adicionar novos projetos ao arquivo de solução após criá-los**
+- Ao criar um novo projeto class library ou qualquer projeto .NET, executar: `dotnet sln <arquivo-solucao> add <caminho-projeto>`
+- **Organização correta no arquivo de solução:**
+  - Projetos devem estar na raiz da solução, não dentro de pastas virtuais desnecessárias
+  - Manter a mesma estrutura de diretórios físicos (src/, tests/) mas sem criar pastas virtuais no .slnx/.sln
+  - Projetos em `src/` devem aparecer diretamente na raiz da solução no Solution Explorer
+  - Projetos em `tests/` também devem aparecer diretamente na raiz da solução
+- Verificar que o projeto aparece no Solution Explorer do Visual Studio após adicionar
+- Se o projeto aparecer dentro de uma pasta virtual incorreta, remover e readicionar sem especificar pasta
+- Isso garante que o projeto seja visível no IDE e possa ser gerenciado corretamente
+- **Esta regra se aplica a TODOS os projetos .NET do ecossistema FastFood**
+
 =====================
 REGRAS DE TESTES
 =====================
