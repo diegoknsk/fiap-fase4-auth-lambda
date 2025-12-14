@@ -1,5 +1,9 @@
 using Microsoft.EntityFrameworkCore;
 using FastFood.Auth.Infra.Persistence;
+using FastFood.Auth.Application.Ports;
+using FastFood.Auth.Infra.Persistence.Repositories;
+using FastFood.Auth.Infra.Persistence.Services;
+using FastFood.Auth.Application.UseCases.Customer;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -13,6 +17,13 @@ builder.Services.AddSwaggerGen();
 // Configurar DbContext com PostgreSQL
 builder.Services.AddDbContext<AuthDbContext>(options =>
     options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
+
+// Registrar repositórios e serviços
+builder.Services.AddScoped<ICustomerRepository, CustomerRepository>();
+builder.Services.AddScoped<ITokenService, TokenService>();
+
+// Registrar UseCases
+builder.Services.AddScoped<CreateAnonymousCustomerUseCase>();
 
 var app = builder.Build();
 

@@ -16,6 +16,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\FastFood.Auth.Infra.Persistence\FastFood.Auth.Infra.Persistence.csproj" />
+    <ProjectReference Include="..\FastFood.Auth.Application\FastFood.Auth.Application.csproj" />
   </ItemGroup>
 
 </Project>

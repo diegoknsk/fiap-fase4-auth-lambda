@@ -7,7 +7,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\FastFood.Auth.Lambda\FastFood.Auth.Lambda.csproj" />
+    <ProjectReference Include="..\FastFood.Auth.Domain\FastFood.Auth.Domain.csproj" />
   </ItemGroup>
 
 </Project>
