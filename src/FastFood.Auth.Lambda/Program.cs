@@ -4,6 +4,7 @@ using FastFood.Auth.Application.Ports;
 using FastFood.Auth.Infra.Persistence.Repositories;
 using FastFood.Auth.Infra.Services;
 using FastFood.Auth.Application.UseCases.Customer;
+using FastFood.Auth.Application.UseCases.Admin;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -21,11 +22,13 @@ builder.Services.AddDbContext<AuthDbContext>(options =>
 // Registrar repositórios e serviços
 builder.Services.AddScoped<ICustomerRepository, CustomerRepository>();
 builder.Services.AddScoped<ITokenService, TokenService>();
+builder.Services.AddScoped<ICognitoService, CognitoService>();
 
 // Registrar UseCases
 builder.Services.AddScoped<CreateAnonymousCustomerUseCase>();
 builder.Services.AddScoped<RegisterCustomerUseCase>();
 builder.Services.AddScoped<IdentifyCustomerUseCase>();
+builder.Services.AddScoped<AuthenticateAdminUseCase>();
 
 var app = builder.Build();
 
