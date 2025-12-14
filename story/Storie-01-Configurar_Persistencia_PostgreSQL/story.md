@@ -15,6 +15,7 @@ Configurar Entity Framework Core com PostgreSQL, criar DbContext, configuraçõe
   - `src/FastFood.Auth.Infra.Persistence/Migrations/`
   - `src/FastFood.Auth.Lambda/appsettings.json`
   - `src/FastFood.Auth.Infra.Persistence/FastFood.Auth.Infra.Persistence.csproj`
+  - `src/FastFood.Auth.Migrator/` (projeto console para executar migrations)
 - Recursos: Tabela Customers no PostgreSQL com estrutura:
   - Id (Guid, PK)
   - Name (varchar 500, nullable)
@@ -32,6 +33,7 @@ Configurar Entity Framework Core com PostgreSQL, criar DbContext, configuraçõe
 - [Subtask 05: Configurar connection string e registrar DbContext](./subtask/Subtask-05-Configurar_connection_string_registrar_DbContext.md)
 - [Subtask 06: Criar e aplicar migration inicial](./subtask/Subtask-06-Criar_aplicar_migration_inicial.md)
 - [Subtask 07: Criar workflow GitHub Actions para executar migrations](./subtask/Subtask-07-Criar_workflow_GitHub_Actions_migrations.md)
+- [Subtask 08: Criar projeto Migrator para executar migrations](./subtask/Subtask-08-Criar_projeto_Migrator.md)
 
 ## Critérios de Aceite da História
 
@@ -45,6 +47,8 @@ Configurar Entity Framework Core com PostgreSQL, criar DbContext, configuraçõe
 - [ ] DbContext registrado no Program.cs com PostgreSQL
 - [ ] Migration inicial criada e aplicada com sucesso
 - [ ] Tabela Customers criada no PostgreSQL com estrutura correta (Id, Name, Email, Cpf, CustomerType, CreatedAt)
+- [ ] Projeto Migrator criado para executar migrations independentemente da API
+- [ ] Migrator pode ser executado localmente e em ambientes de produção
 - [ ] Workflow GitHub Actions criado para executar migrations automaticamente
 - [ ] Workflow configurado com secrets necessários (connection string)
 - [ ] Código compila sem erros

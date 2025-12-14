@@ -1,4 +1,7 @@
 <Solution>
+  <Folder Name="/src/">
+    <Project Path="src/FastFood.Auth.Migrator/FastFood.Auth.Migrator.csproj" />
+  </Folder>
   <Project Path="src/FastFood.Auth.Application/FastFood.Auth.Application.csproj" />
   <Project Path="src/FastFood.Auth.Domain/FastFood.Auth.Domain.csproj" />
   <Project Path="src/FastFood.Auth.Infra.Persistence/FastFood.Auth.Infra.Persistence.csproj" />
