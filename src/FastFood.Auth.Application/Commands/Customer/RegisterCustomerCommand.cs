@@ -11,3 +11,4 @@ public class RegisterCustomerCommand
     public string Cpf { get; set; } = string.Empty;
 }
 
+

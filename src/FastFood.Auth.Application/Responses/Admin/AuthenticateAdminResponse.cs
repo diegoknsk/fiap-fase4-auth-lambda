@@ -26,3 +26,4 @@ public class AuthenticateAdminResponse
     public string TokenType { get; set; } = "Bearer";
 }
 
+

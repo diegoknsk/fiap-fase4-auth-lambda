@@ -40,3 +40,4 @@ public class AuthenticateAdminResult
     public string TokenType { get; set; } = "Bearer";
 }
 
+

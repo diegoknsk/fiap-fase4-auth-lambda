@@ -59,3 +59,4 @@ dotnet run --project src/FastFood.Auth.Migrator
 - Use variáveis de ambiente em produção
 - Use AWS Secrets Manager ou similar para gerenciar credenciais em produção
 
+

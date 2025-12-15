@@ -16,3 +16,4 @@ public class AuthenticateAdminCommand
     public string Password { get; set; } = string.Empty;
 }
 
+

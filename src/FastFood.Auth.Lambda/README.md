@@ -39,3 +39,4 @@ Host=seu-host-rds.amazonaws.com;Port=5432;Database=dbAuth;Username=seu-usuario;P
 - Use variáveis de ambiente em produção
 - Use AWS Secrets Manager ou similar para gerenciar credenciais em produção
 
+
