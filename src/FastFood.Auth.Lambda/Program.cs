@@ -5,6 +5,8 @@ using FastFood.Auth.Infra.Persistence.Repositories;
 using FastFood.Auth.Infra.Services;
 using FastFood.Auth.Application.UseCases.Customer;
 using FastFood.Auth.Application.UseCases.Admin;
+using FastFood.Auth.Application.Presenters.Customer;
+using FastFood.Auth.Application.Presenters.Admin;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -29,6 +31,12 @@ builder.Services.AddScoped<CreateAnonymousCustomerUseCase>();
 builder.Services.AddScoped<RegisterCustomerUseCase>();
 builder.Services.AddScoped<IdentifyCustomerUseCase>();
 builder.Services.AddScoped<AuthenticateAdminUseCase>();
+
+// Registrar Presenters
+builder.Services.AddScoped<CreateAnonymousCustomerPresenter>();
+builder.Services.AddScoped<RegisterCustomerPresenter>();
+builder.Services.AddScoped<IdentifyCustomerPresenter>();
+builder.Services.AddScoped<AuthenticateAdminPresenter>();
 
 var app = builder.Build();
 

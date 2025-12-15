@@ -1,6 +1,8 @@
 using Microsoft.AspNetCore.Mvc;
 using FastFood.Auth.Application.UseCases.Customer;
 using FastFood.Auth.Application.Commands.Customer;
+using FastFood.Auth.Application.Responses.Customer;
+using FastFood.Auth.Application.Presenters.Customer;
 using FastFood.Auth.Lambda.Models.Customer;
 
 namespace FastFood.Auth.Lambda.Controllers;
@@ -15,15 +17,24 @@ public class CustomerController : ControllerBase
     private readonly CreateAnonymousCustomerUseCase _createAnonymousUseCase;
     private readonly RegisterCustomerUseCase _registerUseCase;
     private readonly IdentifyCustomerUseCase _identifyUseCase;
+    private readonly CreateAnonymousCustomerPresenter _createAnonymousPresenter;
+    private readonly RegisterCustomerPresenter _registerPresenter;
+    private readonly IdentifyCustomerPresenter _identifyPresenter;
 
     public CustomerController(
         CreateAnonymousCustomerUseCase createAnonymousUseCase,
         RegisterCustomerUseCase registerUseCase,
-        IdentifyCustomerUseCase identifyUseCase)
+        IdentifyCustomerUseCase identifyUseCase,
+        CreateAnonymousCustomerPresenter createAnonymousPresenter,
+        RegisterCustomerPresenter registerPresenter,
+        IdentifyCustomerPresenter identifyPresenter)
     {
         _createAnonymousUseCase = createAnonymousUseCase;
         _registerUseCase = registerUseCase;
         _identifyUseCase = identifyUseCase;
+        _createAnonymousPresenter = createAnonymousPresenter;
+        _registerPresenter = registerPresenter;
+        _identifyPresenter = identifyPresenter;
     }
 
     /// <summary>
@@ -40,7 +51,8 @@ public class CustomerController : ControllerBase
         try
         {
             var result = await _createAnonymousUseCase.ExecuteAsync();
-            return Ok(result);
+            var response = _createAnonymousPresenter.Present(result);
+            return Ok(response);
         }
         catch (Exception ex)
         {
@@ -72,7 +84,8 @@ public class CustomerController : ControllerBase
             };
 
             var result = await _registerUseCase.ExecuteAsync(command);
-            return Ok(result);
+            var response = _registerPresenter.Present(result);
+            return Ok(response);
         }
         catch (Exception ex)
         {
@@ -105,7 +118,8 @@ public class CustomerController : ControllerBase
             };
 
             var result = await _identifyUseCase.ExecuteAsync(command);
-            return Ok(result);
+            var response = _identifyPresenter.Present(result);
+            return Ok(response);
         }
         catch (UnauthorizedAccessException)
         {

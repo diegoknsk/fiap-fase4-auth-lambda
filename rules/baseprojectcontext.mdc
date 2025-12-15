@@ -71,6 +71,17 @@ Todos os serviços .NET seguem o mesmo padrão de pastas (ajuste nomes conforme 
   - Orquestram o fluxo, combinam regras, chamam Gateways.
   - Conhecem apenas Domain + interfaces de Gateways, nunca implementações concretas.
 
+/Responses
+  - ResponseModels (Application Responses) que definem o contrato de saída dos UseCases.
+  - Devem estar na camada Application.
+  - Representam os dados que serão retornados pela API.
+
+/Presenters
+  - Presenters que fazem adaptação/transformação dos Application Responses quando necessário.
+  - Devem estar na camada Application.
+  - Por padrão apenas retornam o response, mas podem fazer transformações se necessário.
+  - API consome os Responses através dos Presenters.
+
 /Gateways
   - Interfaces que definem como os UseCases conversam com o "mundo externo":
     - Acesso a banco (ex.: IOrderGateway, IPaymentGateway).
@@ -89,9 +100,12 @@ Todos os serviços .NET seguem o mesmo padrão de pastas (ajuste nomes conforme 
 
 /Api
   - Projeto ASP.NET Core (ou Lambda HTTP).
-  - Controllers, endpoints, DTOs de request/response, mapeadores, presenters.
+  - Controllers, endpoints, DTOs de request (RequestModels).
+  - NÃO deve ter ResponseModels duplicados (usa Application Responses).
+  - NÃO deve ter Presenters (usa Presenters da Application).
   - NÃO acessa banco, fila ou client externo diretamente.
-  - Sempre chama UseCases, passando DTOs adequados.
+  - Sempre chama UseCases, passando Commands/Queries.
+  - Usa Presenters da Application para obter Responses formatados.
 
 /Tests
   - Testes unitários de UseCases, Gateways (com mocks) e comportamento de controllers.
@@ -100,10 +114,19 @@ Todos os serviços .NET seguem o mesmo padrão de pastas (ajuste nomes conforme 
 Regras de dependência (sempre respeitar):
 - Domain → não depende de ninguém.
 - UseCases → depende de Domain + Gateways (interfaces).
+- Responses → pode depender de Domain (para tipos), mas sem implementações.
+- Presenters → depende de Responses (Application).
 - Gateways → pode depender de Domain (para tipos), mas sem implementações.
 - DataSource/Infra → depende de Gateways + libs externas.
-- Api → depende de UseCases + DTOs + Presenters.
+- Api → depende de UseCases + Presenters (Application) + RequestModels (próprios).
 - Tests → pode referenciar tudo para validar comportamento.
+
+**Regra importante sobre Presenters e Responses:**
+- Presenters e ResponseModels devem estar na camada Application.
+- Application define o contrato de saída (ResponseModels).
+- API não deve ter ResponseModels duplicados.
+- API consome os Responses da Application através dos Presenters.
+- Presenters podem fazer transformações dos Application Responses quando necessário.
 
 =====================
 REGRAS DE .NET E CLEAN CODE

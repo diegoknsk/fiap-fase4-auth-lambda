@@ -3,6 +3,7 @@ using Moq;
 using FastFood.Auth.Application.UseCases.Admin;
 using FastFood.Auth.Application.Responses.Admin;
 using FastFood.Auth.Application.Ports;
+using FastFood.Auth.Application.Presenters.Admin;
 using FastFood.Auth.Lambda.Controllers;
 using FastFood.Auth.Lambda.Models.Admin;
 
@@ -15,13 +16,15 @@ public class AdminControllerTests
 {
     private readonly Mock<ICognitoService> _cognitoServiceMock;
     private readonly AuthenticateAdminUseCase _authenticateUseCase;
+    private readonly AuthenticateAdminPresenter _authenticatePresenter;
     private readonly AdminController _controller;
 
     public AdminControllerTests()
     {
         _cognitoServiceMock = new Mock<ICognitoService>();
         _authenticateUseCase = new AuthenticateAdminUseCase(_cognitoServiceMock.Object);
-        _controller = new AdminController(_authenticateUseCase);
+        _authenticatePresenter = new AuthenticateAdminPresenter();
+        _controller = new AdminController(_authenticateUseCase, _authenticatePresenter);
     }
 
     [Fact]
@@ -51,7 +54,7 @@ public class AdminControllerTests
 
         // Assert
         var okResult = Assert.IsType<OkObjectResult>(result);
-        var response = Assert.IsType<AuthenticateAdminResponse>(okResult.Value);
+        var response = Assert.IsType<Application.Responses.Admin.AuthenticateAdminResponse>(okResult.Value);
         Assert.Equal(expectedResult.AccessToken, response.AccessToken);
         Assert.Equal(expectedResult.IdToken, response.IdToken);
         Assert.Equal(expectedResult.ExpiresIn, response.ExpiresIn);

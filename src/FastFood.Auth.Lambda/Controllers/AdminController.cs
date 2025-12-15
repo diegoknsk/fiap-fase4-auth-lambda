@@ -1,6 +1,8 @@
 using Microsoft.AspNetCore.Mvc;
 using FastFood.Auth.Application.UseCases.Admin;
 using FastFood.Auth.Application.Commands.Admin;
+using FastFood.Auth.Application.Responses.Admin;
+using FastFood.Auth.Application.Presenters.Admin;
 using FastFood.Auth.Lambda.Models.Admin;
 
 namespace FastFood.Auth.Lambda.Controllers;
@@ -13,10 +15,14 @@ namespace FastFood.Auth.Lambda.Controllers;
 public class AdminController : ControllerBase
 {
     private readonly AuthenticateAdminUseCase _authenticateUseCase;
+    private readonly AuthenticateAdminPresenter _authenticatePresenter;
 
-    public AdminController(AuthenticateAdminUseCase authenticateUseCase)
+    public AdminController(
+        AuthenticateAdminUseCase authenticateUseCase,
+        AuthenticateAdminPresenter authenticatePresenter)
     {
         _authenticateUseCase = authenticateUseCase;
+        _authenticatePresenter = authenticatePresenter;
     }
 
     /// <summary>
@@ -42,7 +48,8 @@ public class AdminController : ControllerBase
             };
 
             var result = await _authenticateUseCase.ExecuteAsync(command);
-            return Ok(result);
+            var response = _authenticatePresenter.Present(result);
+            return Ok(response);
         }
         catch (UnauthorizedAccessException)
         {
@@ -55,4 +62,5 @@ public class AdminController : ControllerBase
         }
     }
 }
+
 
