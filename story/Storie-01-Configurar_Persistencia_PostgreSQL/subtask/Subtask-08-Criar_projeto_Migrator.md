@@ -45,3 +45,5 @@ Criar um projeto console application separado (FastFood.Auth.Migrator) responsá
 - Migrations podem ser aplicadas executando o projeto Migrator
 
 
+
+

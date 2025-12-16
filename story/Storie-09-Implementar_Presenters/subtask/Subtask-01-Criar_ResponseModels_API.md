@@ -63,3 +63,5 @@ public class AuthenticateAdminResponse
 - Estrutura similar aos Application Responses mas em namespace diferente
 - Código compila sem erros
 
+
+

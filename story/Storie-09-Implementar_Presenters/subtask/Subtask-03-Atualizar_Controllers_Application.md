@@ -46,3 +46,5 @@ public async Task<IActionResult> Register([FromBody] RegisterCustomerRequest req
 - Swagger documenta corretamente os Application Responses
 - Código compila sem erros
 
+
+

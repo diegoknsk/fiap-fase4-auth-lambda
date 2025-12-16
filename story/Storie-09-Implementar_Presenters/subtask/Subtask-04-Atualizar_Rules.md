@@ -28,3 +28,5 @@ Atualizar o arquivo de regras para documentar que presenters e ResponseModels de
 - Documentação clara sobre localização de presenters e responses
 - Regras de dependência atualizadas se necessário
 
+
+
