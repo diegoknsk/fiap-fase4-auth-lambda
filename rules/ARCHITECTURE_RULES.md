@@ -407,3 +407,4 @@ A arquitetura do AuthLambda deve ser **idêntica** à dos serviços HTTP (OrderH
 
 > *"O Auth é um Lambda, mas arquiteturalmente é uma API ASP.NET Core como qualquer outra; só mudamos o host."*
 
+

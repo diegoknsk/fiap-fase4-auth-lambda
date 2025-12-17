@@ -141,3 +141,4 @@ FastFood.Auth.Application/
 - Nenhuma regra de negócio será alterada durante a refatoração
 - Todos os testes devem continuar passando após cada subtask
 
+

@@ -143,3 +143,4 @@
 6. ✅ Adicionar regras explícitas sobre Facade, Testes e Infra
 7. ✅ Tornar regras vagas em objetivos e mensuráveis
 
+
