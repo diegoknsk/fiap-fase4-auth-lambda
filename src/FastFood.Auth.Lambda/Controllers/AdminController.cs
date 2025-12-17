@@ -2,7 +2,6 @@ using Microsoft.AspNetCore.Mvc;
 using FastFood.Auth.Application.UseCases.Admin;
 using FastFood.Auth.Application.InputModels.Admin;
 using FastFood.Auth.Application.OutputModels.Admin;
-using FastFood.Auth.Application.Presenters.Admin;
 
 namespace FastFood.Auth.Lambda.Controllers;
 
@@ -11,18 +10,9 @@ namespace FastFood.Auth.Lambda.Controllers;
 /// </summary>
 [ApiController]
 [Route("api/[controller]")]
-public class AdminController : ControllerBase
+public class AdminController(
+    AuthenticateAdminUseCase authenticateUseCase) : ControllerBase
 {
-    private readonly AuthenticateAdminUseCase _authenticateUseCase;
-    private readonly AuthenticateAdminPresenter _authenticatePresenter;
-
-    public AdminController(
-        AuthenticateAdminUseCase authenticateUseCase,
-        AuthenticateAdminPresenter authenticatePresenter)
-    {
-        _authenticateUseCase = authenticateUseCase;
-        _authenticatePresenter = authenticatePresenter;
-    }
 
     /// <summary>
     /// Autentica um administrador através do AWS Cognito usando username e password.
@@ -40,8 +30,7 @@ public class AdminController : ControllerBase
     {
         try
         {
-            var result = await _authenticateUseCase.ExecuteAsync(inputModel);
-            var response = _authenticatePresenter.Present(result);
+            var response = await authenticateUseCase.ExecuteAsync(inputModel);
             return Ok(response);
         }
         catch (UnauthorizedAccessException)

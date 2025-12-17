@@ -2,7 +2,6 @@ using Microsoft.AspNetCore.Mvc;
 using FastFood.Auth.Application.UseCases.Customer;
 using FastFood.Auth.Application.InputModels.Customer;
 using FastFood.Auth.Application.OutputModels.Customer;
-using FastFood.Auth.Application.Presenters.Customer;
 
 namespace FastFood.Auth.Lambda.Controllers;
 
@@ -11,30 +10,11 @@ namespace FastFood.Auth.Lambda.Controllers;
 /// </summary>
 [ApiController]
 [Route("api/[controller]")]
-public class CustomerController : ControllerBase
+public class CustomerController(
+    CreateAnonymousCustomerUseCase createAnonymousUseCase,
+    RegisterCustomerUseCase registerUseCase,
+    IdentifyCustomerUseCase identifyUseCase) : ControllerBase
 {
-    private readonly CreateAnonymousCustomerUseCase _createAnonymousUseCase;
-    private readonly RegisterCustomerUseCase _registerUseCase;
-    private readonly IdentifyCustomerUseCase _identifyUseCase;
-    private readonly CreateAnonymousCustomerPresenter _createAnonymousPresenter;
-    private readonly RegisterCustomerPresenter _registerPresenter;
-    private readonly IdentifyCustomerPresenter _identifyPresenter;
-
-    public CustomerController(
-        CreateAnonymousCustomerUseCase createAnonymousUseCase,
-        RegisterCustomerUseCase registerUseCase,
-        IdentifyCustomerUseCase identifyUseCase,
-        CreateAnonymousCustomerPresenter createAnonymousPresenter,
-        RegisterCustomerPresenter registerPresenter,
-        IdentifyCustomerPresenter identifyPresenter)
-    {
-        _createAnonymousUseCase = createAnonymousUseCase;
-        _registerUseCase = registerUseCase;
-        _identifyUseCase = identifyUseCase;
-        _createAnonymousPresenter = createAnonymousPresenter;
-        _registerPresenter = registerPresenter;
-        _identifyPresenter = identifyPresenter;
-    }
 
     /// <summary>
     /// Cria um customer anônimo e retorna um token JWT válido para autenticação.
@@ -49,8 +29,7 @@ public class CustomerController : ControllerBase
     {
         try
         {
-            var result = await _createAnonymousUseCase.ExecuteAsync();
-            var response = _createAnonymousPresenter.Present(result);
+            var response = await createAnonymousUseCase.ExecuteAsync();
             return Ok(response);
         }
         catch (Exception ex)
@@ -77,8 +56,7 @@ public class CustomerController : ControllerBase
     {
         try
         {
-            var result = await _registerUseCase.ExecuteAsync(inputModel);
-            var response = _registerPresenter.Present(result);
+            var response = await registerUseCase.ExecuteAsync(inputModel);
             return Ok(response);
         }
         catch (Exception ex)
@@ -106,8 +84,7 @@ public class CustomerController : ControllerBase
     {
         try
         {
-            var result = await _identifyUseCase.ExecuteAsync(inputModel);
-            var response = _identifyPresenter.Present(result);
+            var response = await identifyUseCase.ExecuteAsync(inputModel);
             return Ok(response);
         }
         catch (UnauthorizedAccessException)
