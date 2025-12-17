@@ -1,11 +1,11 @@
 using Microsoft.AspNetCore.Mvc;
 using Moq;
 using FastFood.Auth.Application.UseCases.Admin;
+using FastFood.Auth.Application.InputModels.Admin;
 using FastFood.Auth.Application.OutputModels.Admin;
 using FastFood.Auth.Application.Ports;
 using FastFood.Auth.Application.Presenters.Admin;
 using FastFood.Auth.Lambda.Controllers;
-using FastFood.Auth.Lambda.Models.Admin;
 
 namespace FastFood.Auth.Tests.Unit.Controllers;
 
@@ -31,7 +31,7 @@ public class AdminControllerTests
     public async Task PostLogin_WithValidCredentials_ShouldReturnOkWithTokens()
     {
         // Arrange
-        var request = new AdminLoginRequest
+        var inputModel = new AuthenticateAdminInputModel
         {
             Username = "admin@example.com",
             Password = "SecurePassword123!"
@@ -46,11 +46,11 @@ public class AdminControllerTests
         };
 
         _cognitoServiceMock
-            .Setup(x => x.AuthenticateAsync(request.Username, request.Password))
+            .Setup(x => x.AuthenticateAsync(inputModel.Username, inputModel.Password))
             .ReturnsAsync(expectedResult);
 
         // Act
-        var result = await _controller.Login(request);
+        var result = await _controller.Login(inputModel);
 
         // Assert
         var okResult = Assert.IsType<OkObjectResult>(result);
@@ -65,18 +65,18 @@ public class AdminControllerTests
     public async Task PostLogin_WithInvalidCredentials_ShouldReturnUnauthorized()
     {
         // Arrange
-        var request = new AdminLoginRequest
+        var inputModel = new AuthenticateAdminInputModel
         {
             Username = "admin@example.com",
             Password = "WrongPassword"
         };
 
         _cognitoServiceMock
-            .Setup(x => x.AuthenticateAsync(request.Username, request.Password))
+            .Setup(x => x.AuthenticateAsync(inputModel.Username, inputModel.Password))
             .ThrowsAsync(new UnauthorizedAccessException("Credenciais inválidas"));
 
         // Act
-        var result = await _controller.Login(request);
+        var result = await _controller.Login(inputModel);
 
         // Assert
         var unauthorizedResult = Assert.IsType<UnauthorizedObjectResult>(result);
@@ -87,7 +87,7 @@ public class AdminControllerTests
     public async Task PostLogin_ShouldCallUseCase()
     {
         // Arrange
-        var request = new AdminLoginRequest
+        var inputModel = new AuthenticateAdminInputModel
         {
             Username = "admin@example.com",
             Password = "SecurePassword123!"
@@ -102,15 +102,15 @@ public class AdminControllerTests
         };
 
         _cognitoServiceMock
-            .Setup(x => x.AuthenticateAsync(request.Username, request.Password))
+            .Setup(x => x.AuthenticateAsync(inputModel.Username, inputModel.Password))
             .ReturnsAsync(expectedResult);
 
         // Act
-        await _controller.Login(request);
+        await _controller.Login(inputModel);
 
         // Assert
         _cognitoServiceMock.Verify(
-            x => x.AuthenticateAsync(request.Username, request.Password), 
+            x => x.AuthenticateAsync(inputModel.Username, inputModel.Password), 
             Times.Once);
     }
 }

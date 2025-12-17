@@ -3,7 +3,6 @@ using FastFood.Auth.Application.UseCases.Customer;
 using FastFood.Auth.Application.InputModels.Customer;
 using FastFood.Auth.Application.OutputModels.Customer;
 using FastFood.Auth.Application.Presenters.Customer;
-using FastFood.Auth.Lambda.Models.Customer;
 
 namespace FastFood.Auth.Lambda.Controllers;
 
@@ -74,15 +73,10 @@ public class CustomerController : ControllerBase
     [ProducesResponseType(typeof(RegisterCustomerOutputModel), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status500InternalServerError)]
-    public async Task<IActionResult> Register([FromBody] RegisterCustomerRequest request)
+    public async Task<IActionResult> Register([FromBody] RegisterCustomerInputModel inputModel)
     {
         try
         {
-            var inputModel = new RegisterCustomerInputModel
-            {
-                Cpf = request.Cpf
-            };
-
             var result = await _registerUseCase.ExecuteAsync(inputModel);
             var response = _registerPresenter.Present(result);
             return Ok(response);
@@ -108,15 +102,10 @@ public class CustomerController : ControllerBase
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status500InternalServerError)]
-    public async Task<IActionResult> Identify([FromBody] IdentifyCustomerRequest request)
+    public async Task<IActionResult> Identify([FromBody] IdentifyCustomerInputModel inputModel)
     {
         try
         {
-            var inputModel = new IdentifyCustomerInputModel
-            {
-                Cpf = request.Cpf
-            };
-
             var result = await _identifyUseCase.ExecuteAsync(inputModel);
             var response = _identifyPresenter.Present(result);
             return Ok(response);

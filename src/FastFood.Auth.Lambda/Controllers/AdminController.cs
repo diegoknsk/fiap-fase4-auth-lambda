@@ -3,7 +3,6 @@ using FastFood.Auth.Application.UseCases.Admin;
 using FastFood.Auth.Application.InputModels.Admin;
 using FastFood.Auth.Application.OutputModels.Admin;
 using FastFood.Auth.Application.Presenters.Admin;
-using FastFood.Auth.Lambda.Models.Admin;
 
 namespace FastFood.Auth.Lambda.Controllers;
 
@@ -37,16 +36,10 @@ public class AdminController : ControllerBase
     [ProducesResponseType(typeof(AuthenticateAdminOutputModel), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     [ProducesResponseType(StatusCodes.Status500InternalServerError)]
-    public async Task<IActionResult> Login([FromBody] AdminLoginRequest request)
+    public async Task<IActionResult> Login([FromBody] AuthenticateAdminInputModel inputModel)
     {
         try
         {
-            var inputModel = new AuthenticateAdminInputModel
-            {
-                Username = request.Username,
-                Password = request.Password
-            };
-
             var result = await _authenticateUseCase.ExecuteAsync(inputModel);
             var response = _authenticatePresenter.Present(result);
             return Ok(response);

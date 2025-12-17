@@ -1,11 +1,11 @@
 using Microsoft.AspNetCore.Mvc;
 using Moq;
 using FastFood.Auth.Application.UseCases.Customer;
+using FastFood.Auth.Application.InputModels.Customer;
 using FastFood.Auth.Application.OutputModels.Customer;
 using FastFood.Auth.Application.Ports;
 using FastFood.Auth.Application.Presenters.Customer;
 using FastFood.Auth.Lambda.Controllers;
-using FastFood.Auth.Lambda.Models.Customer;
 using FastFood.Auth.Domain.Entities.CustomerIdentification;
 using FastFood.Auth.Domain.Entities.CustomerIdentification.ValueObects;
 using DomainCustomer = FastFood.Auth.Domain.Entities.CustomerIdentification.Customer;
@@ -108,7 +108,7 @@ public class CustomerControllerTests
     public async Task PostRegister_WithValidCpf_ShouldReturnOkWithToken()
     {
         // Arrange
-        var request = new RegisterCustomerRequest { Cpf = "11144477735" };
+        var inputModel = new RegisterCustomerInputModel { Cpf = "11144477735" };
         var cpf = "11144477735";
         var expectedToken = "test-token";
         var expectedExpiresAt = DateTime.UtcNow.AddHours(1);
@@ -127,7 +127,7 @@ public class CustomerControllerTests
             .Returns(expectedToken);
 
         // Act
-        var result = await _controller.Register(request);
+        var result = await _controller.Register(inputModel);
 
         // Assert
         var okResult = Assert.IsType<OkObjectResult>(result);
@@ -141,7 +141,7 @@ public class CustomerControllerTests
     public async Task PostRegister_ShouldCallUseCase()
     {
         // Arrange
-        var request = new RegisterCustomerRequest { Cpf = "11144477735" };
+        var inputModel = new RegisterCustomerInputModel { Cpf = "11144477735" };
         var cpf = "11144477735";
         var expectedToken = "test-token";
         var expectedExpiresAt = DateTime.UtcNow.AddHours(1);
@@ -160,7 +160,7 @@ public class CustomerControllerTests
             .Returns(expectedToken);
 
         // Act
-        await _controller.Register(request);
+        await _controller.Register(inputModel);
 
         // Assert
         _customerRepositoryMock.Verify(x => x.GetByCpfAsync(cpf), Times.Once);
@@ -172,7 +172,7 @@ public class CustomerControllerTests
     public async Task PostIdentify_WithValidCpf_ShouldReturnOkWithToken()
     {
         // Arrange
-        var request = new IdentifyCustomerRequest { Cpf = "11144477735" };
+        var inputModel = new IdentifyCustomerInputModel { Cpf = "11144477735" };
         var cpf = "11144477735";
         var customerId = Guid.NewGuid();
         var existingCustomer = new DomainCustomer(
@@ -194,7 +194,7 @@ public class CustomerControllerTests
             .Returns(expectedToken);
 
         // Act
-        var result = await _controller.Identify(request);
+        var result = await _controller.Identify(inputModel);
 
         // Assert
         var okResult = Assert.IsType<OkObjectResult>(result);
@@ -208,7 +208,7 @@ public class CustomerControllerTests
     public async Task PostIdentify_WithInvalidCpf_ShouldReturnUnauthorized()
     {
         // Arrange
-        var request = new IdentifyCustomerRequest { Cpf = "11144477735" };
+        var inputModel = new IdentifyCustomerInputModel { Cpf = "11144477735" };
         var cpf = "11144477735";
 
         _customerRepositoryMock
@@ -216,7 +216,7 @@ public class CustomerControllerTests
             .ReturnsAsync((DomainCustomer?)null);
 
         // Act
-        var result = await _controller.Identify(request);
+        var result = await _controller.Identify(inputModel);
 
         // Assert
         var unauthorizedResult = Assert.IsType<UnauthorizedObjectResult>(result);
@@ -227,7 +227,7 @@ public class CustomerControllerTests
     public async Task PostIdentify_ShouldCallUseCase()
     {
         // Arrange
-        var request = new IdentifyCustomerRequest { Cpf = "11144477735" };
+        var inputModel = new IdentifyCustomerInputModel { Cpf = "11144477735" };
         var cpf = "11144477735";
         var customerId = Guid.NewGuid();
         var existingCustomer = new DomainCustomer(
@@ -249,7 +249,7 @@ public class CustomerControllerTests
             .Returns(expectedToken);
 
         // Act
-        await _controller.Identify(request);
+        await _controller.Identify(inputModel);
 
         // Assert
         _customerRepositoryMock.Verify(x => x.GetByCpfAsync(cpf), Times.Once);
