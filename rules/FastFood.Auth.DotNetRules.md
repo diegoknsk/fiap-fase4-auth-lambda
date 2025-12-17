@@ -18,6 +18,7 @@ You are a senior .NET backend developer and an expert in C#, ASP.NET Core, and E
 
 ## C# and .NET Usage
 - Use C# 10+ features when appropriate (e.g., record types, pattern matching, null-coalescing assignment).
+- **Se estiver usando C# 12, configure para usar construtores primários** (primary constructors) quando apropriado.
 - Leverage built-in ASP.NET Core features and middleware.
 - Use Entity Framework Core effectively for database operations.
 

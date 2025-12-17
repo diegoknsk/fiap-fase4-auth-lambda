@@ -64,12 +64,13 @@ mudando apenas o tipo de hosting.
 - **Responsabilidades:**
   - autenticação/autorização
   - validação básica de request
-  - mapear RequestModel -> Command
-  - chamar UseCase
-  - usar Presenter da Application para obter Response
+  - mapear RequestModel -> InputModel
+  - chamar UseCase.ExecuteAsync(InputModel)
+  - receber ResponseModel do UseCase e retornar HTTP Response
 - **Proibido:**
   - regra de negócio no controller
   - acesso direto a banco ou SDKs
+  - chamar Presenter diretamente (responsabilidade do UseCase)
   - ResponseModels duplicados (deve usar Application Responses)
   - Presenters próprios (deve usar Presenters da Application)
 
@@ -79,14 +80,20 @@ mudando apenas o tipo de hosting.
   - RegisterCustomer
   - IssueToken
   - ValidateToken
-- UseCases recebem apenas Commands/Queries da Application.
+- UseCases recebem apenas InputModels da Application.
+- **Responsabilidade do UseCase:**
+  - Executar lógica de negócio
+  - Chamar Ports (repositórios, serviços)
+  - Chamar o Presenter para transformar OutputModel em ResponseModel
+  - Retornar ResponseModel (não OutputModel diretamente)
 - **Responses (ResponseModels):**
   - Devem estar na camada Application.
   - Definem o contrato de saída dos UseCases.
   - Representam os dados que serão retornados pela API.
 - **Presenters:**
   - Devem estar na camada Application.
-  - Fazem adaptação/transformação dos Application Responses quando necessário.
+  - São chamados pelo UseCase (não pelo Controller).
+  - Fazem adaptação/transformação dos OutputModels em ResponseModels quando necessário.
   - Por padrão apenas retornam o response, mas podem fazer transformações se necessário.
 - Ports (interfaces) ficam aqui:
   - IAuthRepository

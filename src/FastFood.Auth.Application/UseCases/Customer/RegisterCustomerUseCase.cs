@@ -1,6 +1,7 @@
 using FastFood.Auth.Application.InputModels.Customer;
 using FastFood.Auth.Application.OutputModels.Customer;
 using FastFood.Auth.Application.Ports;
+using FastFood.Auth.Application.Presenters.Customer;
 using FastFood.Auth.Domain.Entities.CustomerIdentification;
 using FastFood.Auth.Domain.Entities.CustomerIdentification.ValueObects;
 using DomainCustomer = FastFood.Auth.Domain.Entities.CustomerIdentification.Customer;
@@ -12,19 +13,11 @@ namespace FastFood.Auth.Application.UseCases.Customer;
 /// Se o customer já existir, retorna o token do customer existente.
 /// Se não existir, cria um novo customer Registered e retorna um token.
 /// </summary>
-public class RegisterCustomerUseCase
+public class RegisterCustomerUseCase(
+    ICustomerRepository customerRepository,
+    ITokenService tokenService,
+    RegisterCustomerPresenter presenter)
 {
-    private readonly ICustomerRepository _customerRepository;
-    private readonly ITokenService _tokenService;
-
-    public RegisterCustomerUseCase(
-        ICustomerRepository customerRepository,
-        ITokenService tokenService)
-    {
-        _customerRepository = customerRepository;
-        _tokenService = tokenService;
-    }
-
     /// <summary>
     /// Executa o registro de um customer através do CPF e gera um token JWT.
     /// </summary>
@@ -34,7 +27,7 @@ public class RegisterCustomerUseCase
         var cpfValueObject = new Cpf(inputModel.Cpf);
         
         // Buscar customer existente pelo CPF
-        var existingCustomer = await _customerRepository.GetByCpfAsync(cpfValueObject.Value!);
+        var existingCustomer = await customerRepository.GetByCpfAsync(cpfValueObject.Value!);
 
         DomainCustomer customer;
         
@@ -55,19 +48,22 @@ public class RegisterCustomerUseCase
             );
 
             // Salvar no repositório
-            customer = await _customerRepository.AddAsync(customer);
+            customer = await customerRepository.AddAsync(customer);
         }
 
         // Gerar token JWT
-        var token = _tokenService.GenerateToken(customer.Id, out var expiresAt);
+        var token = tokenService.GenerateToken(customer.Id, out var expiresAt);
 
-        // Retornar resposta
-        return new RegisterCustomerOutputModel
+        // Criar OutputModel
+        var outputModel = new RegisterCustomerOutputModel
         {
             Token = token,
             CustomerId = customer.Id,
             ExpiresAt = expiresAt
         };
+
+        // Chamar Presenter para transformar OutputModel em ResponseModel
+        return presenter.Present(outputModel);
     }
 }
 

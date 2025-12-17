@@ -11,39 +11,33 @@ namespace FastFood.Auth.Infra.Persistence.Repositories;
 /// Implementação do repositório de Customer usando Entity Framework Core.
 /// Responsável por fazer o mapeamento entre Customer (Domain) e CustomerEntity (Infra).
 /// </summary>
-public class CustomerRepository : ICustomerRepository
+public class CustomerRepository(AuthDbContext context) : ICustomerRepository
 {
-    private readonly AuthDbContext _context;
-
-    public CustomerRepository(AuthDbContext context)
-    {
-        _context = context;
-    }
 
     public async Task<Customer?> GetByIdAsync(Guid id)
     {
-        var entity = await _context.Customers.FindAsync(id);
+        var entity = await context.Customers.FindAsync(id);
         return entity == null ? null : MapToDomain(entity);
     }
 
     public async Task<Customer?> GetByCpfAsync(string cpf)
     {
-        var entity = await _context.Customers
+        var entity = await context.Customers
             .FirstOrDefaultAsync(c => c.Cpf == cpf);
         return entity == null ? null : MapToDomain(entity);
     }
 
     public async Task<bool> ExistsByCpfAsync(string cpf)
     {
-        return await _context.Customers
+        return await context.Customers
             .AnyAsync(c => c.Cpf == cpf);
     }
 
     public async Task<Customer> AddAsync(Customer customer)
     {
         var entity = MapToEntity(customer);
-        await _context.Customers.AddAsync(entity);
-        await _context.SaveChangesAsync();
+        await context.Customers.AddAsync(entity);
+        await context.SaveChangesAsync();
         return MapToDomain(entity);
     }
 

@@ -63,12 +63,13 @@ mudando apenas o tipo de hosting.
 - **Responsabilidades:**
   - autenticação/autorização
   - validação básica de request
-  - mapear RequestModel -> Command
-  - chamar UseCase
-  - mapear Result -> ResponseModel
+  - mapear RequestModel -> InputModel
+  - chamar UseCase.ExecuteAsync(InputModel)
+  - receber ResponseModel do UseCase e retornar HTTP Response
 - **Proibido:**
   - regra de negócio no controller
   - acesso direto a banco ou SDKs
+  - chamar Presenter diretamente (responsabilidade do UseCase)
 
 ### Endpoints Customer
 - `POST /customer/identify` - Identificar customer por CPF
@@ -84,7 +85,16 @@ mudando apenas o tipo de hosting.
   - RegisterCustomerUseCase
   - CreateAnonymousCustomerUseCase
   - AuthenticateAdminUseCase
-- UseCases recebem apenas Commands/Queries da Application.
+- UseCases recebem apenas InputModels da Application.
+- **Responsabilidade do UseCase:**
+  - Executar lógica de negócio
+  - Chamar Ports (repositórios, serviços)
+  - Chamar o Presenter para transformar OutputModel em ResponseModel
+  - Retornar ResponseModel (não OutputModel diretamente)
+- **Presenters:**
+  - Devem estar na camada Application.
+  - São chamados pelo UseCase (não pelo Controller).
+  - Fazem adaptação/transformação dos OutputModels em ResponseModels quando necessário.
 - Ports (interfaces) ficam aqui:
   - ICustomerRepository
   - ITokenService

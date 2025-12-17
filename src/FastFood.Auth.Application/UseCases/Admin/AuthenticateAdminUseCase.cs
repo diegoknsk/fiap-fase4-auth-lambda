@@ -1,21 +1,17 @@
 using FastFood.Auth.Application.InputModels.Admin;
 using FastFood.Auth.Application.OutputModels.Admin;
 using FastFood.Auth.Application.Ports;
+using FastFood.Auth.Application.Presenters.Admin;
 
 namespace FastFood.Auth.Application.UseCases.Admin;
 
 /// <summary>
 /// UseCase para autenticar um administrador via AWS Cognito.
 /// </summary>
-public class AuthenticateAdminUseCase
+public class AuthenticateAdminUseCase(
+    ICognitoService cognitoService,
+    AuthenticateAdminPresenter presenter)
 {
-    private readonly ICognitoService _cognitoService;
-
-    public AuthenticateAdminUseCase(ICognitoService cognitoService)
-    {
-        _cognitoService = cognitoService;
-    }
-
     /// <summary>
     /// Executa a autenticação do administrador através do Cognito.
     /// </summary>
@@ -23,15 +19,19 @@ public class AuthenticateAdminUseCase
     /// <returns>OutputModel com os tokens de autenticação</returns>
     public async Task<AuthenticateAdminOutputModel> ExecuteAsync(AuthenticateAdminInputModel inputModel)
     {
-        var result = await _cognitoService.AuthenticateAsync(inputModel.Username, inputModel.Password);
+        var result = await cognitoService.AuthenticateAsync(inputModel.Username, inputModel.Password);
 
-        return new AuthenticateAdminOutputModel
+        // Criar OutputModel
+        var outputModel = new AuthenticateAdminOutputModel
         {
             AccessToken = result.AccessToken,
             IdToken = result.IdToken,
             ExpiresIn = result.ExpiresIn,
             TokenType = result.TokenType
         };
+
+        // Chamar Presenter para transformar OutputModel em ResponseModel
+        return presenter.Present(outputModel);
     }
 }
 

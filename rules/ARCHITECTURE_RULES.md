@@ -131,13 +131,16 @@ Controller (Lambda)
 UseCase (Application)
   ↓ executa lógica de negócio
   ↓ chama Ports (repositórios, serviços)
-  ↓ retorna OutputModel
+  ↓ obtém OutputModel
+  ↓ chama Presenter.Present(OutputModel)
 Presenter (Application)
   ↓ recebe OutputModel
   ↓ transforma em ResponseModel (da API)
   ↓ retorna ResponseModel
+UseCase (Application)
+  ↓ retorna ResponseModel para o Controller
 Controller (Lambda)
-  ↓ recebe ResponseModel do Presenter
+  ↓ recebe ResponseModel do UseCase
   ↓ retorna HTTP Response
 ```
 
@@ -145,9 +148,10 @@ Controller (Lambda)
 
 1. **Controller NÃO acessa DbContext direto** - sempre via UseCase
 2. **UseCase NÃO recebe RequestModel da API** - recebe InputModel da Application
-3. **UseCase retorna OutputModel** - nunca ResponseModel da API
-4. **Presenter transforma OutputModel em ResponseModel** - adaptação quando necessário
-5. **Controller usa Presenter** - não cria ResponseModel diretamente
+3. **UseCase é responsável por chamar o Presenter** - não é responsabilidade do Controller
+4. **UseCase retorna ResponseModel** - já transformado pelo Presenter
+5. **Presenter transforma OutputModel em ResponseModel** - adaptação quando necessário
+6. **Controller apenas recebe ResponseModel e retorna HTTP** - não chama Presenter diretamente
 
 ---
 
@@ -161,14 +165,15 @@ Controllers são **adapters de transporte** (HTTP/API Gateway).
 - Validação básica de request (ModelState)
 - Mapear `RequestModel` → `InputModel`
 - Chamar `UseCase.ExecuteAsync(InputModel)`
-- Usar `Presenter.Present(OutputModel)` para obter `ResponseModel`
+- Receber `ResponseModel` do UseCase
 - Retornar HTTP Response
 
 ### Proibido nos Controllers
 
 - ❌ Regra de negócio
 - ❌ Acesso direto a banco (DbContext) ou SDKs
-- ❌ Criar ResponseModels diretamente (deve usar Presenters)
+- ❌ Chamar Presenter diretamente (responsabilidade do UseCase)
+- ❌ Criar ResponseModels diretamente (deve usar Presenters via UseCase)
 - ❌ Criar Presenters próprios (deve usar Presenters da Application)
 - ❌ Lógica de transformação complexa (deve estar no Presenter)
 
@@ -191,8 +196,10 @@ Controllers são **adapters de transporte** (HTTP/API Gateway).
 - UseCases são **pequenos e focados** (uma única responsabilidade)
 - Cada UseCase deve ter um objetivo claro e não deve orquestrar múltiplos fluxos complexos
 - UseCases recebem **InputModels** da Application (não RequestModels da API)
-- UseCases retornam **OutputModels** (não ResponseModels da API)
-- UseCases chamam **Ports** (interfaces) para acesso a dados/serviços externos
+- UseCases executam lógica de negócio e chamam **Ports** (interfaces) para acesso a dados/serviços externos
+- UseCases obtêm **OutputModels** da execução
+- **UseCases são responsáveis por chamar o Presenter** para transformar OutputModel em ResponseModel
+- UseCases retornam **ResponseModels** (já transformados pelo Presenter)
 
 ### InputModels
 
@@ -211,9 +218,10 @@ Controllers são **adapters de transporte** (HTTP/API Gateway).
 ### Presenters
 
 - Presenters são **obrigatórios** e devem estar na camada Application
+- **São chamados pelo UseCase** (não pelo Controller)
 - Responsabilidade: transformar `OutputModel` em `ResponseModel` (da API)
 - Por padrão, fazem mapeamento direto, mas podem fazer transformações quando necessário
-- API consome os OutputModels através dos Presenters
+- API consome os OutputModels através dos Presenters, mas a chamada é feita pelo UseCase
 
 ### Ports (Interfaces)
 

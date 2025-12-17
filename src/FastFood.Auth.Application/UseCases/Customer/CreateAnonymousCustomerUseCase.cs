@@ -1,5 +1,6 @@
 using FastFood.Auth.Application.OutputModels.Customer;
 using FastFood.Auth.Application.Ports;
+using FastFood.Auth.Application.Presenters.Customer;
 using FastFood.Auth.Domain.Entities.CustomerIdentification;
 using DomainCustomer = FastFood.Auth.Domain.Entities.CustomerIdentification.Customer;
 
@@ -8,19 +9,11 @@ namespace FastFood.Auth.Application.UseCases.Customer;
 /// <summary>
 /// UseCase para criar um customer anônimo e retornar um token JWT válido.
 /// </summary>
-public class CreateAnonymousCustomerUseCase
+public class CreateAnonymousCustomerUseCase(
+    ICustomerRepository customerRepository,
+    ITokenService tokenService,
+    CreateAnonymousCustomerPresenter presenter)
 {
-    private readonly ICustomerRepository _customerRepository;
-    private readonly ITokenService _tokenService;
-
-    public CreateAnonymousCustomerUseCase(
-        ICustomerRepository customerRepository,
-        ITokenService tokenService)
-    {
-        _customerRepository = customerRepository;
-        _tokenService = tokenService;
-    }
-
     /// <summary>
     /// Executa a criação de um customer anônimo e gera um token JWT.
     /// </summary>
@@ -36,18 +29,21 @@ public class CreateAnonymousCustomerUseCase
         );
 
         // Salvar no repositório
-        var savedCustomer = await _customerRepository.AddAsync(customer);
+        var savedCustomer = await customerRepository.AddAsync(customer);
 
         // Gerar token JWT
-        var token = _tokenService.GenerateToken(savedCustomer.Id, out var expiresAt);
+        var token = tokenService.GenerateToken(savedCustomer.Id, out var expiresAt);
 
-        // Retornar resposta
-        return new CreateAnonymousCustomerOutputModel
+        // Criar OutputModel
+        var outputModel = new CreateAnonymousCustomerOutputModel
         {
             Token = token,
             CustomerId = savedCustomer.Id,
             ExpiresAt = expiresAt
         };
+
+        // Chamar Presenter para transformar OutputModel em ResponseModel
+        return presenter.Present(outputModel);
     }
 }
 

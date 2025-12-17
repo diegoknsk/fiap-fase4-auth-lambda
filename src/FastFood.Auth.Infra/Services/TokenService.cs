@@ -10,18 +10,11 @@ namespace FastFood.Auth.Infra.Services;
 /// <summary>
 /// Implementação do serviço de geração de tokens JWT.
 /// </summary>
-public class TokenService : ITokenService
+public class TokenService(IConfiguration configuration) : ITokenService
 {
-    private readonly IConfiguration _configuration;
-
-    public TokenService(IConfiguration configuration)
-    {
-        _configuration = configuration;
-    }
-
     public string GenerateToken(Guid customerId, out DateTime expiresAt)
     {
-        var jwtSettings = _configuration.GetSection("JwtSettings");
+        var jwtSettings = configuration.GetSection("JwtSettings");
         var secret = jwtSettings["Secret"] ?? throw new InvalidOperationException("JWT Secret não configurado");
         var issuer = jwtSettings["Issuer"] ?? throw new InvalidOperationException("JWT Issuer não configurado");
         var audience = jwtSettings["Audience"] ?? throw new InvalidOperationException("JWT Audience não configurado");
