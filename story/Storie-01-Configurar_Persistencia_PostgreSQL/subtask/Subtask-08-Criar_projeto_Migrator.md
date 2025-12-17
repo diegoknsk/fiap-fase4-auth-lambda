@@ -48,3 +48,4 @@ Criar um projeto console application separado (FastFood.Auth.Migrator) responsá
 
 
 
+

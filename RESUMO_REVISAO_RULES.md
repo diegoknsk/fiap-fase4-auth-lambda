@@ -142,3 +142,4 @@ FastFood.Auth.Application/
 - Todos os testes devem continuar passando após cada subtask
 
 
+

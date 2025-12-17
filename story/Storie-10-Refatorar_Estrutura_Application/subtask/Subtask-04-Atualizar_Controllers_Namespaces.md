@@ -42,3 +42,4 @@ Atualizar todos os Controllers (CustomerController, AdminController) para usar o
 - Endpoints respondem corretamente (teste manual via Swagger)
 
 
+
