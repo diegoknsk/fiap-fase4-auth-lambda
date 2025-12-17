@@ -1,5 +1,5 @@
 using Moq;
-using FastFood.Auth.Application.Commands.Admin;
+using FastFood.Auth.Application.InputModels.Admin;
 using FastFood.Auth.Application.Ports;
 using FastFood.Auth.Application.UseCases.Admin;
 
@@ -25,7 +25,7 @@ public class AuthenticateAdminUseCaseTests
         // Arrange
         var username = "admin@example.com";
         var password = "SecurePassword123!";
-        var command = new AuthenticateAdminCommand
+        var inputModel = new AuthenticateAdminInputModel
         {
             Username = username,
             Password = password
@@ -44,7 +44,7 @@ public class AuthenticateAdminUseCaseTests
             .ReturnsAsync(expectedResult);
 
         // Act
-        var result = await _useCase.ExecuteAsync(command);
+        var result = await _useCase.ExecuteAsync(inputModel);
 
         // Assert
         Assert.NotNull(result);
@@ -62,7 +62,7 @@ public class AuthenticateAdminUseCaseTests
         // Arrange
         var username = "admin@example.com";
         var password = "WrongPassword";
-        var command = new AuthenticateAdminCommand
+        var inputModel = new AuthenticateAdminInputModel
         {
             Username = username,
             Password = password
@@ -73,7 +73,7 @@ public class AuthenticateAdminUseCaseTests
             .ThrowsAsync(new UnauthorizedAccessException("Credenciais inválidas"));
 
         // Act & Assert
-        await Assert.ThrowsAsync<UnauthorizedAccessException>(() => _useCase.ExecuteAsync(command));
+        await Assert.ThrowsAsync<UnauthorizedAccessException>(() => _useCase.ExecuteAsync(inputModel));
 
         _cognitoServiceMock.Verify(x => x.AuthenticateAsync(username, password), Times.Once);
     }
@@ -84,7 +84,7 @@ public class AuthenticateAdminUseCaseTests
         // Arrange
         var username = "admin@example.com";
         var password = "SecurePassword123!";
-        var command = new AuthenticateAdminCommand
+        var inputModel = new AuthenticateAdminInputModel
         {
             Username = username,
             Password = password
@@ -103,7 +103,7 @@ public class AuthenticateAdminUseCaseTests
             .ReturnsAsync(expectedResult);
 
         // Act
-        await _useCase.ExecuteAsync(command);
+        await _useCase.ExecuteAsync(inputModel);
 
         // Assert
         _cognitoServiceMock.Verify(x => x.AuthenticateAsync(username, password), Times.Once);
@@ -115,7 +115,7 @@ public class AuthenticateAdminUseCaseTests
         // Arrange
         var username = "admin@example.com";
         var password = "SecurePassword123!";
-        var command = new AuthenticateAdminCommand
+        var inputModel = new AuthenticateAdminInputModel
         {
             Username = username,
             Password = password
@@ -134,7 +134,7 @@ public class AuthenticateAdminUseCaseTests
             .ReturnsAsync(expectedResult);
 
         // Act
-        var result = await _useCase.ExecuteAsync(command);
+        var result = await _useCase.ExecuteAsync(inputModel);
 
         // Assert
         Assert.NotNull(result);
@@ -148,7 +148,7 @@ public class AuthenticateAdminUseCaseTests
         // Arrange
         var username = "admin@example.com";
         var password = "SecurePassword123!";
-        var command = new AuthenticateAdminCommand
+        var inputModel = new AuthenticateAdminInputModel
         {
             Username = username,
             Password = password
@@ -167,7 +167,7 @@ public class AuthenticateAdminUseCaseTests
             .ReturnsAsync(expectedResult);
 
         // Act
-        await _useCase.ExecuteAsync(command);
+        await _useCase.ExecuteAsync(inputModel);
 
         // Assert
         _cognitoServiceMock.Verify(

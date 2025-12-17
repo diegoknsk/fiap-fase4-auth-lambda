@@ -46,3 +46,4 @@ Verificar que UseCases já estão organizados por contexto e atualizar todas as 
 - Instanciação de objetos atualizada
 - Projeto compila sem erros
 
+

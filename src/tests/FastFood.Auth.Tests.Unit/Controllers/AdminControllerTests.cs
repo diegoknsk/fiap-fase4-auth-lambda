@@ -1,7 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
 using Moq;
 using FastFood.Auth.Application.UseCases.Admin;
-using FastFood.Auth.Application.Responses.Admin;
+using FastFood.Auth.Application.OutputModels.Admin;
 using FastFood.Auth.Application.Ports;
 using FastFood.Auth.Application.Presenters.Admin;
 using FastFood.Auth.Lambda.Controllers;
@@ -54,7 +54,7 @@ public class AdminControllerTests
 
         // Assert
         var okResult = Assert.IsType<OkObjectResult>(result);
-        var response = Assert.IsType<Application.Responses.Admin.AuthenticateAdminResponse>(okResult.Value);
+        var response = Assert.IsType<AuthenticateAdminOutputModel>(okResult.Value);
         Assert.Equal(expectedResult.AccessToken, response.AccessToken);
         Assert.Equal(expectedResult.IdToken, response.IdToken);
         Assert.Equal(expectedResult.ExpiresIn, response.ExpiresIn);

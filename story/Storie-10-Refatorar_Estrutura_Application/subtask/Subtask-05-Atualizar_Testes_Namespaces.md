@@ -40,3 +40,4 @@ Atualizar todos os testes unitários para usar os novos namespaces de InputModel
 - Cobertura de código mantida (>= 80%)
 - Nenhuma referência antiga a Commands ou Responses encontrada
 
+

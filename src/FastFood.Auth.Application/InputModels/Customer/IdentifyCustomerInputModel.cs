@@ -1,16 +1,14 @@
-namespace FastFood.Auth.Application.Commands.Customer;
+namespace FastFood.Auth.Application.InputModels.Customer;
 
 /// <summary>
-/// Command para identificar um customer através do CPF.
+/// InputModel para identificar um customer através do CPF.
 /// </summary>
-public class IdentifyCustomerCommand
+public class IdentifyCustomerInputModel
 {
     /// <summary>
     /// CPF do customer a ser identificado
     /// </summary>
     public string Cpf { get; set; } = string.Empty;
 }
-
-
 
 

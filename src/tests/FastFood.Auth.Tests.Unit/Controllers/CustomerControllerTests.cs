@@ -1,7 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
 using Moq;
 using FastFood.Auth.Application.UseCases.Customer;
-using FastFood.Auth.Application.Responses.Customer;
+using FastFood.Auth.Application.OutputModels.Customer;
 using FastFood.Auth.Application.Ports;
 using FastFood.Auth.Application.Presenters.Customer;
 using FastFood.Auth.Lambda.Controllers;
@@ -74,7 +74,7 @@ public class CustomerControllerTests
 
         // Assert
         var okResult = Assert.IsType<OkObjectResult>(result);
-        var response = Assert.IsType<Application.Responses.Customer.CreateAnonymousCustomerResponse>(okResult.Value);
+        var response = Assert.IsType<CreateAnonymousCustomerOutputModel>(okResult.Value);
         Assert.Equal(expectedToken, response.Token);
         Assert.NotEqual(Guid.Empty, response.CustomerId);
         Assert.Equal(expectedExpiresAt, response.ExpiresAt);
@@ -131,7 +131,7 @@ public class CustomerControllerTests
 
         // Assert
         var okResult = Assert.IsType<OkObjectResult>(result);
-        var response = Assert.IsType<Application.Responses.Customer.RegisterCustomerResponse>(okResult.Value);
+        var response = Assert.IsType<RegisterCustomerOutputModel>(okResult.Value);
         Assert.Equal(expectedToken, response.Token);
         Assert.NotEqual(Guid.Empty, response.CustomerId);
         Assert.Equal(expectedExpiresAt, response.ExpiresAt);
@@ -198,7 +198,7 @@ public class CustomerControllerTests
 
         // Assert
         var okResult = Assert.IsType<OkObjectResult>(result);
-        var response = Assert.IsType<Application.Responses.Customer.IdentifyCustomerResponse>(okResult.Value);
+        var response = Assert.IsType<IdentifyCustomerOutputModel>(okResult.Value);
         Assert.Equal(expectedToken, response.Token);
         Assert.Equal(customerId, response.CustomerId);
         Assert.Equal(expectedExpiresAt, response.ExpiresAt);

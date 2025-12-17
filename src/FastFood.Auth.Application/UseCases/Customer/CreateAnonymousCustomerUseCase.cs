@@ -1,5 +1,5 @@
+using FastFood.Auth.Application.OutputModels.Customer;
 using FastFood.Auth.Application.Ports;
-using FastFood.Auth.Application.Responses.Customer;
 using FastFood.Auth.Domain.Entities.CustomerIdentification;
 using DomainCustomer = FastFood.Auth.Domain.Entities.CustomerIdentification.Customer;
 
@@ -24,7 +24,7 @@ public class CreateAnonymousCustomerUseCase
     /// <summary>
     /// Executa a criação de um customer anônimo e gera um token JWT.
     /// </summary>
-    public async Task<CreateAnonymousCustomerResponse> ExecuteAsync()
+    public async Task<CreateAnonymousCustomerOutputModel> ExecuteAsync()
     {
         // Criar customer anônimo
         var customer = new DomainCustomer(
@@ -42,7 +42,7 @@ public class CreateAnonymousCustomerUseCase
         var token = _tokenService.GenerateToken(savedCustomer.Id, out var expiresAt);
 
         // Retornar resposta
-        return new CreateAnonymousCustomerResponse
+        return new CreateAnonymousCustomerOutputModel
         {
             Token = token,
             CustomerId = savedCustomer.Id,

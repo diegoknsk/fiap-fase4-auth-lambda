@@ -1,5 +1,5 @@
 using Moq;
-using FastFood.Auth.Application.Commands.Customer;
+using FastFood.Auth.Application.InputModels.Customer;
 using FastFood.Auth.Application.Ports;
 using FastFood.Auth.Application.UseCases.Customer;
 using FastFood.Auth.Domain.Entities.CustomerIdentification;
@@ -40,7 +40,7 @@ public class RegisterCustomerUseCaseTests
             new Cpf(cpf),
             CustomerTypeEnum.Registered);
 
-        var command = new RegisterCustomerCommand { Cpf = cpf };
+        var inputModel = new RegisterCustomerInputModel { Cpf = cpf };
         var expectedToken = "existing-token";
         var expectedExpiresAt = DateTime.UtcNow.AddHours(1);
 
@@ -54,7 +54,7 @@ public class RegisterCustomerUseCaseTests
             .Returns(expectedToken);
 
         // Act
-        var result = await _useCase.ExecuteAsync(command);
+        var result = await _useCase.ExecuteAsync(inputModel);
 
         // Assert
         Assert.NotNull(result);
@@ -73,7 +73,7 @@ public class RegisterCustomerUseCaseTests
         // Arrange
         var cpf = "11144477735"; // CPF válido para testes
         var newCustomerId = Guid.NewGuid();
-        var command = new RegisterCustomerCommand { Cpf = cpf };
+        var inputModel = new RegisterCustomerInputModel { Cpf = cpf };
         var expectedToken = "new-token";
         var expectedExpiresAt = DateTime.UtcNow.AddHours(1);
 
@@ -93,7 +93,7 @@ public class RegisterCustomerUseCaseTests
             .Returns(expectedToken);
 
         // Act
-        var result = await _useCase.ExecuteAsync(command);
+        var result = await _useCase.ExecuteAsync(inputModel);
 
         // Assert
         Assert.NotNull(result);
@@ -118,11 +118,11 @@ public class RegisterCustomerUseCaseTests
     {
         // Arrange
         var invalidCpf = "12345678901"; // CPF inválido
-        var command = new RegisterCustomerCommand { Cpf = invalidCpf };
+        var inputModel = new RegisterCustomerInputModel { Cpf = invalidCpf };
 
         // Act & Assert
         await Assert.ThrowsAsync<DomainException>(async () =>
-            await _useCase.ExecuteAsync(command));
+            await _useCase.ExecuteAsync(inputModel));
 
         _customerRepositoryMock.Verify(x => x.GetByCpfAsync(It.IsAny<string>()), Times.Never);
         _customerRepositoryMock.Verify(x => x.AddAsync(It.IsAny<DomainCustomer>()), Times.Never);
@@ -133,7 +133,7 @@ public class RegisterCustomerUseCaseTests
     {
         // Arrange
         var cpf = "11144477735";
-        var command = new RegisterCustomerCommand { Cpf = cpf };
+        var inputModel = new RegisterCustomerInputModel { Cpf = cpf };
         var expectedToken = "new-token";
         var expectedExpiresAt = DateTime.UtcNow.AddHours(1);
 
@@ -151,8 +151,8 @@ public class RegisterCustomerUseCaseTests
             .Returns(expectedToken);
 
         // Act
-        var result1 = await _useCase.ExecuteAsync(command);
-        var result2 = await _useCase.ExecuteAsync(command);
+        var result1 = await _useCase.ExecuteAsync(inputModel);
+        var result2 = await _useCase.ExecuteAsync(inputModel);
 
         // Assert
         // Verificar que cada chamada cria um novo customer

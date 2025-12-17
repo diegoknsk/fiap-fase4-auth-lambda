@@ -1,5 +1,5 @@
 using Moq;
-using FastFood.Auth.Application.Commands.Customer;
+using FastFood.Auth.Application.InputModels.Customer;
 using FastFood.Auth.Application.Ports;
 using FastFood.Auth.Application.UseCases.Customer;
 using FastFood.Auth.Domain.Entities.CustomerIdentification;
@@ -40,7 +40,7 @@ public class IdentifyCustomerUseCaseTests
             new Cpf(cpf),
             CustomerTypeEnum.Registered);
 
-        var command = new IdentifyCustomerCommand { Cpf = cpf };
+        var inputModel = new IdentifyCustomerInputModel { Cpf = cpf };
         var expectedToken = "test-token";
         var expectedExpiresAt = DateTime.UtcNow.AddHours(1);
 
@@ -54,7 +54,7 @@ public class IdentifyCustomerUseCaseTests
             .Returns(expectedToken);
 
         // Act
-        var result = await _useCase.ExecuteAsync(command);
+        var result = await _useCase.ExecuteAsync(inputModel);
 
         // Assert
         Assert.NotNull(result);
@@ -71,7 +71,7 @@ public class IdentifyCustomerUseCaseTests
     {
         // Arrange
         var cpf = "11144477735"; // CPF válido para testes
-        var command = new IdentifyCustomerCommand { Cpf = cpf };
+        var inputModel = new IdentifyCustomerInputModel { Cpf = cpf };
 
         _customerRepositoryMock
             .Setup(x => x.GetByCpfAsync(cpf))
@@ -79,7 +79,7 @@ public class IdentifyCustomerUseCaseTests
 
         // Act & Assert
         await Assert.ThrowsAsync<UnauthorizedAccessException>(async () =>
-            await _useCase.ExecuteAsync(command));
+            await _useCase.ExecuteAsync(inputModel));
 
         _customerRepositoryMock.Verify(x => x.GetByCpfAsync(cpf), Times.Once);
         _tokenServiceMock.Verify(x => x.GenerateToken(It.IsAny<Guid>(), out It.Ref<DateTime>.IsAny), Times.Never);
@@ -90,11 +90,11 @@ public class IdentifyCustomerUseCaseTests
     {
         // Arrange
         var invalidCpf = "12345678901"; // CPF inválido
-        var command = new IdentifyCustomerCommand { Cpf = invalidCpf };
+        var inputModel = new IdentifyCustomerInputModel { Cpf = invalidCpf };
 
         // Act & Assert
         await Assert.ThrowsAsync<DomainException>(async () =>
-            await _useCase.ExecuteAsync(command));
+            await _useCase.ExecuteAsync(inputModel));
 
         _customerRepositoryMock.Verify(x => x.GetByCpfAsync(It.IsAny<string>()), Times.Never);
         _tokenServiceMock.Verify(x => x.GenerateToken(It.IsAny<Guid>(), out It.Ref<DateTime>.IsAny), Times.Never);
@@ -113,7 +113,7 @@ public class IdentifyCustomerUseCaseTests
             new Cpf(cpf),
             CustomerTypeEnum.Registered);
 
-        var command = new IdentifyCustomerCommand { Cpf = cpf };
+        var inputModel = new IdentifyCustomerInputModel { Cpf = cpf };
         var expectedToken = "test-token";
         var expectedExpiresAt = DateTime.UtcNow.AddHours(1);
 
@@ -127,7 +127,7 @@ public class IdentifyCustomerUseCaseTests
             .Returns(expectedToken);
 
         // Act
-        await _useCase.ExecuteAsync(command);
+        await _useCase.ExecuteAsync(inputModel);
 
         // Assert
         _customerRepositoryMock.Verify(x => x.GetByCpfAsync(cpf), Times.Once);
@@ -146,7 +146,7 @@ public class IdentifyCustomerUseCaseTests
             new Cpf(cpf),
             CustomerTypeEnum.Registered);
 
-        var command = new IdentifyCustomerCommand { Cpf = cpf };
+        var inputModel = new IdentifyCustomerInputModel { Cpf = cpf };
         var expectedToken = "test-token";
         var expectedExpiresAt = DateTime.UtcNow.AddHours(1);
 
@@ -160,7 +160,7 @@ public class IdentifyCustomerUseCaseTests
             .Returns(expectedToken);
 
         // Act
-        await _useCase.ExecuteAsync(command);
+        await _useCase.ExecuteAsync(inputModel);
 
         // Assert
         _tokenServiceMock.Verify(x => x.GenerateToken(customerId, out It.Ref<DateTime>.IsAny), Times.Once);

@@ -1,9 +1,9 @@
-namespace FastFood.Auth.Application.Responses.Customer;
+namespace FastFood.Auth.Application.OutputModels.Customer;
 
 /// <summary>
-/// Resposta do UseCase IdentifyCustomerUseCase contendo o token JWT e informações do customer identificado.
+/// OutputModel do UseCase CreateAnonymousCustomerUseCase contendo o token JWT e informações do customer criado.
 /// </summary>
-public class IdentifyCustomerResponse
+public class CreateAnonymousCustomerOutputModel
 {
     /// <summary>
     /// Token JWT gerado para autenticação
@@ -11,7 +11,7 @@ public class IdentifyCustomerResponse
     public string Token { get; set; } = string.Empty;
 
     /// <summary>
-    /// Id do customer identificado
+    /// Id do customer anônimo criado
     /// </summary>
     public Guid CustomerId { get; set; }
 
@@ -20,7 +20,5 @@ public class IdentifyCustomerResponse
     /// </summary>
     public DateTime ExpiresAt { get; set; }
 }
-
-
 
 

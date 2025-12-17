@@ -1,6 +1,6 @@
-using FastFood.Auth.Application.Commands.Admin;
+using FastFood.Auth.Application.InputModels.Admin;
+using FastFood.Auth.Application.OutputModels.Admin;
 using FastFood.Auth.Application.Ports;
-using FastFood.Auth.Application.Responses.Admin;
 
 namespace FastFood.Auth.Application.UseCases.Admin;
 
@@ -19,13 +19,13 @@ public class AuthenticateAdminUseCase
     /// <summary>
     /// Executa a autenticação do administrador através do Cognito.
     /// </summary>
-    /// <param name="command">Command contendo username e password</param>
-    /// <returns>Resposta com os tokens de autenticação</returns>
-    public async Task<AuthenticateAdminResponse> ExecuteAsync(AuthenticateAdminCommand command)
+    /// <param name="inputModel">InputModel contendo username e password</param>
+    /// <returns>OutputModel com os tokens de autenticação</returns>
+    public async Task<AuthenticateAdminOutputModel> ExecuteAsync(AuthenticateAdminInputModel inputModel)
     {
-        var result = await _cognitoService.AuthenticateAsync(command.Username, command.Password);
+        var result = await _cognitoService.AuthenticateAsync(inputModel.Username, inputModel.Password);
 
-        return new AuthenticateAdminResponse
+        return new AuthenticateAdminOutputModel
         {
             AccessToken = result.AccessToken,
             IdToken = result.IdToken,

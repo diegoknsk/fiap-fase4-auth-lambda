@@ -57,6 +57,10 @@ Storie-XX-Descricao/
 ```markdown
 # Storie-XX: Título da História
 
+## Status
+- **Estado:** 🔄 Em desenvolvimento | ✅ Concluída | ⏸️ Pausada
+- **Data de Conclusão:** [DD/MM/AAAA] (preencher quando concluída)
+
 ## Descrição
 Como [papel], quero [ação], para [benefício].
 
@@ -83,35 +87,43 @@ Como [papel], quero [ação], para [benefício].
 
 ### Regras de Escrita do story.md
 
-1. **Título:**
+1. **Status:**
+   - Campo obrigatório que indica o estado atual da história
+   - Estados possíveis: 🔄 Em desenvolvimento | ✅ Concluída | ⏸️ Pausada
+   - Quando uma história for concluída, deve-se:
+     - Alterar o estado para "✅ Concluída"
+     - Preencher a data de conclusão no formato DD/MM/AAAA
+   - Este campo deve ser atualizado sempre que o status da história mudar
+
+2. **Título:**
    - Formato: `# Storie-XX: Título da História`
    - Título deve ser claro e descritivo
    - Máximo 10 palavras
 
-2. **Descrição:**
+3. **Descrição:**
    - Usar formato "Como... quero... para..."
    - Ser específico sobre o papel (ex: "engenheiro de plataforma")
    - Ação deve ser clara e objetiva
    - Benefício deve ser mensurável ou observável
 
-3. **Objetivo:**
+4. **Objetivo:**
    - Uma única frase ou parágrafo curto
    - Deve explicar O QUE será entregue, não COMO
    - Focar no resultado final
 
-4. **Escopo Técnico:**
+5. **Escopo Técnico:**
    - Listar tecnologias específicas (ex: "Terraform, AWS EKS")
    - Listar arquivos/caminhos que serão criados/modificados
    - Listar recursos AWS que serão provisionados
    - Ser específico, não genérico
 
-5. **Subtasks:**
+6. **Subtasks:**
    - Mínimo 3 subtasks, máximo 8 subtasks
    - Cada subtask deve ser uma ação específica e testável
    - Ordem deve fazer sentido lógico (dependências)
    - Links devem usar caminho relativo: `./subtask/Subtask-XX-Nome.md`
 
-6. **Critérios de Aceite:**
+7. **Critérios de Aceite:**
    - Mínimo 5 critérios, ideal 7-10
    - Cada critério deve ser:
      - Específico (não genérico)
@@ -259,6 +271,7 @@ Antes de considerar uma história completa, verificar:
 - [ ] Todas as subtasks criadas na pasta `subtask/`
 
 ### Conteúdo do story.md
+- [ ] Status preenchido (Estado e Data de Conclusão quando aplicável)
 - [ ] Título no formato correto
 - [ ] Descrição no formato "Como... quero... para..."
 - [ ] Objetivo claro e objetivo
@@ -300,6 +313,10 @@ stories/
 ### Exemplo de story.md
 ```markdown
 # Storie-19: Criar Manifests Kubernetes para OrderHub
+
+## Status
+- **Estado:** ✅ Concluída
+- **Data de Conclusão:** 15/12/2024
 
 ## Descrição
 Como engenheiro de plataforma, quero criar manifests Kubernetes (Deployment, Service, HPA) para o microsserviço OrderHub, para que ele possa ser implantado no cluster EKS com escalabilidade horizontal independente.

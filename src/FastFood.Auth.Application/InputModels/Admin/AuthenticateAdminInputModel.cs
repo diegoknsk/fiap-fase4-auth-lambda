@@ -1,9 +1,9 @@
-namespace FastFood.Auth.Application.Commands.Admin;
+namespace FastFood.Auth.Application.InputModels.Admin;
 
 /// <summary>
-/// Command para autenticar um administrador via AWS Cognito.
+/// InputModel para autenticar um administrador via AWS Cognito.
 /// </summary>
-public class AuthenticateAdminCommand
+public class AuthenticateAdminInputModel
 {
     /// <summary>
     /// Username do administrador
@@ -15,7 +15,5 @@ public class AuthenticateAdminCommand
     /// </summary>
     public string Password { get; set; } = string.Empty;
 }
-
-
 
 

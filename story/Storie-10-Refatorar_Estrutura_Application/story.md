@@ -1,5 +1,9 @@
 # Storie-10: Refatorar Estrutura da Camada Application para Padrão Horizontal por Contexto
 
+## Status
+- **Estado:** ✅ Concluída
+- **Data de Conclusão:** 20/12/2024
+
 ## Descrição
 Como arquiteto de software, quero refatorar a estrutura da camada Application para seguir o padrão horizontal por contexto (organização por Customer/Admin dentro de cada pasta), para garantir consistência com a arquitetura alvo e facilitar manutenção e evolução do código.
 
@@ -40,16 +44,16 @@ Reorganizar a estrutura da camada `FastFood.Auth.Application` de organização v
 
 ## Critérios de Aceite da História
 
-- [ ] Todos os Commands foram renomeados para InputModels e organizados por contexto (Customer/, Admin/)
-- [ ] Todos os Responses foram renomeados para OutputModels e organizados por contexto (Customer/, Admin/)
-- [ ] UseCases estão organizados por contexto dentro de UseCases/
-- [ ] Presenters estão organizados por contexto dentro de Presenters/
-- [ ] Estrutura final segue o padrão horizontal por contexto conforme arquitetura alvo
-- [ ] Todos os Controllers foram atualizados para usar novos namespaces (InputModels, OutputModels)
-- [ ] Todos os testes unitários foram atualizados para usar novos namespaces
-- [ ] Projeto compila sem erros (`dotnet build`)
-- [ ] Todos os testes passam (`dotnet test`)
-- [ ] Swagger continua funcionando corretamente
-- [ ] Nenhuma regra de negócio foi alterada (apenas reorganização estrutural)
-- [ ] Namespaces seguem o padrão: `FastFood.Auth.Application.InputModels.Customer`, `FastFood.Auth.Application.OutputModels.Admin`, etc.
+- [x] Todos os Commands foram renomeados para InputModels e organizados por contexto (Customer/, Admin/)
+- [x] Todos os Responses foram renomeados para OutputModels e organizados por contexto (Customer/, Admin/)
+- [x] UseCases estão organizados por contexto dentro de UseCases/
+- [x] Presenters estão organizados por contexto dentro de Presenters/
+- [x] Estrutura final segue o padrão horizontal por contexto conforme arquitetura alvo
+- [x] Todos os Controllers foram atualizados para usar novos namespaces (InputModels, OutputModels)
+- [x] Todos os testes unitários foram atualizados para usar novos namespaces
+- [x] Projeto compila sem erros (`dotnet build`)
+- [x] Todos os testes passam (`dotnet test`)
+- [x] Swagger continua funcionando corretamente
+- [x] Nenhuma regra de negócio foi alterada (apenas reorganização estrutural)
+- [x] Namespaces seguem o padrão: `FastFood.Auth.Application.InputModels.Customer`, `FastFood.Auth.Application.OutputModels.Admin`, etc.
 

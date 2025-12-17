@@ -1,22 +1,22 @@
-using FastFood.Auth.Application.Responses.Customer;
+using FastFood.Auth.Application.OutputModels.Customer;
 
 namespace FastFood.Auth.Application.Presenters.Customer;
 
 /// <summary>
 /// Presenter para adaptar a resposta do UseCase IdentifyCustomerUseCase.
-/// Por enquanto apenas retorna o response, mas preparado para transformações futuras se necessário.
+/// Por enquanto apenas retorna o outputModel, mas preparado para transformações futuras se necessário.
 /// </summary>
 public class IdentifyCustomerPresenter
 {
     /// <summary>
     /// Adapta a resposta do UseCase.
     /// </summary>
-    /// <param name="response">Resposta do UseCase da camada Application</param>
-    /// <returns>Response adaptado</returns>
-    public IdentifyCustomerResponse Present(IdentifyCustomerResponse response)
+    /// <param name="outputModel">OutputModel do UseCase da camada Application</param>
+    /// <returns>OutputModel adaptado</returns>
+    public IdentifyCustomerOutputModel Present(IdentifyCustomerOutputModel outputModel)
     {
-        // Por enquanto apenas retorna o response, mas preparado para transformações futuras
-        return response;
+        // Por enquanto apenas retorna o outputModel, mas preparado para transformações futuras
+        return outputModel;
     }
 }
 

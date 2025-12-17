@@ -1,6 +1,6 @@
-using FastFood.Auth.Application.Commands.Customer;
+using FastFood.Auth.Application.InputModels.Customer;
+using FastFood.Auth.Application.OutputModels.Customer;
 using FastFood.Auth.Application.Ports;
-using FastFood.Auth.Application.Responses.Customer;
 using FastFood.Auth.Domain.Entities.CustomerIdentification;
 using FastFood.Auth.Domain.Entities.CustomerIdentification.ValueObects;
 using DomainCustomer = FastFood.Auth.Domain.Entities.CustomerIdentification.Customer;
@@ -28,10 +28,10 @@ public class RegisterCustomerUseCase
     /// <summary>
     /// Executa o registro de um customer através do CPF e gera um token JWT.
     /// </summary>
-    public async Task<RegisterCustomerResponse> ExecuteAsync(RegisterCustomerCommand command)
+    public async Task<RegisterCustomerOutputModel> ExecuteAsync(RegisterCustomerInputModel inputModel)
     {
         // Validar CPF usando Value Object
-        var cpfValueObject = new Cpf(command.Cpf);
+        var cpfValueObject = new Cpf(inputModel.Cpf);
         
         // Buscar customer existente pelo CPF
         var existingCustomer = await _customerRepository.GetByCpfAsync(cpfValueObject.Value!);
@@ -62,7 +62,7 @@ public class RegisterCustomerUseCase
         var token = _tokenService.GenerateToken(customer.Id, out var expiresAt);
 
         // Retornar resposta
-        return new RegisterCustomerResponse
+        return new RegisterCustomerOutputModel
         {
             Token = token,
             CustomerId = customer.Id,

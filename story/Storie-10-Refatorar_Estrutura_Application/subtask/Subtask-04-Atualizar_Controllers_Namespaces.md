@@ -41,3 +41,4 @@ Atualizar todos os Controllers (CustomerController, AdminController) para usar o
 - Swagger funciona corretamente
 - Endpoints respondem corretamente (teste manual via Swagger)
 
+

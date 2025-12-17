@@ -1,7 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
 using FastFood.Auth.Application.UseCases.Admin;
-using FastFood.Auth.Application.Commands.Admin;
-using FastFood.Auth.Application.Responses.Admin;
+using FastFood.Auth.Application.InputModels.Admin;
+using FastFood.Auth.Application.OutputModels.Admin;
 using FastFood.Auth.Application.Presenters.Admin;
 using FastFood.Auth.Lambda.Models.Admin;
 
@@ -34,20 +34,20 @@ public class AdminController : ControllerBase
     /// <response code="401">Credenciais inválidas</response>
     /// <response code="500">Erro interno do servidor</response>
     [HttpPost("login")]
-    [ProducesResponseType(typeof(Application.Responses.Admin.AuthenticateAdminResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(AuthenticateAdminOutputModel), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     [ProducesResponseType(StatusCodes.Status500InternalServerError)]
     public async Task<IActionResult> Login([FromBody] AdminLoginRequest request)
     {
         try
         {
-            var command = new AuthenticateAdminCommand
+            var inputModel = new AuthenticateAdminInputModel
             {
                 Username = request.Username,
                 Password = request.Password
             };
 
-            var result = await _authenticateUseCase.ExecuteAsync(command);
+            var result = await _authenticateUseCase.ExecuteAsync(inputModel);
             var response = _authenticatePresenter.Present(result);
             return Ok(response);
         }

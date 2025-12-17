@@ -1,9 +1,9 @@
-namespace FastFood.Auth.Application.Responses.Admin;
+namespace FastFood.Auth.Application.OutputModels.Admin;
 
 /// <summary>
-/// Resposta do UseCase AuthenticateAdminUseCase contendo os tokens de autenticação.
+/// OutputModel do UseCase AuthenticateAdminUseCase contendo os tokens de autenticação.
 /// </summary>
-public class AuthenticateAdminResponse
+public class AuthenticateAdminOutputModel
 {
     /// <summary>
     /// Access Token retornado pelo Cognito
@@ -25,7 +25,5 @@ public class AuthenticateAdminResponse
     /// </summary>
     public string TokenType { get; set; } = "Bearer";
 }
-
-
 
 

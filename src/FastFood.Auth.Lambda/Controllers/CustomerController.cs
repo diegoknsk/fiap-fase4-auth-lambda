@@ -1,7 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
 using FastFood.Auth.Application.UseCases.Customer;
-using FastFood.Auth.Application.Commands.Customer;
-using FastFood.Auth.Application.Responses.Customer;
+using FastFood.Auth.Application.InputModels.Customer;
+using FastFood.Auth.Application.OutputModels.Customer;
 using FastFood.Auth.Application.Presenters.Customer;
 using FastFood.Auth.Lambda.Models.Customer;
 
@@ -44,7 +44,7 @@ public class CustomerController : ControllerBase
     /// <response code="200">Customer anônimo criado com sucesso</response>
     /// <response code="500">Erro interno do servidor</response>
     [HttpPost("anonymous")]
-    [ProducesResponseType(typeof(Application.Responses.Customer.CreateAnonymousCustomerResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(CreateAnonymousCustomerOutputModel), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status500InternalServerError)]
     public async Task<IActionResult> CreateAnonymous()
     {
@@ -71,19 +71,19 @@ public class CustomerController : ControllerBase
     /// <response code="400">CPF inválido</response>
     /// <response code="500">Erro interno do servidor</response>
     [HttpPost("register")]
-    [ProducesResponseType(typeof(Application.Responses.Customer.RegisterCustomerResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(RegisterCustomerOutputModel), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status500InternalServerError)]
     public async Task<IActionResult> Register([FromBody] RegisterCustomerRequest request)
     {
         try
         {
-            var command = new RegisterCustomerCommand
+            var inputModel = new RegisterCustomerInputModel
             {
                 Cpf = request.Cpf
             };
 
-            var result = await _registerUseCase.ExecuteAsync(command);
+            var result = await _registerUseCase.ExecuteAsync(inputModel);
             var response = _registerPresenter.Present(result);
             return Ok(response);
         }
@@ -104,7 +104,7 @@ public class CustomerController : ControllerBase
     /// <response code="400">CPF inválido</response>
     /// <response code="500">Erro interno do servidor</response>
     [HttpPost("identify")]
-    [ProducesResponseType(typeof(Application.Responses.Customer.IdentifyCustomerResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(IdentifyCustomerOutputModel), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status500InternalServerError)]
@@ -112,12 +112,12 @@ public class CustomerController : ControllerBase
     {
         try
         {
-            var command = new IdentifyCustomerCommand
+            var inputModel = new IdentifyCustomerInputModel
             {
                 Cpf = request.Cpf
             };
 
-            var result = await _identifyUseCase.ExecuteAsync(command);
+            var result = await _identifyUseCase.ExecuteAsync(inputModel);
             var response = _identifyPresenter.Present(result);
             return Ok(response);
         }
