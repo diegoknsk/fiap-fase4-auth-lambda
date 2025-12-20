@@ -160,3 +160,94 @@ dotnet build
 dotnet test --results-directory .\TestResults /p:CollectCoverage=true /p:CoverletOutputFormat=opencover /p:CoverletOutput=.\TestResults\coverage\
 
 dotnet-sonarscanner end /d:sonar.token="$env:SONAR_TOKEN"
+
+
+-----------------------------------------------------------------
+# CONFIGURAÇÃO CORRIGIDA PARA WINDOWS (PowerShell)
+# Certifique-se de ter as variáveis de ambiente configuradas:
+# $env:SONAR_HOST_URL="http://localhost:9000"
+# $env:SONAR_TOKEN="seu_token_aqui"
+# $env:SONAR_PROJECT_KEY="fastfood-auth"
+
+1-> Iniciar análise SonarQube
+# IMPORTANTE: O Coverlet gera o arquivo dentro da pasta do projeto de teste
+# Use o caminho relativo ao projectBaseDir ou padrão recursivo
+# Adicione sonar.cs.vstest.reportsPaths para o SonarQube detectar os testes executados
+dotnet-sonarscanner begin `
+  /k:"$env:SONAR_PROJECT_KEY" `
+  /d:sonar.host.url="$env:SONAR_HOST_URL" `
+  /d:sonar.token="$env:SONAR_TOKEN" `
+  /d:sonar.projectBaseDir="C:\Projetos\Fiap\fiap-fase4-auth-lambda" `
+  /d:sonar.sources="src" `
+  /d:sonar.tests="src/tests" `
+  /d:sonar.cs.opencover.reportsPaths="src/tests/FastFood.Auth.Tests.Unit/TestResults/coverage/coverage.opencover.xml" `
+  /d:sonar.cs.vstest.reportsPaths="**/TestResults/*.trx" `
+  /d:sonar.exclusions="**/bin/**,**/obj/**,**/.vs/**,**/.sonarqube/**,**/docs/**,**/rules/**,**/story/**,**/*.md,**/*.mdc"
+
+2-> Build da solução
+dotnet build .\FastFood.Auth.sln
+
+3-> Executar testes com cobertura
+# IMPORTANTE: O Coverlet gera o arquivo dentro da pasta do projeto de teste
+# O arquivo será gerado em: src/tests/FastFood.Auth.Tests.Unit/TestResults/coverage/coverage.opencover.xml
+# O --logger "trx" gera o arquivo de resultados de testes que o SonarQube precisa para contar os testes
+dotnet test .\FastFood.Auth.sln `
+  --results-directory .\TestResults `
+  --logger "trx;LogFileName=test_results.trx" `
+  /p:CollectCoverage=true `
+  /p:CoverletOutputFormat=opencover `
+  /p:CoverletOutput=TestResults\coverage\ `
+  /p:CoverletOutputName="coverage.opencover.xml"
+
+4-> Verificar se os arquivos foram gerados
+# Verificar arquivo de cobertura (OpenCover)
+Test-Path .\src\tests\FastFood.Auth.Tests.Unit\TestResults\coverage\coverage.opencover.xml
+
+# Verificar arquivo de resultados de testes (TRX) - necessário para o SonarQube contar os testes
+Test-Path .\TestResults\test_results.trx
+
+# Se os arquivos não existirem, verificar onde foram gerados:
+Get-ChildItem -Path . -Recurse -Filter "coverage.opencover.xml" | Select-Object FullName
+Get-ChildItem -Path . -Recurse -Filter "*.trx" | Select-Object FullName
+
+# ALTERNATIVA: Se o padrão não funcionar, executar testes por projeto e fazer merge
+# dotnet test .\src\tests\FastFood.Auth.Tests.Unit\FastFood.Auth.Tests.Unit.csproj `
+#   /p:CollectCoverage=true `
+#   /p:CoverletOutputFormat=opencover `
+#   /p:CoverletOutput=.\TestResults\coverage\ `
+#   /p:CoverletOutputName="coverage.opencover.xml"
+
+5-> Finalizar análise SonarQube
+dotnet-sonarscanner end /d:sonar.token="$env:SONAR_TOKEN"
+
+# TROUBLESHOOTING:
+# Se o SonarQube não encontrar os testes OU não contar os testes:
+# 
+# IMPORTANTE: O SonarQube precisa de DOIS arquivos:
+# 1. coverage.opencover.xml - para cobertura de código
+# 2. *.trx - para contar os testes executados
+#
+# 1. Verifique se o arquivo coverage.opencover.xml foi gerado:
+#    Test-Path .\src\tests\FastFood.Auth.Tests.Unit\TestResults\coverage\coverage.opencover.xml
+# 2. Verifique se o arquivo TRX foi gerado:
+#    Test-Path .\TestResults\test_results.trx
+# 3. O caminho no Sonar deve ser relativo ao projectBaseDir:
+#    src/tests/FastFood.Auth.Tests.Unit/TestResults/coverage/coverage.opencover.xml
+# 4. O arquivo TRX é gerado no --results-directory especificado no comando dotnet test
+# 5. Se houver múltiplos projetos de teste, você pode usar padrão recursivo:
+#    /d:sonar.cs.opencover.reportsPaths="**/coverage.opencover.xml"
+#    /d:sonar.cs.vstest.reportsPaths="**/TestResults/*.trx"
+# 6. Certifique-se de que o Coverlet está instalado nos projetos de teste (coverlet.msbuild e coverlet.collector)
+# 7. O Coverlet sempre gera o arquivo relativo ao diretório do projeto de teste, não ao diretório de trabalho
+
+# ALTERNATIVA: Usar reportgenerator para fazer merge dos arquivos de cobertura
+# Após o passo 3, execute:
+# reportgenerator `
+#   -reports:"**/coverage.opencover.xml" `
+#   -targetdir:".\TestResults\coverage" `
+#   -reporttypes:"OpenCover" `
+#   -classfilters:"-*Tests*"
+# 
+# Depois, ajuste o Sonar para usar o arquivo merged:
+# /d:sonar.cs.opencover.reportsPaths=".\TestResults\coverage\coverage.opencover.xml"
+
