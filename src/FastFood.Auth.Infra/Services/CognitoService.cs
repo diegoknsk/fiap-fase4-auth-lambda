@@ -1,6 +1,7 @@
 using Amazon;
 using Amazon.CognitoIdentityProvider;
 using Amazon.CognitoIdentityProvider.Model;
+using Amazon.Runtime;
 using FastFood.Auth.Application.Ports;
 using Microsoft.Extensions.Configuration;
 
@@ -23,9 +24,45 @@ public class CognitoService : ICognitoService
             ?? Environment.GetEnvironmentVariable("COGNITO__REGION")
             ?? throw new InvalidOperationException("Cognito Region não configurado");
 
-        // Criar cliente do Cognito
         var regionEndpoint = RegionEndpoint.GetBySystemName(region);
-        _cognitoClient = new AmazonCognitoIdentityProviderClient(regionEndpoint);
+
+        // Verificar se há credenciais AWS explícitas (para desenvolvimento local)
+        var accessKeyId = _configuration["AWS:AccessKeyId"] 
+            ?? Environment.GetEnvironmentVariable("AWS_ACCESS_KEY_ID");
+        
+        var secretAccessKey = _configuration["AWS:SecretAccessKey"] 
+            ?? Environment.GetEnvironmentVariable("AWS_SECRET_ACCESS_KEY");
+
+        var sessionToken = _configuration["AWS:SessionToken"] 
+            ?? Environment.GetEnvironmentVariable("AWS_SESSION_TOKEN");
+
+        // Criar cliente do Cognito com ou sem credenciais explícitas
+        if (!string.IsNullOrEmpty(accessKeyId) && !string.IsNullOrEmpty(secretAccessKey))
+        {
+            AWSCredentials credentials;
+            
+            // Se houver SessionToken, usar credenciais temporárias (AWS Academy, STS, etc.)
+            if (!string.IsNullOrEmpty(sessionToken))
+            {
+                credentials = new SessionAWSCredentials(accessKeyId, secretAccessKey, sessionToken);
+            }
+            else
+            {
+                // Usar credenciais permanentes (BasicAWSCredentials)
+                credentials = new BasicAWSCredentials(accessKeyId, secretAccessKey);
+            }
+            
+            _cognitoClient = new AmazonCognitoIdentityProviderClient(credentials, regionEndpoint);
+        }
+        else
+        {
+            // Usar cadeia de credenciais padrão (Lambda/EC2 com IAM Role)
+            // O SDK automaticamente buscará credenciais de:
+            // 1. Variáveis de ambiente (AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, AWS_SESSION_TOKEN)
+            // 2. Perfil AWS (~/.aws/credentials)
+            // 3. IAM Role (se executando em EC2/Lambda)
+            _cognitoClient = new AmazonCognitoIdentityProviderClient(regionEndpoint);
+        }
     }
 
     public async Task<AuthenticateAdminResult> AuthenticateAsync(string username, string password)
@@ -83,6 +120,12 @@ public class CognitoService : ICognitoService
         catch (InvalidPasswordException)
         {
             throw new UnauthorizedAccessException("Senha inválida");
+        }
+        catch (AmazonCognitoIdentityProviderException ex) when (ex.Message.Contains("expired") || ex.Message.Contains("token"))
+        {
+            throw new InvalidOperationException(
+                "Erro ao autenticar no Cognito: Credenciais AWS expiradas. " +
+                "Configure AWS_ACCESS_KEY_ID e AWS_SECRET_ACCESS_KEY ou renove as credenciais temporárias.", ex);
         }
         catch (Exception ex) when (ex is not UnauthorizedAccessException)
         {
