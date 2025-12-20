@@ -2,6 +2,7 @@ using Moq;
 using FastFood.Auth.Application.InputModels.Customer;
 using FastFood.Auth.Application.Ports;
 using FastFood.Auth.Application.UseCases.Customer;
+using FastFood.Auth.Application.Presenters.Customer;
 using FastFood.Auth.Domain.Entities.CustomerIdentification;
 using FastFood.Auth.Domain.Entities.CustomerIdentification.ValueObects;
 using FastFood.Auth.Domain.Exceptions;
@@ -16,15 +17,18 @@ public class RegisterCustomerUseCaseTests
 {
     private readonly Mock<ICustomerRepository> _customerRepositoryMock;
     private readonly Mock<ITokenService> _tokenServiceMock;
+    private readonly RegisterCustomerPresenter _presenter;
     private readonly RegisterCustomerUseCase _useCase;
 
     public RegisterCustomerUseCaseTests()
     {
         _customerRepositoryMock = new Mock<ICustomerRepository>();
         _tokenServiceMock = new Mock<ITokenService>();
+        _presenter = new RegisterCustomerPresenter();
         _useCase = new RegisterCustomerUseCase(
             _customerRepositoryMock.Object,
-            _tokenServiceMock.Object);
+            _tokenServiceMock.Object,
+            _presenter);
     }
 
     [Fact]

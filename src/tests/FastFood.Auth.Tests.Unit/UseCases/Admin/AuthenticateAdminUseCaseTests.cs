@@ -2,6 +2,7 @@ using Moq;
 using FastFood.Auth.Application.InputModels.Admin;
 using FastFood.Auth.Application.Ports;
 using FastFood.Auth.Application.UseCases.Admin;
+using FastFood.Auth.Application.Presenters.Admin;
 
 namespace FastFood.Auth.Tests.Unit.UseCases.Admin;
 
@@ -11,12 +12,14 @@ namespace FastFood.Auth.Tests.Unit.UseCases.Admin;
 public class AuthenticateAdminUseCaseTests
 {
     private readonly Mock<ICognitoService> _cognitoServiceMock;
+    private readonly AuthenticateAdminPresenter _presenter;
     private readonly AuthenticateAdminUseCase _useCase;
 
     public AuthenticateAdminUseCaseTests()
     {
         _cognitoServiceMock = new Mock<ICognitoService>();
-        _useCase = new AuthenticateAdminUseCase(_cognitoServiceMock.Object);
+        _presenter = new AuthenticateAdminPresenter();
+        _useCase = new AuthenticateAdminUseCase(_cognitoServiceMock.Object, _presenter);
     }
 
     [Fact]

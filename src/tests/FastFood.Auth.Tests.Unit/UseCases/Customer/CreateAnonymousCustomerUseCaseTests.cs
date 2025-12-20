@@ -1,6 +1,7 @@
 using Moq;
 using FastFood.Auth.Application.Ports;
 using FastFood.Auth.Application.UseCases.Customer;
+using FastFood.Auth.Application.Presenters.Customer;
 using FastFood.Auth.Domain.Entities.CustomerIdentification;
 using DomainCustomer = FastFood.Auth.Domain.Entities.CustomerIdentification.Customer;
 
@@ -13,15 +14,18 @@ public class CreateAnonymousCustomerUseCaseTests
 {
     private readonly Mock<ICustomerRepository> _customerRepositoryMock;
     private readonly Mock<ITokenService> _tokenServiceMock;
+    private readonly CreateAnonymousCustomerPresenter _presenter;
     private readonly CreateAnonymousCustomerUseCase _useCase;
 
     public CreateAnonymousCustomerUseCaseTests()
     {
         _customerRepositoryMock = new Mock<ICustomerRepository>();
         _tokenServiceMock = new Mock<ITokenService>();
+        _presenter = new CreateAnonymousCustomerPresenter();
         _useCase = new CreateAnonymousCustomerUseCase(
             _customerRepositoryMock.Object,
-            _tokenServiceMock.Object);
+            _tokenServiceMock.Object,
+            _presenter);
     }
 
     [Fact]

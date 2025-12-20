@@ -31,25 +31,25 @@ public class CustomerControllerTests
     {
         _customerRepositoryMock = new Mock<ICustomerRepository>();
         _tokenServiceMock = new Mock<ITokenService>();
-        _createAnonymousUseCase = new CreateAnonymousCustomerUseCase(
-            _customerRepositoryMock.Object,
-            _tokenServiceMock.Object);
-        _registerUseCase = new RegisterCustomerUseCase(
-            _customerRepositoryMock.Object,
-            _tokenServiceMock.Object);
-        _identifyUseCase = new IdentifyCustomerUseCase(
-            _customerRepositoryMock.Object,
-            _tokenServiceMock.Object);
         _createAnonymousPresenter = new CreateAnonymousCustomerPresenter();
         _registerPresenter = new RegisterCustomerPresenter();
         _identifyPresenter = new IdentifyCustomerPresenter();
+        _createAnonymousUseCase = new CreateAnonymousCustomerUseCase(
+            _customerRepositoryMock.Object,
+            _tokenServiceMock.Object,
+            _createAnonymousPresenter);
+        _registerUseCase = new RegisterCustomerUseCase(
+            _customerRepositoryMock.Object,
+            _tokenServiceMock.Object,
+            _registerPresenter);
+        _identifyUseCase = new IdentifyCustomerUseCase(
+            _customerRepositoryMock.Object,
+            _tokenServiceMock.Object,
+            _identifyPresenter);
         _controller = new CustomerController(
             _createAnonymousUseCase,
             _registerUseCase,
-            _identifyUseCase,
-            _createAnonymousPresenter,
-            _registerPresenter,
-            _identifyPresenter);
+            _identifyUseCase);
     }
 
     [Fact]
@@ -254,6 +254,56 @@ public class CustomerControllerTests
         // Assert
         _customerRepositoryMock.Verify(x => x.GetByCpfAsync(cpf), Times.Once);
         _tokenServiceMock.Verify(x => x.GenerateToken(customerId, out It.Ref<DateTime>.IsAny), Times.Once);
+    }
+
+    [Fact]
+    public async Task PostAnonymous_WhenExceptionOccurs_ShouldReturnStatusCode500()
+    {
+        // Arrange
+        _customerRepositoryMock
+            .Setup(x => x.AddAsync(It.IsAny<DomainCustomer>()))
+            .ThrowsAsync(new Exception("Database error"));
+
+        // Act
+        var result = await _controller.CreateAnonymous();
+
+        // Assert
+        var statusCodeResult = Assert.IsType<ObjectResult>(result);
+        Assert.Equal(500, statusCodeResult.StatusCode);
+    }
+
+    [Fact]
+    public async Task PostRegister_WhenExceptionOccurs_ShouldReturnStatusCode500()
+    {
+        // Arrange
+        var inputModel = new RegisterCustomerInputModel { Cpf = "11144477735" };
+        _customerRepositoryMock
+            .Setup(x => x.GetByCpfAsync(It.IsAny<string>()))
+            .ThrowsAsync(new Exception("Database error"));
+
+        // Act
+        var result = await _controller.Register(inputModel);
+
+        // Assert
+        var statusCodeResult = Assert.IsType<ObjectResult>(result);
+        Assert.Equal(500, statusCodeResult.StatusCode);
+    }
+
+    [Fact]
+    public async Task PostIdentify_WhenGenericExceptionOccurs_ShouldReturnStatusCode500()
+    {
+        // Arrange
+        var inputModel = new IdentifyCustomerInputModel { Cpf = "11144477735" };
+        _customerRepositoryMock
+            .Setup(x => x.GetByCpfAsync(It.IsAny<string>()))
+            .ThrowsAsync(new Exception("Database error"));
+
+        // Act
+        var result = await _controller.Identify(inputModel);
+
+        // Assert
+        var statusCodeResult = Assert.IsType<ObjectResult>(result);
+        Assert.Equal(500, statusCodeResult.StatusCode);
     }
 }
 

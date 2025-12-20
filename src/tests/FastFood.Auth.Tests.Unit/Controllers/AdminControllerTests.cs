@@ -22,9 +22,9 @@ public class AdminControllerTests
     public AdminControllerTests()
     {
         _cognitoServiceMock = new Mock<ICognitoService>();
-        _authenticateUseCase = new AuthenticateAdminUseCase(_cognitoServiceMock.Object);
         _authenticatePresenter = new AuthenticateAdminPresenter();
-        _controller = new AdminController(_authenticateUseCase, _authenticatePresenter);
+        _authenticateUseCase = new AuthenticateAdminUseCase(_cognitoServiceMock.Object, _authenticatePresenter);
+        _controller = new AdminController(_authenticateUseCase);
     }
 
     [Fact]
@@ -112,6 +112,28 @@ public class AdminControllerTests
         _cognitoServiceMock.Verify(
             x => x.AuthenticateAsync(inputModel.Username, inputModel.Password), 
             Times.Once);
+    }
+
+    [Fact]
+    public async Task PostLogin_WhenGenericExceptionOccurs_ShouldReturnStatusCode500()
+    {
+        // Arrange
+        var inputModel = new AuthenticateAdminInputModel
+        {
+            Username = "admin@example.com",
+            Password = "SecurePassword123!"
+        };
+
+        _cognitoServiceMock
+            .Setup(x => x.AuthenticateAsync(inputModel.Username, inputModel.Password))
+            .ThrowsAsync(new Exception("Service error"));
+
+        // Act
+        var result = await _controller.Login(inputModel);
+
+        // Assert
+        var statusCodeResult = Assert.IsType<ObjectResult>(result);
+        Assert.Equal(500, statusCodeResult.StatusCode);
     }
 }
 
