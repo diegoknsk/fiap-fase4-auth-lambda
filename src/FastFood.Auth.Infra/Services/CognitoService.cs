@@ -105,7 +105,7 @@ public class CognitoService : ICognitoService
             {
                 AccessToken = response.AuthenticationResult.AccessToken ?? string.Empty,
                 IdToken = response.AuthenticationResult.IdToken ?? string.Empty,
-                ExpiresIn = (int)(response.AuthenticationResult.ExpiresIn ?? 3600),
+                ExpiresIn = response.AuthenticationResult.ExpiresIn ?? 3600,
                 TokenType = response.AuthenticationResult.TokenType ?? "Bearer"
             };
         }

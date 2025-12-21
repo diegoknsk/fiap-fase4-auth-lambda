@@ -107,3 +107,4 @@ public void AddCustomer_ShouldSetCreatedAt()
 - [ ] Cobertura de Customer >= 85%
 - [ ] Todos os testes passam
 
+

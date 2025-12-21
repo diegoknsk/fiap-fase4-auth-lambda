@@ -32,7 +32,7 @@ namespace FastFood.Auth.Domain.Entities.CustomerIdentification.ValueObects
             return cpf.EndsWith(firstDigit.ToString() + secondDigit.ToString());
         }
 
-        private int CalculateDigit(string cpfPartial)
+        private static int CalculateDigit(string cpfPartial)
         {
             var sum = 0;
             for (int i = 0; i < cpfPartial.Length; i++)

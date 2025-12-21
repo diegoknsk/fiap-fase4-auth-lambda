@@ -328,3 +328,4 @@ public void Constructor_WithEmailWithMultipleDots_ShouldAccept()
 - Testar valores limite (mínimo, máximo)
 - Testar com caracteres especiais permitidos em emails
 
+

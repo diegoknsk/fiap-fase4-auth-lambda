@@ -183,3 +183,4 @@ Assert.True(jsonToken.ValidTo > DateTime.UtcNow);
 - Validar formato de claims (JTI deve ser GUID, IAT deve ser Unix timestamp)
 - Testar diferentes valores de `ExpirationHours` (0, negativo, padrão, customizado)
 
+

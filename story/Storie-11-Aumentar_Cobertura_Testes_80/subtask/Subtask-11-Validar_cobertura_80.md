@@ -57,3 +57,4 @@ reportgenerator -reports:./TestResults/coverage/coverage.opencover.xml -targetdi
 - Se cobertura não atingir 80%, identificar arquivos com baixa cobertura e criar subtarefas adicionais
 - Manter relatório de cobertura atualizado no repositório
 
+

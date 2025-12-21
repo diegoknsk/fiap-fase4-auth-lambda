@@ -318,3 +318,4 @@ public async Task Login_ShouldReturnCorrectResponseModel()
 - Verificar que UseCases são chamados com parâmetros corretos
 - Testar cenários de null e empty em inputs
 
+

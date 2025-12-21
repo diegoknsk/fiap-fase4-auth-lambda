@@ -19,6 +19,16 @@ public class DomainExceptionTests
     }
 
     [Fact]
+    public void Constructor_WithNoParameters_ShouldHaveNullInnerException()
+    {
+        // Act
+        var exception = new DomainException();
+
+        // Assert
+        Assert.Null(exception.InnerException);
+    }
+
+    [Fact]
     public void Constructor_WithMessage_ShouldCreateExceptionWithMessage()
     {
         // Arrange
@@ -30,6 +40,19 @@ public class DomainExceptionTests
         // Assert
         Assert.NotNull(exception);
         Assert.Equal(message, exception.Message);
+    }
+
+    [Fact]
+    public void Constructor_WithMessage_ShouldHaveNullInnerException()
+    {
+        // Arrange
+        var message = "Test error message";
+
+        // Act
+        var exception = new DomainException(message);
+
+        // Assert
+        Assert.Null(exception.InnerException);
     }
 
     [Fact]
@@ -46,6 +69,155 @@ public class DomainExceptionTests
         Assert.NotNull(exception);
         Assert.Equal(message, exception.Message);
         Assert.Equal(innerException, exception.InnerException);
+    }
+
+    [Fact]
+    public void Constructor_WithMessageAndInnerException_ShouldPreserveInnerException()
+    {
+        // Arrange
+        var message = "Outer exception";
+        var innerException = new ArgumentException("Inner exception");
+
+        // Act
+        var exception = new DomainException(message, innerException);
+
+        // Assert
+        Assert.NotNull(exception.InnerException);
+        Assert.IsType<ArgumentException>(exception.InnerException);
+        Assert.Equal("Inner exception", exception.InnerException.Message);
+    }
+
+    [Fact]
+    public void ShouldInheritFromException()
+    {
+        // Act
+        var exception = new DomainException();
+
+        // Assert
+        Assert.IsAssignableFrom<Exception>(exception);
+    }
+
+    [Fact]
+    public void Message_ShouldReturnSetMessage()
+    {
+        // Arrange
+        var expectedMessage = "Custom error message";
+        var exception = new DomainException(expectedMessage);
+
+        // Act
+        var message = exception.Message;
+
+        // Assert
+        Assert.Equal(expectedMessage, message);
+    }
+
+    [Fact]
+    public void InnerException_ShouldReturnSetInnerException()
+    {
+        // Arrange
+        var innerException = new InvalidOperationException("Inner");
+        var exception = new DomainException("Outer", innerException);
+
+        // Act
+        var inner = exception.InnerException;
+
+        // Assert
+        Assert.Equal(innerException, inner);
+    }
+
+    [Fact]
+    public void Constructor_WithEmptyMessage_ShouldSetEmptyMessage()
+    {
+        // Act
+        var exception = new DomainException(string.Empty);
+
+        // Assert
+        Assert.Equal(string.Empty, exception.Message);
+    }
+
+    [Fact]
+    public void Constructor_WithNullMessage_ShouldSetDefaultMessage()
+    {
+        // Act
+        var exception = new DomainException(null!);
+
+        // Assert
+        // .NET sempre gera uma mensagem padrão mesmo quando null é passado
+        Assert.NotNull(exception.Message);
+    }
+
+    [Fact]
+    public void Constructor_WithLongMessage_ShouldSetLongMessage()
+    {
+        // Arrange
+        var longMessage = new string('A', 10000);
+
+        // Act
+        var exception = new DomainException(longMessage);
+
+        // Assert
+        Assert.Equal(longMessage, exception.Message);
+    }
+
+    [Fact]
+    public void StackTrace_ShouldNotBeNull()
+    {
+        // Arrange
+        DomainException? exception = null;
+        try
+        {
+            throw new DomainException("Test");
+        }
+        catch (DomainException ex)
+        {
+            exception = ex;
+        }
+
+        // Assert
+        Assert.NotNull(exception);
+        Assert.NotNull(exception.StackTrace);
+    }
+
+    [Fact]
+    public void GetType_ShouldReturnDomainException()
+    {
+        // Arrange
+        var exception = new DomainException();
+
+        // Act
+        var type = exception.GetType();
+
+        // Assert
+        Assert.Equal(typeof(DomainException), type);
+    }
+
+    [Fact]
+    public void Constructor_WithNullMessageAndInnerException_ShouldSetDefaultMessage()
+    {
+        // Arrange
+        var innerException = new InvalidOperationException("Inner");
+
+        // Act
+        var exception = new DomainException(null!, innerException);
+
+        // Assert
+        // .NET sempre gera uma mensagem padrão mesmo quando null é passado
+        Assert.NotNull(exception.Message);
+        Assert.Equal(innerException, exception.InnerException);
+    }
+
+    [Fact]
+    public void Constructor_WithMessageAndNullInnerException_ShouldSetNullInnerException()
+    {
+        // Arrange
+        var message = "Test message";
+
+        // Act
+        var exception = new DomainException(message, null!);
+
+        // Assert
+        Assert.Equal(message, exception.Message);
+        Assert.Null(exception.InnerException);
     }
 }
 

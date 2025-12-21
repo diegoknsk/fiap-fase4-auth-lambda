@@ -15,8 +15,7 @@ namespace FastFood.Auth.Application.UseCases.Customer;
 /// </summary>
 public class RegisterCustomerUseCase(
     ICustomerRepository customerRepository,
-    ITokenService tokenService,
-    RegisterCustomerPresenter presenter)
+    ITokenService tokenService)
 {
     /// <summary>
     /// Executa o registro de um customer através do CPF e gera um token JWT.
@@ -63,7 +62,7 @@ public class RegisterCustomerUseCase(
         };
 
         // Chamar Presenter para transformar OutputModel em ResponseModel
-        return presenter.Present(outputModel);
+        return RegisterCustomerPresenter.Present(outputModel);
     }
 }
 

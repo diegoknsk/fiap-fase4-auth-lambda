@@ -9,8 +9,7 @@ namespace FastFood.Auth.Application.UseCases.Admin;
 /// UseCase para autenticar um administrador via AWS Cognito.
 /// </summary>
 public class AuthenticateAdminUseCase(
-    ICognitoService cognitoService,
-    AuthenticateAdminPresenter presenter)
+    ICognitoService cognitoService)
 {
     /// <summary>
     /// Executa a autenticação do administrador através do Cognito.
@@ -31,7 +30,7 @@ public class AuthenticateAdminUseCase(
         };
 
         // Chamar Presenter para transformar OutputModel em ResponseModel
-        return presenter.Present(outputModel);
+        return AuthenticateAdminPresenter.Present(outputModel);
     }
 }
 

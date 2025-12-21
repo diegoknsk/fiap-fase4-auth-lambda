@@ -11,8 +11,7 @@ namespace FastFood.Auth.Application.UseCases.Customer;
 /// </summary>
 public class CreateAnonymousCustomerUseCase(
     ICustomerRepository customerRepository,
-    ITokenService tokenService,
-    CreateAnonymousCustomerPresenter presenter)
+    ITokenService tokenService)
 {
     /// <summary>
     /// Executa a criação de um customer anônimo e gera um token JWT.
@@ -43,7 +42,7 @@ public class CreateAnonymousCustomerUseCase(
         };
 
         // Chamar Presenter para transformar OutputModel em ResponseModel
-        return presenter.Present(outputModel);
+        return CreateAnonymousCustomerPresenter.Present(outputModel);
     }
 }
 

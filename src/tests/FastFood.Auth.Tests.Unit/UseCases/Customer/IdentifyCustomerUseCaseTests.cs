@@ -17,18 +17,15 @@ public class IdentifyCustomerUseCaseTests
 {
     private readonly Mock<ICustomerRepository> _customerRepositoryMock;
     private readonly Mock<ITokenService> _tokenServiceMock;
-    private readonly IdentifyCustomerPresenter _presenter;
     private readonly IdentifyCustomerUseCase _useCase;
 
     public IdentifyCustomerUseCaseTests()
     {
         _customerRepositoryMock = new Mock<ICustomerRepository>();
         _tokenServiceMock = new Mock<ITokenService>();
-        _presenter = new IdentifyCustomerPresenter();
         _useCase = new IdentifyCustomerUseCase(
             _customerRepositoryMock.Object,
-            _tokenServiceMock.Object,
-            _presenter);
+            _tokenServiceMock.Object);
     }
 
     [Fact]
@@ -168,6 +165,109 @@ public class IdentifyCustomerUseCaseTests
 
         // Assert
         _tokenServiceMock.Verify(x => x.GenerateToken(customerId, out It.Ref<DateTime>.IsAny), Times.Once);
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_WithNonExistingCustomer_ShouldThrowUnauthorizedAccessExceptionWithCorrectMessage()
+    {
+        // Arrange
+        var cpf = "11144477735";
+        var inputModel = new IdentifyCustomerInputModel { Cpf = cpf };
+
+        _customerRepositoryMock
+            .Setup(x => x.GetByCpfAsync(cpf))
+            .ReturnsAsync((DomainCustomer?)null);
+
+        // Act
+        var exception = await Assert.ThrowsAsync<UnauthorizedAccessException>(() =>
+            _useCase.ExecuteAsync(inputModel));
+
+        // Assert
+        Assert.Equal("Customer not found with the provided CPF.", exception.Message);
+        _tokenServiceMock.Verify(
+            t => t.GenerateToken(It.IsAny<Guid>(), out It.Ref<DateTime>.IsAny),
+            Times.Never);
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_WithNullCpf_ShouldThrowDomainException()
+    {
+        // Arrange
+        var inputModel = new IdentifyCustomerInputModel { Cpf = null! };
+
+        // Act & Assert
+        await Assert.ThrowsAsync<DomainException>(() =>
+            _useCase.ExecuteAsync(inputModel));
+
+        _customerRepositoryMock.Verify(x => x.GetByCpfAsync(It.IsAny<string>()), Times.Never);
+        _tokenServiceMock.Verify(
+            t => t.GenerateToken(It.IsAny<Guid>(), out It.Ref<DateTime>.IsAny),
+            Times.Never);
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_WithEmptyCpf_ShouldThrowDomainException()
+    {
+        // Arrange
+        var inputModel = new IdentifyCustomerInputModel { Cpf = string.Empty };
+
+        // Act & Assert
+        await Assert.ThrowsAsync<DomainException>(() =>
+            _useCase.ExecuteAsync(inputModel));
+
+        _customerRepositoryMock.Verify(x => x.GetByCpfAsync(It.IsAny<string>()), Times.Never);
+        _tokenServiceMock.Verify(
+            t => t.GenerateToken(It.IsAny<Guid>(), out It.Ref<DateTime>.IsAny),
+            Times.Never);
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_WhenRepositoryFails_ShouldPropagateException()
+    {
+        // Arrange
+        var cpf = "11144477735";
+        var inputModel = new IdentifyCustomerInputModel { Cpf = cpf };
+
+        _customerRepositoryMock
+            .Setup(x => x.GetByCpfAsync(cpf))
+            .ThrowsAsync(new InvalidOperationException("Database error"));
+
+        // Act & Assert
+        await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            _useCase.ExecuteAsync(inputModel));
+
+        _tokenServiceMock.Verify(
+            t => t.GenerateToken(It.IsAny<Guid>(), out It.Ref<DateTime>.IsAny),
+            Times.Never);
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_WhenTokenServiceFails_ShouldPropagateException()
+    {
+        // Arrange
+        var cpf = "11144477735";
+        var inputModel = new IdentifyCustomerInputModel { Cpf = cpf };
+        var customerId = Guid.NewGuid();
+        var existingCustomer = new DomainCustomer(
+            customerId,
+            null,
+            null,
+            new Cpf(cpf),
+            CustomerTypeEnum.Registered);
+
+        _customerRepositoryMock
+            .Setup(x => x.GetByCpfAsync(cpf))
+            .ReturnsAsync((DomainCustomer?)existingCustomer);
+
+        _tokenServiceMock
+            .Setup(x => x.GenerateToken(customerId, out It.Ref<DateTime>.IsAny))
+            .Throws(new InvalidOperationException("Token generation failed"));
+
+        // Act & Assert
+        await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            _useCase.ExecuteAsync(inputModel));
+
+        _customerRepositoryMock.Verify(x => x.GetByCpfAsync(cpf), Times.Once);
     }
 }
 

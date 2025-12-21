@@ -252,3 +252,4 @@ public async Task ExecuteAsync_WithInvalidCpf_ShouldThrowDomainException()
 - Testar normalização de CPF (remoção de caracteres especiais)
 - Verificar que métodos não são chamados quando validação falha antes
 
+

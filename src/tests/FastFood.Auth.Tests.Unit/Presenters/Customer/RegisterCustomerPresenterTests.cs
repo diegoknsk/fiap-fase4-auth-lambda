@@ -8,12 +8,6 @@ namespace FastFood.Auth.Tests.Unit.Presenters.Customer;
 /// </summary>
 public class RegisterCustomerPresenterTests
 {
-    private readonly RegisterCustomerPresenter _presenter;
-
-    public RegisterCustomerPresenterTests()
-    {
-        _presenter = new RegisterCustomerPresenter();
-    }
 
     [Fact]
     public void Present_ShouldReturnSameOutputModel()
@@ -27,7 +21,7 @@ public class RegisterCustomerPresenterTests
         };
 
         // Act
-        var result = _presenter.Present(outputModel);
+        var result = RegisterCustomerPresenter.Present(outputModel);
 
         // Assert
         Assert.NotNull(result);
@@ -48,7 +42,7 @@ public class RegisterCustomerPresenterTests
         };
 
         // Act
-        var result = _presenter.Present(outputModel);
+        var result = RegisterCustomerPresenter.Present(outputModel);
 
         // Assert
         Assert.Same(outputModel, result);
@@ -66,7 +60,7 @@ public class RegisterCustomerPresenterTests
         };
 
         // Act
-        var result = _presenter.Present(outputModel);
+        var result = RegisterCustomerPresenter.Present(outputModel);
 
         // Assert
         Assert.NotNull(result);

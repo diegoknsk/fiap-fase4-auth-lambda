@@ -8,12 +8,6 @@ namespace FastFood.Auth.Tests.Unit.Presenters.Admin;
 /// </summary>
 public class AuthenticateAdminPresenterTests
 {
-    private readonly AuthenticateAdminPresenter _presenter;
-
-    public AuthenticateAdminPresenterTests()
-    {
-        _presenter = new AuthenticateAdminPresenter();
-    }
 
     [Fact]
     public void Present_ShouldReturnSameOutputModel()
@@ -28,7 +22,7 @@ public class AuthenticateAdminPresenterTests
         };
 
         // Act
-        var result = _presenter.Present(outputModel);
+        var result = AuthenticateAdminPresenter.Present(outputModel);
 
         // Assert
         Assert.NotNull(result);
@@ -51,7 +45,7 @@ public class AuthenticateAdminPresenterTests
         };
 
         // Act
-        var result = _presenter.Present(outputModel);
+        var result = AuthenticateAdminPresenter.Present(outputModel);
 
         // Assert
         Assert.Same(outputModel, result);
@@ -70,7 +64,7 @@ public class AuthenticateAdminPresenterTests
         };
 
         // Act
-        var result = _presenter.Present(outputModel);
+        var result = AuthenticateAdminPresenter.Present(outputModel);
 
         // Assert
         Assert.NotNull(result);
@@ -93,7 +87,7 @@ public class AuthenticateAdminPresenterTests
         };
 
         // Act
-        var result = _presenter.Present(outputModel);
+        var result = AuthenticateAdminPresenter.Present(outputModel);
 
         // Assert
         Assert.NotNull(result);

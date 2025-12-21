@@ -12,8 +12,7 @@ namespace FastFood.Auth.Application.UseCases.Customer;
 /// </summary>
 public class IdentifyCustomerUseCase(
     ICustomerRepository customerRepository,
-    ITokenService tokenService,
-    IdentifyCustomerPresenter presenter)
+    ITokenService tokenService)
 {
     /// <summary>
     /// Executa a identificação de um customer através do CPF e gera um token JWT.
@@ -44,7 +43,7 @@ public class IdentifyCustomerUseCase(
         };
 
         // Chamar Presenter para transformar OutputModel em ResponseModel
-        return presenter.Present(outputModel);
+        return IdentifyCustomerPresenter.Present(outputModel);
     }
 }
 

@@ -103,3 +103,4 @@ Implementar suite completa de testes unitários cobrindo todos os componentes cr
 - Usar InMemory Database apenas se necessário para testes de repositório
 - Manter testes rápidos e isolados
 
+

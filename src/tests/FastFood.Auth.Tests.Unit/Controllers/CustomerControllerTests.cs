@@ -22,30 +22,21 @@ public class CustomerControllerTests
     private readonly CreateAnonymousCustomerUseCase _createAnonymousUseCase;
     private readonly RegisterCustomerUseCase _registerUseCase;
     private readonly IdentifyCustomerUseCase _identifyUseCase;
-    private readonly CreateAnonymousCustomerPresenter _createAnonymousPresenter;
-    private readonly RegisterCustomerPresenter _registerPresenter;
-    private readonly IdentifyCustomerPresenter _identifyPresenter;
     private readonly CustomerController _controller;
 
     public CustomerControllerTests()
     {
         _customerRepositoryMock = new Mock<ICustomerRepository>();
         _tokenServiceMock = new Mock<ITokenService>();
-        _createAnonymousPresenter = new CreateAnonymousCustomerPresenter();
-        _registerPresenter = new RegisterCustomerPresenter();
-        _identifyPresenter = new IdentifyCustomerPresenter();
         _createAnonymousUseCase = new CreateAnonymousCustomerUseCase(
             _customerRepositoryMock.Object,
-            _tokenServiceMock.Object,
-            _createAnonymousPresenter);
+            _tokenServiceMock.Object);
         _registerUseCase = new RegisterCustomerUseCase(
             _customerRepositoryMock.Object,
-            _tokenServiceMock.Object,
-            _registerPresenter);
+            _tokenServiceMock.Object);
         _identifyUseCase = new IdentifyCustomerUseCase(
             _customerRepositoryMock.Object,
-            _tokenServiceMock.Object,
-            _identifyPresenter);
+            _tokenServiceMock.Object);
         _controller = new CustomerController(
             _createAnonymousUseCase,
             _registerUseCase,

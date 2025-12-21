@@ -14,18 +14,15 @@ public class CreateAnonymousCustomerUseCaseTests
 {
     private readonly Mock<ICustomerRepository> _customerRepositoryMock;
     private readonly Mock<ITokenService> _tokenServiceMock;
-    private readonly CreateAnonymousCustomerPresenter _presenter;
     private readonly CreateAnonymousCustomerUseCase _useCase;
 
     public CreateAnonymousCustomerUseCaseTests()
     {
         _customerRepositoryMock = new Mock<ICustomerRepository>();
         _tokenServiceMock = new Mock<ITokenService>();
-        _presenter = new CreateAnonymousCustomerPresenter();
         _useCase = new CreateAnonymousCustomerUseCase(
             _customerRepositoryMock.Object,
-            _tokenServiceMock.Object,
-            _presenter);
+            _tokenServiceMock.Object);
     }
 
     [Fact]
@@ -141,6 +138,61 @@ public class CreateAnonymousCustomerUseCaseTests
         Assert.Equal(expectedToken, result.Token);
         Assert.NotEqual(Guid.Empty, result.CustomerId);
         Assert.Equal(expectedExpiresAt, result.ExpiresAt);
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_WhenRepositoryFails_ShouldPropagateException()
+    {
+        // Arrange
+        _customerRepositoryMock
+            .Setup(x => x.AddAsync(It.IsAny<DomainCustomer>()))
+            .ThrowsAsync(new InvalidOperationException("Database error"));
+
+        // Act & Assert
+        await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            _useCase.ExecuteAsync());
+
+        _tokenServiceMock.Verify(
+            t => t.GenerateToken(It.IsAny<Guid>(), out It.Ref<DateTime>.IsAny),
+            Times.Never);
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_WhenTokenServiceFails_ShouldPropagateException()
+    {
+        // Arrange
+        _customerRepositoryMock
+            .Setup(x => x.AddAsync(It.IsAny<DomainCustomer>()))
+            .ReturnsAsync((DomainCustomer c) => c);
+
+        _tokenServiceMock
+            .Setup(x => x.GenerateToken(It.IsAny<Guid>(), out It.Ref<DateTime>.IsAny))
+            .Throws(new InvalidOperationException("Token generation failed"));
+
+        // Act & Assert
+        await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            _useCase.ExecuteAsync());
+
+        _customerRepositoryMock.Verify(
+            x => x.AddAsync(It.IsAny<DomainCustomer>()),
+            Times.Once);
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_WhenRepositoryThrowsException_ShouldNotCreateCustomer()
+    {
+        // Arrange
+        _customerRepositoryMock
+            .Setup(x => x.AddAsync(It.IsAny<DomainCustomer>()))
+            .ThrowsAsync(new Exception("Repository error"));
+
+        // Act & Assert
+        await Assert.ThrowsAsync<Exception>(() =>
+            _useCase.ExecuteAsync());
+
+        _tokenServiceMock.Verify(
+            t => t.GenerateToken(It.IsAny<Guid>(), out It.Ref<DateTime>.IsAny),
+            Times.Never);
     }
 }
 

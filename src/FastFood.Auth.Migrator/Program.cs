@@ -8,7 +8,7 @@ namespace FastFood.Auth.Migrator
     /// Aplicativo console responsável por executar migrations do Entity Framework Core.
     /// Este projeto é executado separadamente da API para aplicar migrations no banco de dados.
     /// </summary>
-    class Program
+    static class Program
     {
         static async Task Main(string[] args)
         {

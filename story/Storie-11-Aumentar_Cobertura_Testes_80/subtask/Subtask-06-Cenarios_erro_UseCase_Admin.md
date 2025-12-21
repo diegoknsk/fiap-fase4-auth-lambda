@@ -257,3 +257,4 @@ public async Task ExecuteAsync_WithNullInputModel_ShouldThrowArgumentNullExcepti
 - Verificar que métodos não são chamados quando validação falha antes
 - Testar mapeamento completo de `AuthenticateAdminResult` para `AuthenticateAdminOutputModel`
 
+

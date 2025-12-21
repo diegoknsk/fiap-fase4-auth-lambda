@@ -281,3 +281,4 @@ public class CustomerRepositoryTests : IDisposable
 - Validar preservação de `CreatedAt` usando reflection
 - Testar todos os tipos de Customer (Registered, Anonymous)
 
+

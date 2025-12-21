@@ -12,14 +12,12 @@ namespace FastFood.Auth.Tests.Unit.UseCases.Admin;
 public class AuthenticateAdminUseCaseTests
 {
     private readonly Mock<ICognitoService> _cognitoServiceMock;
-    private readonly AuthenticateAdminPresenter _presenter;
     private readonly AuthenticateAdminUseCase _useCase;
 
     public AuthenticateAdminUseCaseTests()
     {
         _cognitoServiceMock = new Mock<ICognitoService>();
-        _presenter = new AuthenticateAdminPresenter();
-        _useCase = new AuthenticateAdminUseCase(_cognitoServiceMock.Object, _presenter);
+        _useCase = new AuthenticateAdminUseCase(_cognitoServiceMock.Object);
     }
 
     [Fact]

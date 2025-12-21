@@ -128,3 +128,4 @@ public class CognitoServiceTests
 - Testes devem ser isolados e não fazer chamadas reais ao AWS
 - Focar em testar a lógica de negócio, não a integração com AWS SDK
 
+

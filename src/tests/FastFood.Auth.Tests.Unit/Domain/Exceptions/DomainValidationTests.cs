@@ -21,8 +21,14 @@ public class DomainValidationTests
     [Fact]
     public void ThrowIf_WhenConditionIsFalse_ShouldNotThrow()
     {
-        // Arrange & Act & Assert
-        DomainValidation.ThrowIf(false, "Should not throw");
+        // Arrange
+        var message = "Should not throw";
+        
+        // Act
+        var exception = Record.Exception(() => DomainValidation.ThrowIf(false, message));
+        
+        // Assert
+        Assert.Null(exception);
     }
 
     [Fact]
@@ -44,8 +50,11 @@ public class DomainValidationTests
         var value = new object();
         var message = "Should not throw";
 
-        // Act & Assert
-        DomainValidation.ThrowIfNull(value, message);
+        // Act
+        var exception = Record.Exception(() => DomainValidation.ThrowIfNull(value, message));
+
+        // Assert
+        Assert.Null(exception);
     }
 
     [Fact]
@@ -91,8 +100,11 @@ public class DomainValidationTests
         var validValue = "valid string";
         var message = "Should not throw";
 
-        // Act & Assert
-        DomainValidation.ThrowIfNullOrWhiteSpace(validValue, message);
+        // Act
+        var exception = Record.Exception(() => DomainValidation.ThrowIfNullOrWhiteSpace(validValue, message));
+
+        // Assert
+        Assert.Null(exception);
     }
 
     [Fact]
@@ -102,8 +114,11 @@ public class DomainValidationTests
         string? nullValue = null;
         var message = "Should not throw";
 
-        // Act & Assert
-        DomainValidation.ThrowIfLengthLessThan(nullValue, 5, message);
+        // Act
+        var exception = Record.Exception(() => DomainValidation.ThrowIfLengthLessThan(nullValue, 5, message));
+
+        // Assert
+        Assert.Null(exception);
     }
 
     [Fact]
@@ -113,8 +128,11 @@ public class DomainValidationTests
         var emptyValue = string.Empty;
         var message = "Should not throw";
 
-        // Act & Assert
-        DomainValidation.ThrowIfLengthLessThan(emptyValue, 5, message);
+        // Act
+        var exception = Record.Exception(() => DomainValidation.ThrowIfLengthLessThan(emptyValue, 5, message));
+
+        // Assert
+        Assert.Null(exception);
     }
 
     [Fact]
@@ -138,8 +156,11 @@ public class DomainValidationTests
         var minLength = 5;
         var message = "Should not throw";
 
-        // Act & Assert
-        DomainValidation.ThrowIfLengthLessThan(value, minLength, message);
+        // Act
+        var exception = Record.Exception(() => DomainValidation.ThrowIfLengthLessThan(value, minLength, message));
+
+        // Assert
+        Assert.Null(exception);
     }
 
     [Fact]
@@ -150,8 +171,11 @@ public class DomainValidationTests
         var minLength = 5;
         var message = "Should not throw";
 
-        // Act & Assert
-        DomainValidation.ThrowIfLengthLessThan(value, minLength, message);
+        // Act
+        var exception = Record.Exception(() => DomainValidation.ThrowIfLengthLessThan(value, minLength, message));
+
+        // Assert
+        Assert.Null(exception);
     }
 
     [Fact]
@@ -188,8 +212,11 @@ public class DomainValidationTests
         var threshold = 10m;
         var message = "Should not throw";
 
-        // Act & Assert
-        DomainValidation.ThrowIfLessOrEqual(value, threshold, message);
+        // Act
+        var exception = Record.Exception(() => DomainValidation.ThrowIfLessOrEqual(value, threshold, message));
+
+        // Assert
+        Assert.Null(exception);
     }
 }
 

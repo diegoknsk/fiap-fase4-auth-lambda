@@ -19,7 +19,7 @@ namespace FastFood.Auth.Domain.Entities.CustomerIdentification.ValueObects
             Value = value;
         }
 
-        private bool IsValidEmail(string email)
+        private static bool IsValidEmail(string email)
         {
             return Regex.IsMatch(email, @"^[^@\s]+@[^@\s]+\.[^@\s]+$");
         }

@@ -44,7 +44,7 @@ public class CustomerRepository(AuthDbContext context) : ICustomerRepository
     /// <summary>
     /// Mapeia CustomerEntity (Infra) para Customer (Domain)
     /// </summary>
-    private Customer MapToDomain(CustomerEntity entity)
+    private static Customer MapToDomain(CustomerEntity entity)
     {
         Email? email = null;
         if (!string.IsNullOrWhiteSpace(entity.Email))
@@ -79,7 +79,7 @@ public class CustomerRepository(AuthDbContext context) : ICustomerRepository
     /// <summary>
     /// Mapeia Customer (Domain) para CustomerEntity (Infra)
     /// </summary>
-    private CustomerEntity MapToEntity(Customer customer)
+    private static CustomerEntity MapToEntity(Customer customer)
     {
         return new CustomerEntity
         {

@@ -71,3 +71,4 @@ O SonarQube identificou 8 testes sem assertions nas linhas:
 - Manter a nomenclatura e estrutura dos testes existentes
 - Não alterar a lógica dos testes, apenas adicionar assertions
 
+

@@ -265,3 +265,4 @@ public class DomainExceptionTests
 - Validar que `StackTrace` é gerado quando a exceção é lançada
 - Se `DomainException` implementa `ISerializable`, testar serialização
 
+

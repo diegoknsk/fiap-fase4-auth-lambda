@@ -16,14 +16,12 @@ public class AdminControllerTests
 {
     private readonly Mock<ICognitoService> _cognitoServiceMock;
     private readonly AuthenticateAdminUseCase _authenticateUseCase;
-    private readonly AuthenticateAdminPresenter _authenticatePresenter;
     private readonly AdminController _controller;
 
     public AdminControllerTests()
     {
         _cognitoServiceMock = new Mock<ICognitoService>();
-        _authenticatePresenter = new AuthenticateAdminPresenter();
-        _authenticateUseCase = new AuthenticateAdminUseCase(_cognitoServiceMock.Object, _authenticatePresenter);
+        _authenticateUseCase = new AuthenticateAdminUseCase(_cognitoServiceMock.Object);
         _controller = new AdminController(_authenticateUseCase);
     }
 
