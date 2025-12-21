@@ -74,3 +74,6 @@ src/FastFood.Auth.Lambda/appsettings.Development.json
 # SonarQube
 .sonarqube/
 sonar-issues.json
+
+# SpecFlow generated files
+**/*.feature.cs

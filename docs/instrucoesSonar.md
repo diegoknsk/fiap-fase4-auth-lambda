@@ -182,7 +182,7 @@ dotnet-sonarscanner begin `
   /d:sonar.tests="src/tests" `
   /d:sonar.cs.opencover.reportsPaths="src/tests/FastFood.Auth.Tests.Unit/TestResults/coverage/coverage.opencover.xml" `
   /d:sonar.cs.vstest.reportsPaths="**/TestResults/*.trx" `
-  /d:sonar.exclusions="**/bin/**,**/obj/**,**/.vs/**,**/.sonarqube/**,**/docs/**,**/rules/**,**/story/**,**/*.md,**/*.mdc"
+  /d:sonar.exclusions="**/bin/**,**/obj/**,**/.vs/**,**/.sonarqube/**,**/docs/**,**/rules/**,**/story/**,**/*.md,**/*.mdc,**/FastFood.Auth.Tests.Bdd/**"
 
 2-> Build da solução
 dotnet build .\FastFood.Auth.sln

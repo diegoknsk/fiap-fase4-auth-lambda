@@ -48,3 +48,8 @@ app.UseAuthorization();
 app.MapControllers();
 
 app.Run();
+
+// Classe partial para permitir que WebApplicationFactory acesse a aplicação
+// Em .NET 8, o compilador gera automaticamente uma classe Program implícita
+// Esta declaração partial permite que WebApplicationFactory<Program> funcione
+public partial class Program { }
