@@ -39,7 +39,7 @@ jobs:
           dotnet-sonarscanner begin
           /k:"diegoknsk_fiap-fase4-auth-lambda"
           /o:"diegoknsk"
-          /d:sonar.token="${{ secrets.SONAR_TOKEN }}"
+          /d:sonar.token="$SONAR_TOKEN"
           /d:sonar.cs.opencover.reportsPaths="**/TestResults/**/coverage.opencover.xml"
           /d:sonar.coverage.exclusions="**/*Program.cs,**/*Startup.cs,**/Migrations/**,**/*Dto.cs"
 
@@ -49,16 +49,15 @@ jobs:
       - name: Build
         run: dotnet build FastFood.Auth.sln -c Release --no-restore
 
-      # Roda Unit + BDD porque estão dentro da solução. Se preferir, dá pra rodar por pasta tests/.
       - name: Test (Unit + BDD) with coverage
         run: >
           dotnet test FastFood.Auth.sln -c Release --no-build
           --logger "trx;LogFileName=test_results.trx"
           /p:CollectCoverage=true
-          /p:CoverletOutputFormat=opencover
+          /p:CoverletOutputFormat="opencover,cobertura"
           /p:CoverletOutput=./TestResults/coverage/
 
       - name: Sonar - End
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-        run: dotnet-sonarscanner end /d:sonar.token="${{ secrets.SONAR_TOKEN }}"
+        run: dotnet-sonarscanner end /d:sonar.token="$SONAR_TOKEN"
