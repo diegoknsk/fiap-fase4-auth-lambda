@@ -108,6 +108,67 @@ public class CpfTests
         Assert.NotNull(cpf);
         Assert.Equal("11144477735", cpf.Value);
     }
+
+    [Fact]
+    public void Constructor_WithCpfWithSpecialCharacters_ShouldRemoveSpecialCharacters()
+    {
+        // Arrange
+        var cpfWithSpecialChars = "111 444 777 35"; // CPF com espaços
+
+        // Act
+        var cpf = new Cpf(cpfWithSpecialChars);
+
+        // Assert
+        Assert.NotNull(cpf);
+        Assert.Equal("11144477735", cpf.Value);
+    }
+
+    [Fact]
+    public void Constructor_WithCpfWithMixedPunctuation_ShouldRemoveAllPunctuation()
+    {
+        // Arrange
+        var cpfWithMixedPunctuation = "111.444-777.35"; // CPF com pontuação mista
+
+        // Act
+        var cpf = new Cpf(cpfWithMixedPunctuation);
+
+        // Assert
+        Assert.NotNull(cpf);
+        Assert.Equal("11144477735", cpf.Value);
+    }
+
+    [Fact]
+    public void ToString_WithDifferentCpf_ShouldReturnCorrectFormat()
+    {
+        // Arrange
+        var cpf = new Cpf("12345678909");
+
+        // Act
+        var formatted = cpf.ToString();
+
+        // Assert
+        Assert.Equal("123.456.789-09", formatted);
+    }
+
+    [Fact]
+    public void Constructor_WithCpfWithInvalidFirstDigit_ShouldThrowDomainException()
+    {
+        // Arrange
+        var invalidCpf = "11144477734"; // CPF com primeiro dígito verificador inválido
+
+        // Act & Assert
+        Assert.Throws<DomainException>(() => new Cpf(invalidCpf));
+    }
+
+    [Fact]
+    public void Constructor_WithCpfWithInvalidSecondDigit_ShouldThrowDomainException()
+    {
+        // Arrange
+        var invalidCpf = "11144477736"; // CPF com segundo dígito verificador inválido
+
+        // Act & Assert
+        Assert.Throws<DomainException>(() => new Cpf(invalidCpf));
+    }
 }
 
 

@@ -251,3 +251,4 @@ dotnet-sonarscanner end /d:sonar.token="$env:SONAR_TOKEN"
 # Depois, ajuste o Sonar para usar o arquivo merged:
 # /d:sonar.cs.opencover.reportsPaths=".\TestResults\coverage\coverage.opencover.xml"
 
+ Invoke-WebRequest `  -Uri "$env:SONAR_HOST_URL/api/issues/search?componentKeys=$env:SONAR_PROJECT_KEY&ps=500" `  -Headers @{ Authorization = "Basic $([Convert]::ToBase64String([Text.Encoding]::ASCII.GetBytes($env:SONAR_TOKEN + ':')))" } `  -OutFile sonar-issues3.json

@@ -109,6 +109,64 @@ public class EmailTests
         Assert.NotNull(email);
         Assert.Equal(validEmail, email.Value);
     }
+
+    [Fact]
+    public void Constructor_WithEmailWithWhitespace_ShouldThrowDomainException()
+    {
+        // Arrange
+        var emailWithWhitespace = "test @example.com";
+
+        // Act & Assert
+        Assert.Throws<DomainException>(() => new Email(emailWithWhitespace));
+    }
+
+    [Fact]
+    public void Constructor_WithEmailWithMultipleAt_ShouldThrowDomainException()
+    {
+        // Arrange
+        var emailWithMultipleAt = "test@@example.com";
+
+        // Act & Assert
+        Assert.Throws<DomainException>(() => new Email(emailWithMultipleAt));
+    }
+
+    [Fact]
+    public void Constructor_WithEmailWithOnlyWhitespace_ShouldThrowDomainException()
+    {
+        // Arrange
+        var emailWithOnlyWhitespace = "   ";
+
+        // Act & Assert
+        Assert.Throws<DomainException>(() => new Email(emailWithOnlyWhitespace));
+    }
+
+    [Fact]
+    public void Constructor_WithValidEmailWithPlusSign_ShouldCreateInstance()
+    {
+        // Arrange
+        var validEmail = "test+tag@example.com";
+
+        // Act
+        var email = new Email(validEmail);
+
+        // Assert
+        Assert.NotNull(email);
+        Assert.Equal(validEmail, email.Value);
+    }
+
+    [Fact]
+    public void Constructor_WithValidEmailWithNumbers_ShouldCreateInstance()
+    {
+        // Arrange
+        var validEmail = "test123@example123.com";
+
+        // Act
+        var email = new Email(validEmail);
+
+        // Assert
+        Assert.NotNull(email);
+        Assert.Equal(validEmail, email.Value);
+    }
 }
 
 

@@ -39,7 +39,7 @@ public class RegisterCustomerUseCaseTests
             null,
             null,
             new Cpf(cpf),
-            CustomerTypeEnum.Registered);
+            CustomerType.Registered);
 
         var inputModel = new RegisterCustomerInputModel { Cpf = cpf };
         var expectedToken = "existing-token";
@@ -100,7 +100,7 @@ public class RegisterCustomerUseCaseTests
         Assert.NotNull(result);
         Assert.Equal(expectedToken, result.Token);
         Assert.NotNull(savedCustomer);
-        Assert.Equal(CustomerTypeEnum.Registered, savedCustomer.CustomerType);
+        Assert.Equal(CustomerType.Registered, savedCustomer.CustomerType);
         Assert.NotNull(savedCustomer.Cpf);
         Assert.Equal(cpf, savedCustomer.Cpf.Value);
         Assert.Equal(savedCustomer.Id, result.CustomerId);
@@ -108,7 +108,7 @@ public class RegisterCustomerUseCaseTests
 
         _customerRepositoryMock.Verify(x => x.GetByCpfAsync(cpf), Times.Once);
         _customerRepositoryMock.Verify(x => x.AddAsync(It.Is<DomainCustomer>(c => 
-            c.CustomerType == CustomerTypeEnum.Registered && 
+            c.CustomerType == CustomerType.Registered && 
             c.Cpf != null && 
             c.Cpf.Value == cpf)), Times.Once);
         _tokenServiceMock.Verify(x => x.GenerateToken(It.IsAny<Guid>(), out It.Ref<DateTime>.IsAny), Times.Once);
@@ -220,7 +220,7 @@ public class RegisterCustomerUseCaseTests
             null,
             null,
             new Cpf(cpf),
-            CustomerTypeEnum.Registered);
+            CustomerType.Registered);
 
         _customerRepositoryMock
             .Setup(x => x.GetByCpfAsync(cpf))
@@ -249,7 +249,7 @@ public class RegisterCustomerUseCaseTests
             null,
             null,
             new Cpf(cpf),
-            CustomerTypeEnum.Registered);
+            CustomerType.Registered);
 
         _customerRepositoryMock
             .Setup(x => x.GetByCpfAsync(cpf))

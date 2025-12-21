@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace FastFood.Auth.Domain.Entities.CustomerIdentification
 {
-    public enum CustomerTypeEnum
+    public enum CustomerType
     {
         Registered = 1,
         Anonymous = 2

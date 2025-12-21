@@ -36,7 +36,7 @@ public class CustomerRepositoryTests : IDisposable
             Name = "Test Customer",
             Email = "test@example.com",
             Cpf = "11144477735",
-            CustomerType = (int)CustomerTypeEnum.Registered,
+            CustomerType = (int)CustomerType.Registered,
             CreatedAt = DateTime.UtcNow
         };
 
@@ -81,7 +81,7 @@ public class CustomerRepositoryTests : IDisposable
             Name = "Mapped Customer",
             Email = "mapped@example.com",
             Cpf = "11144477735",
-            CustomerType = (int)CustomerTypeEnum.Registered,
+            CustomerType = (int)CustomerType.Registered,
             CreatedAt = createdAt
         };
 
@@ -99,7 +99,7 @@ public class CustomerRepositoryTests : IDisposable
         Assert.Equal("mapped@example.com", result.Email.Value);
         Assert.NotNull(result.Cpf);
         Assert.Equal("11144477735", result.Cpf.Value);
-        Assert.Equal(CustomerTypeEnum.Registered, result.CustomerType);
+        Assert.Equal(CustomerType.Registered, result.CustomerType);
         Assert.Equal(createdAt, result.CreatedAt);
     }
 
@@ -113,7 +113,7 @@ public class CustomerRepositoryTests : IDisposable
             Id = customerId,
             Name = "Email Customer",
             Email = "email@test.com",
-            CustomerType = (int)CustomerTypeEnum.Registered,
+            CustomerType = (int)CustomerType.Registered,
             CreatedAt = DateTime.UtcNow
         };
 
@@ -139,7 +139,7 @@ public class CustomerRepositoryTests : IDisposable
             Id = customerId,
             Name = "CPF Customer",
             Cpf = "11144477735",
-            CustomerType = (int)CustomerTypeEnum.Registered,
+            CustomerType = (int)CustomerType.Registered,
             CreatedAt = DateTime.UtcNow
         };
 
@@ -166,7 +166,7 @@ public class CustomerRepositoryTests : IDisposable
             Name = null,
             Email = null,
             Cpf = null,
-            CustomerType = (int)CustomerTypeEnum.Anonymous,
+            CustomerType = (int)CustomerType.Anonymous,
             CreatedAt = DateTime.UtcNow
         };
 
@@ -180,7 +180,7 @@ public class CustomerRepositoryTests : IDisposable
         Assert.NotNull(result);
         Assert.Null(result.Email);
         Assert.Null(result.Cpf);
-        Assert.Equal(CustomerTypeEnum.Anonymous, result.CustomerType);
+        Assert.Equal(CustomerType.Anonymous, result.CustomerType);
     }
 
     [Fact]
@@ -193,7 +193,7 @@ public class CustomerRepositoryTests : IDisposable
         {
             Id = customerId,
             Name = "Created At Customer",
-            CustomerType = (int)CustomerTypeEnum.Registered,
+            CustomerType = (int)CustomerType.Registered,
             CreatedAt = createdAt
         };
 
@@ -218,7 +218,7 @@ public class CustomerRepositoryTests : IDisposable
             Id = Guid.NewGuid(),
             Name = "CPF Test Customer",
             Cpf = cpf,
-            CustomerType = (int)CustomerTypeEnum.Registered,
+            CustomerType = (int)CustomerType.Registered,
             CreatedAt = DateTime.UtcNow
         };
 
@@ -259,7 +259,7 @@ public class CustomerRepositoryTests : IDisposable
             Name = "CPF Mapped Customer",
             Email = "cpf@example.com",
             Cpf = cpf,
-            CustomerType = (int)CustomerTypeEnum.Registered,
+            CustomerType = (int)CustomerType.Registered,
             CreatedAt = DateTime.UtcNow
         };
 
@@ -288,7 +288,7 @@ public class CustomerRepositoryTests : IDisposable
             Id = Guid.NewGuid(),
             Name = "Formatted CPF Customer",
             Cpf = cpf,
-            CustomerType = (int)CustomerTypeEnum.Registered,
+            CustomerType = (int)CustomerType.Registered,
             CreatedAt = DateTime.UtcNow
         };
 
@@ -312,7 +312,7 @@ public class CustomerRepositoryTests : IDisposable
         {
             Id = Guid.NewGuid(),
             Cpf = cpf,
-            CustomerType = (int)CustomerTypeEnum.Registered,
+            CustomerType = (int)CustomerType.Registered,
             CreatedAt = DateTime.UtcNow
         };
 
@@ -348,7 +348,7 @@ public class CustomerRepositoryTests : IDisposable
             name: "New Customer",
             email: new Email("new@example.com"),
             cpf: new Cpf("11144477735"),
-            customerType: CustomerTypeEnum.Registered
+            customerType: CustomerType.Registered
         );
 
         // Act
@@ -378,7 +378,7 @@ public class CustomerRepositoryTests : IDisposable
             name: "Email Customer",
             email: new Email("email@test.com"),
             cpf: null,
-            customerType: CustomerTypeEnum.Registered
+            customerType: CustomerType.Registered
         );
 
         // Act
@@ -404,7 +404,7 @@ public class CustomerRepositoryTests : IDisposable
             name: "CPF Customer",
             email: null,
             cpf: new Cpf("11144477735"),
-            customerType: CustomerTypeEnum.Registered
+            customerType: CustomerType.Registered
         );
 
         // Act
@@ -430,7 +430,7 @@ public class CustomerRepositoryTests : IDisposable
             name: null,
             email: null,
             cpf: null,
-            customerType: CustomerTypeEnum.Anonymous
+            customerType: CustomerType.Anonymous
         );
 
         // Act
@@ -440,14 +440,14 @@ public class CustomerRepositoryTests : IDisposable
         Assert.NotNull(result);
         Assert.Null(result.Email);
         Assert.Null(result.Cpf);
-        Assert.Equal(CustomerTypeEnum.Anonymous, result.CustomerType);
+        Assert.Equal(CustomerType.Anonymous, result.CustomerType);
 
         // Verificar no banco
         var savedEntity = await _context.Customers.FindAsync(customer.Id);
         Assert.NotNull(savedEntity);
         Assert.Null(savedEntity.Email);
         Assert.Null(savedEntity.Cpf);
-        Assert.Equal((int)CustomerTypeEnum.Anonymous, savedEntity.CustomerType);
+        Assert.Equal((int)CustomerType.Anonymous, savedEntity.CustomerType);
     }
 
     [Fact]
@@ -460,7 +460,7 @@ public class CustomerRepositoryTests : IDisposable
             name: "Mapped Customer",
             email: new Email("mapped@example.com"),
             cpf: new Cpf("11144477735"),
-            customerType: CustomerTypeEnum.Registered
+            customerType: CustomerType.Registered
         );
 
         // Act
@@ -474,7 +474,7 @@ public class CustomerRepositoryTests : IDisposable
         Assert.Equal("Mapped Customer", savedEntity.Name);
         Assert.Equal("mapped@example.com", savedEntity.Email);
         Assert.Equal("11144477735", savedEntity.Cpf);
-        Assert.Equal((int)CustomerTypeEnum.Registered, savedEntity.CustomerType);
+        Assert.Equal((int)CustomerType.Registered, savedEntity.CustomerType);
     }
 
     [Fact]
@@ -486,7 +486,7 @@ public class CustomerRepositoryTests : IDisposable
             name: "Created At Customer",
             email: null,
             cpf: null,
-            customerType: CustomerTypeEnum.Registered
+            customerType: CustomerType.Registered
         );
 
         // Act
@@ -513,7 +513,7 @@ public class CustomerRepositoryTests : IDisposable
             name: "ID Customer",
             email: null,
             cpf: null,
-            customerType: CustomerTypeEnum.Registered
+            customerType: CustomerType.Registered
         );
 
         // Act
@@ -533,17 +533,17 @@ public class CustomerRepositoryTests : IDisposable
             name: "Registered Customer",
             email: new Email("registered@example.com"),
             cpf: new Cpf("11144477735"),
-            customerType: CustomerTypeEnum.Registered
+            customerType: CustomerType.Registered
         );
 
         // Act
         var result = await _repository.AddAsync(customer);
 
         // Assert
-        Assert.Equal(CustomerTypeEnum.Registered, result.CustomerType);
+        Assert.Equal(CustomerType.Registered, result.CustomerType);
         var savedEntity = await _context.Customers.FindAsync(customer.Id);
         Assert.NotNull(savedEntity);
-        Assert.Equal((int)CustomerTypeEnum.Registered, savedEntity.CustomerType);
+        Assert.Equal((int)CustomerType.Registered, savedEntity.CustomerType);
     }
 
     [Fact]
@@ -555,17 +555,17 @@ public class CustomerRepositoryTests : IDisposable
             name: null,
             email: null,
             cpf: null,
-            customerType: CustomerTypeEnum.Anonymous
+            customerType: CustomerType.Anonymous
         );
 
         // Act
         var result = await _repository.AddAsync(customer);
 
         // Assert
-        Assert.Equal(CustomerTypeEnum.Anonymous, result.CustomerType);
+        Assert.Equal(CustomerType.Anonymous, result.CustomerType);
         var savedEntity = await _context.Customers.FindAsync(customer.Id);
         Assert.NotNull(savedEntity);
-        Assert.Equal((int)CustomerTypeEnum.Anonymous, savedEntity.CustomerType);
+        Assert.Equal((int)CustomerType.Anonymous, savedEntity.CustomerType);
     }
 
     [Fact]
@@ -577,7 +577,7 @@ public class CustomerRepositoryTests : IDisposable
         {
             Id = customerId,
             Name = "Type Test Customer",
-            CustomerType = (int)CustomerTypeEnum.Registered,
+            CustomerType = (int)CustomerType.Registered,
             CreatedAt = DateTime.UtcNow
         };
 
@@ -589,7 +589,7 @@ public class CustomerRepositoryTests : IDisposable
 
         // Assert
         Assert.NotNull(result);
-        Assert.Equal(CustomerTypeEnum.Registered, result.CustomerType);
+        Assert.Equal(CustomerType.Registered, result.CustomerType);
     }
 
     public void Dispose()

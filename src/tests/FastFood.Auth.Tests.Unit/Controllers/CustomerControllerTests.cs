@@ -171,7 +171,7 @@ public class CustomerControllerTests
             null,
             null,
             new Cpf(cpf),
-            CustomerTypeEnum.Registered);
+            CustomerType.Registered);
         var expectedToken = "test-token";
         var expectedExpiresAt = DateTime.UtcNow.AddHours(1);
 
@@ -226,7 +226,7 @@ public class CustomerControllerTests
             null,
             null,
             new Cpf(cpf),
-            CustomerTypeEnum.Registered);
+            CustomerType.Registered);
         var expectedToken = "test-token";
         var expectedExpiresAt = DateTime.UtcNow.AddHours(1);
 

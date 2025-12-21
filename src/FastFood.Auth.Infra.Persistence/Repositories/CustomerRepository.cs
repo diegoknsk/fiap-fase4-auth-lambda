@@ -63,7 +63,7 @@ public class CustomerRepository(AuthDbContext context) : ICustomerRepository
             entity.Name,
             email,
             cpf,
-            (CustomerTypeEnum)entity.CustomerType
+            (CustomerType)entity.CustomerType
         );
 
         // Preservar CreatedAt original do banco usando reflection

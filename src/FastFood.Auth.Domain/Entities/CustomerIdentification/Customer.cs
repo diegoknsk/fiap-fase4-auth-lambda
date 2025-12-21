@@ -8,7 +8,7 @@ namespace FastFood.Auth.Domain.Entities.CustomerIdentification
         public string? Name { get; private set; }
         public Email? Email { get; private set; }
         public Cpf? Cpf { get; private set; }
-        public CustomerTypeEnum CustomerType { get; private set; }
+        public CustomerType CustomerType { get; private set; }
         public DateTime CreatedAt { get; private set; }
 
         protected Customer()
@@ -16,21 +16,21 @@ namespace FastFood.Auth.Domain.Entities.CustomerIdentification
 
         }
 
-        public Customer(Guid id, string? name, Email? email, Cpf? cpf, CustomerTypeEnum customerType)
+        public Customer(Guid id, string? name, Email? email, Cpf? cpf, CustomerType customerType)
         {
             Id = id;
             CreatedAt = DateTime.UtcNow;
             SetProperties(name, email, cpf, customerType);
         }
 
-        public void AddCustomer(string? name, Email? email, Cpf? cpf, CustomerTypeEnum customerType)
+        public void AddCustomer(string? name, Email? email, Cpf? cpf, CustomerType customerType)
         {
             Id = Guid.NewGuid();
             CreatedAt = DateTime.UtcNow;
             SetProperties(name, email, cpf, customerType);
         }
 
-        private void SetProperties(string? name, Email? email, Cpf? cpf, CustomerTypeEnum customerType)
+        private void SetProperties(string? name, Email? email, Cpf? cpf, CustomerType customerType)
         {
             Name = name;
             Email = email;

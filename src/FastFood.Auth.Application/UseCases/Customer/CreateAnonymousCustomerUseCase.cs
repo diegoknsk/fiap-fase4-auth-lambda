@@ -24,7 +24,7 @@ public class CreateAnonymousCustomerUseCase(
             name: null,
             email: null,
             cpf: null,
-            customerType: CustomerTypeEnum.Anonymous
+            customerType: CustomerType.Anonymous
         );
 
         // Salvar no repositório

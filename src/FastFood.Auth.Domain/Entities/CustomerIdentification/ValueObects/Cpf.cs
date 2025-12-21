@@ -3,16 +3,19 @@ using System.Text.RegularExpressions;
 
 namespace FastFood.Auth.Domain.Entities.CustomerIdentification.ValueObects
 {
-    public class Cpf
+    public partial class Cpf
     {
         public string? Value { get; private set; }
         protected Cpf() { } // Para EF Core
+
+        [GeneratedRegex("[^0-9]")]
+        private static partial Regex NonDigitRegex();
 
         public Cpf(string value)
         {
             DomainValidation.ThrowIfNullOrWhiteSpace(value, "CPF is required.");
 
-            value = Regex.Replace(value, "[^0-9]", ""); // remove pontuação
+            value = NonDigitRegex().Replace(value, ""); // remove pontuação
 
             DomainValidation.ThrowIf(value.Length != 11, "CPF must have 11 digits.");
             DomainValidation.ThrowIf(!IsValidCpf(value), "Invalid CPF.");
@@ -20,7 +23,7 @@ namespace FastFood.Auth.Domain.Entities.CustomerIdentification.ValueObects
             Value = value;
         }
 
-        private bool IsValidCpf(string cpf)
+        private static bool IsValidCpf(string cpf)
         {
             if (cpf.All(c => c == cpf[0]))
                 return false; // evita CPFs com todos dígitos iguais (111.111.111-11)

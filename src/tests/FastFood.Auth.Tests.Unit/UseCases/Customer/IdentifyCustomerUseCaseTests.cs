@@ -39,7 +39,7 @@ public class IdentifyCustomerUseCaseTests
             null,
             null,
             new Cpf(cpf),
-            CustomerTypeEnum.Registered);
+            CustomerType.Registered);
 
         var inputModel = new IdentifyCustomerInputModel { Cpf = cpf };
         var expectedToken = "test-token";
@@ -112,7 +112,7 @@ public class IdentifyCustomerUseCaseTests
             null,
             null,
             new Cpf(cpf),
-            CustomerTypeEnum.Registered);
+            CustomerType.Registered);
 
         var inputModel = new IdentifyCustomerInputModel { Cpf = cpf };
         var expectedToken = "test-token";
@@ -145,7 +145,7 @@ public class IdentifyCustomerUseCaseTests
             null,
             null,
             new Cpf(cpf),
-            CustomerTypeEnum.Registered);
+            CustomerType.Registered);
 
         var inputModel = new IdentifyCustomerInputModel { Cpf = cpf };
         var expectedToken = "test-token";
@@ -253,7 +253,7 @@ public class IdentifyCustomerUseCaseTests
             null,
             null,
             new Cpf(cpf),
-            CustomerTypeEnum.Registered);
+            CustomerType.Registered);
 
         _customerRepositoryMock
             .Setup(x => x.GetByCpfAsync(cpf))

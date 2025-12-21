@@ -3,11 +3,14 @@ using System.Text.RegularExpressions;
 
 namespace FastFood.Auth.Domain.Entities.CustomerIdentification.ValueObects
 {
-    public class Email
+    public partial class Email
     {
         public string Value { get; private set; } = string.Empty;
 
         protected Email() { } // Requerido pelo EF Core
+
+        [GeneratedRegex(@"^[^@\s]+@[^@\s]+\.[^@\s]+$")]
+        private static partial Regex EmailRegex();
 
         public Email(string value)
         {
@@ -21,7 +24,7 @@ namespace FastFood.Auth.Domain.Entities.CustomerIdentification.ValueObects
 
         private static bool IsValidEmail(string email)
         {
-            return Regex.IsMatch(email, @"^[^@\s]+@[^@\s]+\.[^@\s]+$");
+            return EmailRegex().IsMatch(email);
         }
 
         public override string ToString() => Value;

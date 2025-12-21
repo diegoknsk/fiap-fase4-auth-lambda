@@ -43,7 +43,7 @@ public class RegisterCustomerUseCase(
                 name: null,
                 email: null,
                 cpf: cpfValueObject,
-                customerType: CustomerTypeEnum.Registered
+                customerType: CustomerType.Registered
             );
 
             // Salvar no repositório

@@ -16,7 +16,7 @@ public class CustomerTests
         var name = "John Doe";
         var email = new Email("john@example.com");
         var cpf = new Cpf("11144477735");
-        var customerType = CustomerTypeEnum.Registered;
+        var customerType = CustomerType.Registered;
 
         // Act
         var customer = new Customer(id, name, email, cpf, customerType);
@@ -38,10 +38,10 @@ public class CustomerTests
         var cpf = new Cpf("11144477735");
 
         // Act
-        var customer = new Customer(id, null, null, cpf, CustomerTypeEnum.Registered);
+        var customer = new Customer(id, null, null, cpf, CustomerType.Registered);
 
         // Assert
-        Assert.Equal(CustomerTypeEnum.Registered, customer.CustomerType);
+        Assert.Equal(CustomerType.Registered, customer.CustomerType);
     }
 
     [Fact]
@@ -51,10 +51,10 @@ public class CustomerTests
         var id = Guid.NewGuid();
 
         // Act
-        var customer = new Customer(id, null, null, null, CustomerTypeEnum.Anonymous);
+        var customer = new Customer(id, null, null, null, CustomerType.Anonymous);
 
         // Assert
-        Assert.Equal(CustomerTypeEnum.Anonymous, customer.CustomerType);
+        Assert.Equal(CustomerType.Anonymous, customer.CustomerType);
     }
 
     [Fact]
@@ -65,7 +65,7 @@ public class CustomerTests
         var beforeCreation = DateTime.UtcNow;
 
         // Act
-        var customer = new Customer(id, null, null, null, CustomerTypeEnum.Anonymous);
+        var customer = new Customer(id, null, null, null, CustomerType.Anonymous);
         var afterCreation = DateTime.UtcNow;
 
         // Assert
@@ -78,10 +78,10 @@ public class CustomerTests
     {
         // Arrange
         var id = Guid.NewGuid();
-        var customer = new Customer(id, null, null, null, CustomerTypeEnum.Anonymous);
+        var customer = new Customer(id, null, null, null, CustomerType.Anonymous);
 
         // Act
-        customer.AddCustomer(null, null, null, CustomerTypeEnum.Anonymous);
+        customer.AddCustomer(null, null, null, CustomerType.Anonymous);
 
         // Assert
         Assert.NotEqual(Guid.Empty, customer.Id);
@@ -93,11 +93,11 @@ public class CustomerTests
     {
         // Arrange
         var id = Guid.NewGuid();
-        var customer = new Customer(id, null, null, null, CustomerTypeEnum.Anonymous);
+        var customer = new Customer(id, null, null, null, CustomerType.Anonymous);
         var beforeCreation = DateTime.UtcNow;
 
         // Act
-        customer.AddCustomer(null, null, null, CustomerTypeEnum.Anonymous);
+        customer.AddCustomer(null, null, null, CustomerType.Anonymous);
         var afterCreation = DateTime.UtcNow;
 
         // Assert
@@ -110,14 +110,14 @@ public class CustomerTests
     {
         // Arrange
         var id = Guid.NewGuid();
-        var customer = new Customer(id, null, null, null, CustomerTypeEnum.Anonymous);
+        var customer = new Customer(id, null, null, null, CustomerType.Anonymous);
         var cpf = new Cpf("11144477735");
 
         // Act
-        customer.AddCustomer(null, null, cpf, CustomerTypeEnum.Registered);
+        customer.AddCustomer(null, null, cpf, CustomerType.Registered);
 
         // Assert
-        Assert.Equal(CustomerTypeEnum.Registered, customer.CustomerType);
+        Assert.Equal(CustomerType.Registered, customer.CustomerType);
         Assert.NotNull(customer.Cpf);
         Assert.Equal(cpf.Value, customer.Cpf.Value);
     }
@@ -127,13 +127,13 @@ public class CustomerTests
     {
         // Arrange
         var id = Guid.NewGuid();
-        var customer = new Customer(id, null, null, null, CustomerTypeEnum.Registered);
+        var customer = new Customer(id, null, null, null, CustomerType.Registered);
 
         // Act
-        customer.AddCustomer(null, null, null, CustomerTypeEnum.Anonymous);
+        customer.AddCustomer(null, null, null, CustomerType.Anonymous);
 
         // Assert
-        Assert.Equal(CustomerTypeEnum.Anonymous, customer.CustomerType);
+        Assert.Equal(CustomerType.Anonymous, customer.CustomerType);
         Assert.Null(customer.Cpf);
     }
 
@@ -144,7 +144,7 @@ public class CustomerTests
         var id = Guid.NewGuid();
 
         // Act
-        var customer = new Customer(id, null, null, null, CustomerTypeEnum.Anonymous);
+        var customer = new Customer(id, null, null, null, CustomerType.Anonymous);
 
         // Assert
         Assert.NotNull(customer);
@@ -158,7 +158,7 @@ public class CustomerTests
         var id = Guid.NewGuid();
 
         // Act
-        var customer = new Customer(id, null, null, null, CustomerTypeEnum.Anonymous);
+        var customer = new Customer(id, null, null, null, CustomerType.Anonymous);
 
         // Assert
         Assert.NotNull(customer);
@@ -172,7 +172,7 @@ public class CustomerTests
         var id = Guid.NewGuid();
 
         // Act
-        var customer = new Customer(id, null, null, null, CustomerTypeEnum.Anonymous);
+        var customer = new Customer(id, null, null, null, CustomerType.Anonymous);
 
         // Assert
         Assert.NotNull(customer);

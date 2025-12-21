@@ -53,7 +53,7 @@ public class CreateAnonymousCustomerUseCaseTests
         Assert.NotEqual(Guid.Empty, result.CustomerId);
         Assert.Equal(expectedExpiresAt, result.ExpiresAt);
         Assert.NotNull(savedCustomer);
-        Assert.Equal(CustomerTypeEnum.Anonymous, savedCustomer.CustomerType);
+        Assert.Equal(CustomerType.Anonymous, savedCustomer.CustomerType);
         Assert.Null(savedCustomer.Cpf);
         Assert.Null(savedCustomer.Email);
         Assert.Null(savedCustomer.Name);
@@ -81,7 +81,7 @@ public class CreateAnonymousCustomerUseCaseTests
         // Assert
         _customerRepositoryMock.Verify(
             x => x.AddAsync(It.Is<DomainCustomer>(c => 
-                c.CustomerType == CustomerTypeEnum.Anonymous && 
+                c.CustomerType == CustomerType.Anonymous && 
                 c.Cpf == null && 
                 c.Email == null && 
                 c.Name == null)), 
