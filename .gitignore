@@ -81,3 +81,18 @@ sonar-issues.json
 
 # Launch settings (contém variáveis de ambiente locais)
 **/Properties/launchSettings.json
+
+# Terraform
+.terraform/
+*.tfstate
+*.tfstate.*
+*.tfplan
+*.tfvars
+!*.tfvars.example
+.terraform.lock.hcl
+crash.log
+crash.*.log
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
