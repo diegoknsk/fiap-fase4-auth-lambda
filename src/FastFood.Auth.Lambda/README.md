@@ -102,6 +102,30 @@ Para autenticar com o Cognito, o serviço precisa de credenciais AWS válidas. A
 - Em **produção (Lambda)**, use IAM Role com permissões adequadas para o Cognito
 - Se você receber o erro "The security token included in the request is expired", suas credenciais AWS expiraram e precisam ser renovadas (no caso da AWS Academy, baixe novas credenciais)
 
+### Configuração JWT
+
+⚠️ **IMPORTANTE DE SEGURANÇA**: O JWT Secret **DEVE** ser fornecido exclusivamente via variável de ambiente por questões de segurança (Sonar S4790).
+
+1. **Variável de Ambiente** (Obrigatório)
+   ```bash
+   # Windows PowerShell
+   $env:JwtSettings_Secret="sua-chave-secreta-minimo-32-caracteres-para-hmac-sha256"
+   
+   # Linux/Mac
+   export JwtSettings_Secret="sua-chave-secreta-minimo-32-caracteres-para-hmac-sha256"
+   ```
+   - ⚠️ **Obrigatório**: Mínimo de 32 caracteres
+   - ⚠️ **Nunca** coloque o secret em arquivos de configuração versionados
+   - Em **produção (Lambda/K8s)**, configure via variáveis de ambiente ou Secrets Manager
+
+2. **Outras configurações JWT** (Issuer, Audience, ExpirationHours)
+   - Podem ser configuradas via `appsettings.json` ou `appsettings.Development.json`
+   - Valores padrão: Issuer="FastFood.Auth", Audience="FastFood.API", ExpirationHours=24
+
+3. **Desenvolvimento Local**
+   - O `launchSettings.json` (não versionado) pode conter `JwtSettings_Secret` para facilitar o desenvolvimento
+   - ⚠️ Este arquivo está no `.gitignore` e não será commitado
+
 ## Segurança
 
 ⚠️ **IMPORTANTE**: Nunca commite arquivos com credenciais reais!

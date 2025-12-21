@@ -9,7 +9,6 @@
     "DefaultConnection": "Host=seu-host-rds.amazonaws.com;Port=5432;Database=dbAuth;Username=seu-usuario;Password=sua-senha"
   },
   "JwtSettings": {
-    "Secret": "sua-chave-secreta-minimo-32-caracteres-para-hmac-sha256",
     "Issuer": "FastFood.Auth",
     "Audience": "FastFood.API",
     "ExpirationHours": "24"

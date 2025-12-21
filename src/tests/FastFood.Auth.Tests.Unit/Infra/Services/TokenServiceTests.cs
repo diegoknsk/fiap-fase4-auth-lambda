@@ -9,20 +9,22 @@ namespace FastFood.Auth.Tests.Unit.Infra.Services;
 /// <summary>
 /// Testes unitários para TokenService.
 /// </summary>
-public class TokenServiceTests
+public class TokenServiceTests : IDisposable
 {
     private readonly Mock<IConfiguration> _configurationMock;
     private readonly Mock<IConfigurationSection> _jwtSettingsSectionMock;
     private readonly TokenService _tokenService;
+    private const string TestSecret = "MySuperSecretKeyThatIsAtLeast32CharactersLong";
 
     public TokenServiceTests()
     {
+        // Configurar variável de ambiente para o secret (obrigatório agora)
+        Environment.SetEnvironmentVariable("JwtSettings_Secret", TestSecret);
+
         _configurationMock = new Mock<IConfiguration>();
         _jwtSettingsSectionMock = new Mock<IConfigurationSection>();
 
-        // Setup default configuration
-        _jwtSettingsSectionMock.Setup(x => x["Secret"])
-            .Returns("MySuperSecretKeyThatIsAtLeast32CharactersLong");
+        // Setup default configuration (apenas Issuer, Audience, ExpirationHours - Secret vem de ENV)
         _jwtSettingsSectionMock.Setup(x => x["Issuer"])
             .Returns("FastFood.Auth");
         _jwtSettingsSectionMock.Setup(x => x["Audience"])
@@ -34,6 +36,12 @@ public class TokenServiceTests
             .Returns(_jwtSettingsSectionMock.Object);
 
         _tokenService = new TokenService(_configurationMock.Object);
+    }
+
+    public void Dispose()
+    {
+        // Limpar variável de ambiente após os testes
+        Environment.SetEnvironmentVariable("JwtSettings_Secret", null);
     }
 
     [Fact]
@@ -194,13 +202,34 @@ public class TokenServiceTests
     public void GenerateToken_WithMissingSecret_ShouldThrowInvalidOperationException()
     {
         // Arrange
-        _jwtSettingsSectionMock.Setup(x => x["Secret"]).Returns((string?)null);
+        Environment.SetEnvironmentVariable("JwtSettings_Secret", null);
         var tokenService = new TokenService(_configurationMock.Object);
         var customerId = Guid.NewGuid();
 
         // Act & Assert
-        Assert.Throws<InvalidOperationException>(() =>
+        var exception = Assert.Throws<InvalidOperationException>(() =>
             tokenService.GenerateToken(customerId, out _));
+        Assert.Contains("JWT Secret não configurado", exception.Message);
+        
+        // Restaurar para outros testes
+        Environment.SetEnvironmentVariable("JwtSettings_Secret", TestSecret);
+    }
+
+    [Fact]
+    public void GenerateToken_WithSecretTooShort_ShouldThrowInvalidOperationException()
+    {
+        // Arrange
+        Environment.SetEnvironmentVariable("JwtSettings_Secret", "short");
+        var tokenService = new TokenService(_configurationMock.Object);
+        var customerId = Guid.NewGuid();
+
+        // Act & Assert
+        var exception = Assert.Throws<InvalidOperationException>(() =>
+            tokenService.GenerateToken(customerId, out _));
+        Assert.Contains("mínimo 32 caracteres", exception.Message);
+        
+        // Restaurar para outros testes
+        Environment.SetEnvironmentVariable("JwtSettings_Secret", TestSecret);
     }
 
     [Fact]

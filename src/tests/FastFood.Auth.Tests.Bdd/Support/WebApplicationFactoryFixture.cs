@@ -18,12 +18,14 @@ public class WebApplicationFactoryFixture : WebApplicationFactory<Program>
 {
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
+        // Configurar variável de ambiente para JWT Secret (obrigatório)
+        Environment.SetEnvironmentVariable("JwtSettings_Secret", "TestSecretKeyForJWTTokenGenerationInBDDTests12345678901234567890");
+
         builder.ConfigureAppConfiguration(config =>
         {
-            // Adicionar configurações necessárias para os testes
+            // Adicionar configurações necessárias para os testes (Secret não vem mais de config)
             config.AddInMemoryCollection(new Dictionary<string, string?>
             {
-                { "JwtSettings:Secret", "TestSecretKeyForJWTTokenGenerationInBDDTests12345678901234567890" },
                 { "JwtSettings:Issuer", "FastFood.Auth.Tests" },
                 { "JwtSettings:Audience", "FastFood.Auth.Tests" },
                 { "JwtSettings:ExpirationHours", "24" },

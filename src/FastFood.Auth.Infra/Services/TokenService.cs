@@ -14,8 +14,16 @@ public class TokenService(IConfiguration configuration) : ITokenService
 {
     public string GenerateToken(Guid customerId, out DateTime expiresAt)
     {
+        // JWT Secret deve vir EXCLUSIVAMENTE de variável de ambiente por segurança
+        var secret = Environment.GetEnvironmentVariable("JwtSettings_Secret")
+            ?? throw new InvalidOperationException("JWT Secret não configurado. Configure a variável de ambiente 'JwtSettings_Secret' (mínimo 32 caracteres).");
+        
+        if (secret.Length < 32)
+        {
+            throw new InvalidOperationException($"JWT Secret deve ter no mínimo 32 caracteres. Valor atual tem {secret.Length} caracteres.");
+        }
+
         var jwtSettings = configuration.GetSection("JwtSettings");
-        var secret = jwtSettings["Secret"] ?? throw new InvalidOperationException("JWT Secret não configurado");
         var issuer = jwtSettings["Issuer"] ?? throw new InvalidOperationException("JWT Issuer não configurado");
         var audience = jwtSettings["Audience"] ?? throw new InvalidOperationException("JWT Audience não configurado");
         var expirationHours = int.Parse(jwtSettings["ExpirationHours"] ?? "24");

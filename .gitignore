@@ -78,3 +78,6 @@ sonar-issues.json
 
 # SpecFlow generated files
 **/*.feature.cs
+
+# Launch settings (contém variáveis de ambiente locais)
+**/Properties/launchSettings.json
