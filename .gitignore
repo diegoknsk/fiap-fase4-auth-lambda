@@ -70,3 +70,7 @@ nunit-*.xml
 # Specific development config files
 src/FastFood.Auth.Migrator/appsettings.Development.json
 src/FastFood.Auth.Lambda/appsettings.Development.json
+
+# SonarQube
+.sonarqube/
+sonar-issues.json
