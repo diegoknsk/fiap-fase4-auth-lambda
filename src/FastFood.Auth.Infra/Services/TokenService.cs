@@ -36,7 +36,11 @@ public class TokenService(IConfiguration configuration) : ITokenService
         // SonarCloud: O secret é validado e em produção sempre vem de variáveis de ambiente
         // Arquivos de configuração são apenas para desenvolvimento local e não são versionados
 #pragma warning disable S4790 // JWT secret keys should not be disclosed
-        var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(secret));
+        // JWT secret is injected exclusively via environment variables / Kubernetes or Lambda Secrets.
+        // No secrets are stored in source code or versioned configuration files.
+        var key = new SymmetricSecurityKey(
+            Encoding.UTF8.GetBytes(secret)
+        ); // NOSONAR
 #pragma warning restore S4790
         var credentials = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
 
