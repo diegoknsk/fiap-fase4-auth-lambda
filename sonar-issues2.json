@@ -1,0 +1,676 @@
+﻿{
+    "total":  15,
+    "p":  1,
+    "ps":  500,
+    "paging":  {
+                   "pageIndex":  1,
+                   "pageSize":  500,
+                   "total":  15
+               },
+    "effortTotal":  40,
+    "issues":  [
+                   {
+                       "key":  "AZs-gGyEgJOYlNUdSsp7",
+                       "rule":  "external_roslyn:CA1816",
+                       "severity":  "INFO",
+                       "component":  "FastFood.Auth:src/tests/FastFood.Auth.Tests.Unit/Infra.Persistence/Repositories/CustomerRepositoryTests.cs",
+                       "project":  "FastFood.Auth",
+                       "line":  595,
+                       "hash":  "bf806853e30b788d82cd918e0f65dc14",
+                       "textRange":  {
+                                         "startLine":  595,
+                                         "endLine":  595,
+                                         "startOffset":  16,
+                                         "endOffset":  23
+                                     },
+                       "flows":  [
+
+                                 ],
+                       "status":  "OPEN",
+                       "message":  "Altere CustomerRepositoryTests.Dispose() para chamar GC.SuppressFinalize(object). Isso impedirÃ¡ que tipos derivados que introduzem um finalizador precisem reimplementar \u0027IDisposable\u0027 para chamÃ¡-lo.",
+                       "effort":  "0min",
+                       "debt":  "0min",
+                       "author":  "",
+                       "tags":  [
+
+                                ],
+                       "creationDate":  "2025-12-21T01:22:23+0000",
+                       "updateDate":  "2025-12-21T01:22:23+0000",
+                       "type":  "CODE_SMELL",
+                       "externalRuleEngine":  "roslyn",
+                       "scope":  "TEST",
+                       "quickFixAvailable":  false,
+                       "messageFormattings":  [
+
+                                              ]
+                   },
+                   {
+                       "key":  "AZs90h5jgJOYlNUdSnlZ",
+                       "rule":  "external_roslyn:CA1822",
+                       "severity":  "INFO",
+                       "component":  "FastFood.Auth:src/FastFood.Auth.Application/Presenters/Admin/AuthenticateAdminPresenter.cs",
+                       "project":  "FastFood.Auth",
+                       "line":  16,
+                       "hash":  "dee0936810159b14f35f3f94a2b3541f",
+                       "textRange":  {
+                                         "startLine":  16,
+                                         "endLine":  16,
+                                         "startOffset":  40,
+                                         "endOffset":  47
+                                     },
+                       "flows":  [
+
+                                 ],
+                       "status":  "OPEN",
+                       "message":  "O membro \u0027Present\u0027 nÃ£o acessa os dados da instÃ¢ncia e pode ser marcado como estÃ¡tico",
+                       "effort":  "0min",
+                       "debt":  "0min",
+                       "author":  "diego.knsk@hotmail.com",
+                       "tags":  [
+
+                                ],
+                       "creationDate":  "2025-12-17T00:11:25+0000",
+                       "updateDate":  "2025-12-20T22:12:02+0000",
+                       "type":  "CODE_SMELL",
+                       "externalRuleEngine":  "roslyn",
+                       "scope":  "MAIN",
+                       "quickFixAvailable":  false,
+                       "messageFormattings":  [
+
+                                              ]
+                   },
+                   {
+                       "key":  "AZs90h52gJOYlNUdSnlb",
+                       "rule":  "external_roslyn:CA1822",
+                       "severity":  "INFO",
+                       "component":  "FastFood.Auth:src/FastFood.Auth.Application/Presenters/Customer/CreateAnonymousCustomerPresenter.cs",
+                       "project":  "FastFood.Auth",
+                       "line":  16,
+                       "hash":  "462ae21238838e92a6b4ff395b0050cd",
+                       "textRange":  {
+                                         "startLine":  16,
+                                         "endLine":  16,
+                                         "startOffset":  46,
+                                         "endOffset":  53
+                                     },
+                       "flows":  [
+
+                                 ],
+                       "status":  "OPEN",
+                       "message":  "O membro \u0027Present\u0027 nÃ£o acessa os dados da instÃ¢ncia e pode ser marcado como estÃ¡tico",
+                       "effort":  "0min",
+                       "debt":  "0min",
+                       "author":  "diego.knsk@hotmail.com",
+                       "tags":  [
+
+                                ],
+                       "creationDate":  "2025-12-17T00:11:25+0000",
+                       "updateDate":  "2025-12-20T22:12:02+0000",
+                       "type":  "CODE_SMELL",
+                       "externalRuleEngine":  "roslyn",
+                       "scope":  "MAIN",
+                       "quickFixAvailable":  false,
+                       "messageFormattings":  [
+
+                                              ]
+                   },
+                   {
+                       "key":  "AZs90h55gJOYlNUdSnlc",
+                       "rule":  "external_roslyn:CA1822",
+                       "severity":  "INFO",
+                       "component":  "FastFood.Auth:src/FastFood.Auth.Application/Presenters/Customer/IdentifyCustomerPresenter.cs",
+                       "project":  "FastFood.Auth",
+                       "line":  16,
+                       "hash":  "bca1444323c90e662509866f64708655",
+                       "textRange":  {
+                                         "startLine":  16,
+                                         "endLine":  16,
+                                         "startOffset":  39,
+                                         "endOffset":  46
+                                     },
+                       "flows":  [
+
+                                 ],
+                       "status":  "OPEN",
+                       "message":  "O membro \u0027Present\u0027 nÃ£o acessa os dados da instÃ¢ncia e pode ser marcado como estÃ¡tico",
+                       "effort":  "0min",
+                       "debt":  "0min",
+                       "author":  "diego.knsk@hotmail.com",
+                       "tags":  [
+
+                                ],
+                       "creationDate":  "2025-12-17T00:11:25+0000",
+                       "updateDate":  "2025-12-20T22:12:02+0000",
+                       "type":  "CODE_SMELL",
+                       "externalRuleEngine":  "roslyn",
+                       "scope":  "MAIN",
+                       "quickFixAvailable":  false,
+                       "messageFormattings":  [
+
+                                              ]
+                   },
+                   {
+                       "key":  "AZs90h5ygJOYlNUdSnla",
+                       "rule":  "external_roslyn:CA1822",
+                       "severity":  "INFO",
+                       "component":  "FastFood.Auth:src/FastFood.Auth.Application/Presenters/Customer/RegisterCustomerPresenter.cs",
+                       "project":  "FastFood.Auth",
+                       "line":  16,
+                       "hash":  "f007d4eaaddef090d7c8b29f47fc890b",
+                       "textRange":  {
+                                         "startLine":  16,
+                                         "endLine":  16,
+                                         "startOffset":  39,
+                                         "endOffset":  46
+                                     },
+                       "flows":  [
+
+                                 ],
+                       "status":  "OPEN",
+                       "message":  "O membro \u0027Present\u0027 nÃ£o acessa os dados da instÃ¢ncia e pode ser marcado como estÃ¡tico",
+                       "effort":  "0min",
+                       "debt":  "0min",
+                       "author":  "diego.knsk@hotmail.com",
+                       "tags":  [
+
+                                ],
+                       "creationDate":  "2025-12-17T00:11:25+0000",
+                       "updateDate":  "2025-12-20T22:12:02+0000",
+                       "type":  "CODE_SMELL",
+                       "externalRuleEngine":  "roslyn",
+                       "scope":  "MAIN",
+                       "quickFixAvailable":  false,
+                       "messageFormattings":  [
+
+                                              ]
+                   },
+                   {
+                       "key":  "AZs90h6lgJOYlNUdSnln",
+                       "rule":  "csharpsquid:S1905",
+                       "severity":  "MINOR",
+                       "component":  "FastFood.Auth:src/FastFood.Auth.Infra/Services/CognitoService.cs",
+                       "project":  "FastFood.Auth",
+                       "line":  108,
+                       "hash":  "ce81e70ee10bfdbf9345fe3118fea5c9",
+                       "textRange":  {
+                                         "startLine":  108,
+                                         "endLine":  108,
+                                         "startOffset":  29,
+                                         "endOffset":  32
+                                     },
+                       "flows":  [
+
+                                 ],
+                       "status":  "OPEN",
+                       "message":  "Remove this unnecessary cast to \u0027int\u0027.",
+                       "effort":  "5min",
+                       "debt":  "5min",
+                       "author":  "diego.knsk@hotmail.com",
+                       "tags":  [
+                                    "clumsy",
+                                    "redundant"
+                                ],
+                       "creationDate":  "2025-12-14T23:40:01+0000",
+                       "updateDate":  "2025-12-20T22:12:02+0000",
+                       "type":  "CODE_SMELL",
+                       "scope":  "MAIN",
+                       "quickFixAvailable":  false,
+                       "messageFormattings":  [
+
+                                              ]
+                   },
+                   {
+                       "key":  "AZs90h6dgJOYlNUdSnlm",
+                       "rule":  "external_roslyn:CA1822",
+                       "severity":  "INFO",
+                       "component":  "FastFood.Auth:src/FastFood.Auth.Infra.Persistence/Repositories/CustomerRepository.cs",
+                       "project":  "FastFood.Auth",
+                       "line":  47,
+                       "hash":  "40a569d8e771a435235fbc5d5a403fe8",
+                       "textRange":  {
+                                         "startLine":  47,
+                                         "endLine":  47,
+                                         "startOffset":  21,
+                                         "endOffset":  32
+                                     },
+                       "flows":  [
+
+                                 ],
+                       "status":  "OPEN",
+                       "message":  "O membro \u0027MapToDomain\u0027 nÃ£o acessa os dados da instÃ¢ncia e pode ser marcado como estÃ¡tico",
+                       "effort":  "0min",
+                       "debt":  "0min",
+                       "author":  "diego.knsk@hotmail.com",
+                       "tags":  [
+
+                                ],
+                       "creationDate":  "2025-12-14T22:50:23+0000",
+                       "updateDate":  "2025-12-20T22:12:02+0000",
+                       "type":  "CODE_SMELL",
+                       "externalRuleEngine":  "roslyn",
+                       "scope":  "MAIN",
+                       "quickFixAvailable":  false,
+                       "messageFormattings":  [
+
+                                              ]
+                   },
+                   {
+                       "key":  "AZs90h6dgJOYlNUdSnll",
+                       "rule":  "external_roslyn:CA1822",
+                       "severity":  "INFO",
+                       "component":  "FastFood.Auth:src/FastFood.Auth.Infra.Persistence/Repositories/CustomerRepository.cs",
+                       "project":  "FastFood.Auth",
+                       "line":  82,
+                       "hash":  "7852bc399751bc02a3ab05e99ad57b21",
+                       "textRange":  {
+                                         "startLine":  82,
+                                         "endLine":  82,
+                                         "startOffset":  27,
+                                         "endOffset":  38
+                                     },
+                       "flows":  [
+
+                                 ],
+                       "status":  "OPEN",
+                       "message":  "O membro \u0027MapToEntity\u0027 nÃ£o acessa os dados da instÃ¢ncia e pode ser marcado como estÃ¡tico",
+                       "effort":  "0min",
+                       "debt":  "0min",
+                       "author":  "diego.knsk@hotmail.com",
+                       "tags":  [
+
+                                ],
+                       "creationDate":  "2025-12-14T22:50:23+0000",
+                       "updateDate":  "2025-12-20T22:12:02+0000",
+                       "type":  "CODE_SMELL",
+                       "externalRuleEngine":  "roslyn",
+                       "scope":  "MAIN",
+                       "quickFixAvailable":  false,
+                       "messageFormattings":  [
+
+                                              ]
+                   },
+                   {
+                       "key":  "AZs90h6ugJOYlNUdSnlo",
+                       "rule":  "csharpsquid:S1118",
+                       "severity":  "MAJOR",
+                       "component":  "FastFood.Auth:src/FastFood.Auth.Migrator/Program.cs",
+                       "project":  "FastFood.Auth",
+                       "line":  11,
+                       "hash":  "0afa1b5e62aa3cfaf1cd9a4e63571cb5",
+                       "textRange":  {
+                                         "startLine":  11,
+                                         "endLine":  11,
+                                         "startOffset":  10,
+                                         "endOffset":  17
+                                     },
+                       "flows":  [
+
+                                 ],
+                       "status":  "OPEN",
+                       "message":  "Add a \u0027protected\u0027 constructor or the \u0027static\u0027 keyword to the class declaration.",
+                       "effort":  "10min",
+                       "debt":  "10min",
+                       "author":  "diego.knsk@hotmail.com",
+                       "tags":  [
+                                    "design"
+                                ],
+                       "creationDate":  "2025-12-14T22:38:15+0000",
+                       "updateDate":  "2025-12-20T22:12:02+0000",
+                       "type":  "CODE_SMELL",
+                       "scope":  "MAIN",
+                       "quickFixAvailable":  false,
+                       "messageFormattings":  [
+
+                                              ]
+                   },
+                   {
+                       "key":  "AZs90h6VgJOYlNUdSnlk",
+                       "rule":  "csharpsquid:S3925",
+                       "severity":  "MAJOR",
+                       "component":  "FastFood.Auth:src/FastFood.Auth.Domain/Common/Exceptions/DomainException.cs",
+                       "project":  "FastFood.Auth",
+                       "line":  3,
+                       "hash":  "c9d2b251952d03586bbf442fff116afb",
+                       "textRange":  {
+                                         "startLine":  3,
+                                         "endLine":  3,
+                                         "startOffset":  17,
+                                         "endOffset":  32
+                                     },
+                       "flows":  [
+                                     {
+                                         "locations":  [
+                                                           {
+                                                               "component":  "FastFood.Auth:src/FastFood.Auth.Domain/Common/Exceptions/DomainException.cs",
+                                                               "textRange":  {
+                                                                                 "startLine":  3,
+                                                                                 "endLine":  3,
+                                                                                 "startOffset":  11,
+                                                                                 "endOffset":  16
+                                                                             },
+                                                               "msg":  "Add \u0027System.SerializableAttribute\u0027 attribute on \u0027DomainException\u0027 because it implements \u0027ISerializable\u0027.",
+                                                               "msgFormattings":  [
+
+                                                                                  ]
+                                                           }
+                                                       ]
+                                     },
+                                     {
+                                         "locations":  [
+                                                           {
+                                                               "component":  "FastFood.Auth:src/FastFood.Auth.Domain/Common/Exceptions/DomainException.cs",
+                                                               "textRange":  {
+                                                                                 "startLine":  3,
+                                                                                 "endLine":  3,
+                                                                                 "startOffset":  11,
+                                                                                 "endOffset":  16
+                                                                             },
+                                                               "msg":  "Add a \u0027protected\u0027 constructor \u0027DomainException(SerializationInfo, StreamingContext)\u0027.",
+                                                               "msgFormattings":  [
+
+                                                                                  ]
+                                                           }
+                                                       ]
+                                     }
+                                 ],
+                       "status":  "OPEN",
+                       "message":  "Update this implementation of \u0027ISerializable\u0027 to conform to the recommended serialization pattern.",
+                       "effort":  "20min",
+                       "debt":  "20min",
+                       "author":  "diego.knsk@hotmail.com",
+                       "tags":  [
+                                    "pitfall"
+                                ],
+                       "creationDate":  "2025-12-14T20:46:31+0000",
+                       "updateDate":  "2025-12-20T22:12:02+0000",
+                       "type":  "CODE_SMELL",
+                       "scope":  "MAIN",
+                       "quickFixAvailable":  false,
+                       "messageFormattings":  [
+
+                                              ]
+                   },
+                   {
+                       "key":  "AZs90h6PgJOYlNUdSnlj",
+                       "rule":  "csharpsquid:S2344",
+                       "severity":  "MINOR",
+                       "component":  "FastFood.Auth:src/FastFood.Auth.Domain/Entities/CustomerIdentification/CustomerTypeEnum.cs",
+                       "project":  "FastFood.Auth",
+                       "line":  9,
+                       "hash":  "8b3b4278f734ee1a5dcb69bd797a9187",
+                       "textRange":  {
+                                         "startLine":  9,
+                                         "endLine":  9,
+                                         "startOffset":  16,
+                                         "endOffset":  32
+                                     },
+                       "flows":  [
+
+                                 ],
+                       "status":  "OPEN",
+                       "message":  "Rename this enumeration to remove the \u0027Enum\u0027 suffix.",
+                       "effort":  "5min",
+                       "debt":  "5min",
+                       "author":  "diego.knsk@hotmail.com",
+                       "tags":  [
+                                    "convention"
+                                ],
+                       "creationDate":  "2025-12-14T20:46:31+0000",
+                       "updateDate":  "2025-12-20T22:12:02+0000",
+                       "type":  "CODE_SMELL",
+                       "scope":  "MAIN",
+                       "quickFixAvailable":  false,
+                       "messageFormattings":  [
+
+                                              ]
+                   },
+                   {
+                       "key":  "AZs90h6GgJOYlNUdSnle",
+                       "rule":  "external_roslyn:SYSLIB1045",
+                       "severity":  "INFO",
+                       "component":  "FastFood.Auth:src/FastFood.Auth.Domain/Entities/CustomerIdentification/ValueObects/Cpf.cs",
+                       "project":  "FastFood.Auth",
+                       "line":  15,
+                       "hash":  "18e6597cbfc51f63bd7bc2d9b20ab39a",
+                       "textRange":  {
+                                         "startLine":  15,
+                                         "endLine":  15,
+                                         "startOffset":  20,
+                                         "endOffset":  54
+                                     },
+                       "flows":  [
+
+                                 ],
+                       "status":  "OPEN",
+                       "message":  "Use \u0027GeneratedRegexAttribute\u0027 para gerar a implementaÃ§Ã£o de expressÃ£o regular em tempo de compilaÃ§Ã£o.",
+                       "effort":  "0min",
+                       "debt":  "0min",
+                       "author":  "diego.knsk@hotmail.com",
+                       "tags":  [
+
+                                ],
+                       "creationDate":  "2025-12-14T20:46:31+0000",
+                       "updateDate":  "2025-12-20T22:12:02+0000",
+                       "type":  "CODE_SMELL",
+                       "externalRuleEngine":  "roslyn",
+                       "scope":  "MAIN",
+                       "quickFixAvailable":  false,
+                       "messageFormattings":  [
+
+                                              ]
+                   },
+                   {
+                       "key":  "AZs90h6GgJOYlNUdSnlf",
+                       "rule":  "external_roslyn:CA1822",
+                       "severity":  "INFO",
+                       "component":  "FastFood.Auth:src/FastFood.Auth.Domain/Entities/CustomerIdentification/ValueObects/Cpf.cs",
+                       "project":  "FastFood.Auth",
+                       "line":  35,
+                       "hash":  "a07cb5793e90b6fc833fcc5fbee9ef80",
+                       "textRange":  {
+                                         "startLine":  35,
+                                         "endLine":  35,
+                                         "startOffset":  20,
+                                         "endOffset":  34
+                                     },
+                       "flows":  [
+
+                                 ],
+                       "status":  "OPEN",
+                       "message":  "O membro \u0027CalculateDigit\u0027 nÃ£o acessa os dados da instÃ¢ncia e pode ser marcado como estÃ¡tico",
+                       "effort":  "0min",
+                       "debt":  "0min",
+                       "author":  "diego.knsk@hotmail.com",
+                       "tags":  [
+
+                                ],
+                       "creationDate":  "2025-12-14T20:46:31+0000",
+                       "updateDate":  "2025-12-20T22:12:02+0000",
+                       "type":  "CODE_SMELL",
+                       "externalRuleEngine":  "roslyn",
+                       "scope":  "MAIN",
+                       "quickFixAvailable":  false,
+                       "messageFormattings":  [
+
+                                              ]
+                   },
+                   {
+                       "key":  "AZs90h6KgJOYlNUdSnli",
+                       "rule":  "external_roslyn:CA1822",
+                       "severity":  "INFO",
+                       "component":  "FastFood.Auth:src/FastFood.Auth.Domain/Entities/CustomerIdentification/ValueObects/Email.cs",
+                       "project":  "FastFood.Auth",
+                       "line":  22,
+                       "hash":  "e79a75462eb19943af212e37a5b6e63b",
+                       "textRange":  {
+                                         "startLine":  22,
+                                         "endLine":  22,
+                                         "startOffset":  21,
+                                         "endOffset":  33
+                                     },
+                       "flows":  [
+
+                                 ],
+                       "status":  "OPEN",
+                       "message":  "O membro \u0027IsValidEmail\u0027 nÃ£o acessa os dados da instÃ¢ncia e pode ser marcado como estÃ¡tico",
+                       "effort":  "0min",
+                       "debt":  "0min",
+                       "author":  "diego.knsk@hotmail.com",
+                       "tags":  [
+
+                                ],
+                       "creationDate":  "2025-12-14T20:46:31+0000",
+                       "updateDate":  "2025-12-20T22:12:02+0000",
+                       "type":  "CODE_SMELL",
+                       "externalRuleEngine":  "roslyn",
+                       "scope":  "MAIN",
+                       "quickFixAvailable":  false,
+                       "messageFormattings":  [
+
+                                              ]
+                   },
+                   {
+                       "key":  "AZs90h6KgJOYlNUdSnlh",
+                       "rule":  "external_roslyn:SYSLIB1045",
+                       "severity":  "INFO",
+                       "component":  "FastFood.Auth:src/FastFood.Auth.Domain/Entities/CustomerIdentification/ValueObects/Email.cs",
+                       "project":  "FastFood.Auth",
+                       "line":  24,
+                       "hash":  "7b4504d99e8d11bedcaa66b2f882a1db",
+                       "textRange":  {
+                                         "startLine":  24,
+                                         "endLine":  24,
+                                         "startOffset":  19,
+                                         "endOffset":  70
+                                     },
+                       "flows":  [
+
+                                 ],
+                       "status":  "OPEN",
+                       "message":  "Use \u0027GeneratedRegexAttribute\u0027 para gerar a implementaÃ§Ã£o de expressÃ£o regular em tempo de compilaÃ§Ã£o.",
+                       "effort":  "0min",
+                       "debt":  "0min",
+                       "author":  "diego.knsk@hotmail.com",
+                       "tags":  [
+
+                                ],
+                       "creationDate":  "2025-12-14T20:46:31+0000",
+                       "updateDate":  "2025-12-20T22:12:02+0000",
+                       "type":  "CODE_SMELL",
+                       "externalRuleEngine":  "roslyn",
+                       "scope":  "MAIN",
+                       "quickFixAvailable":  false,
+                       "messageFormattings":  [
+
+                                              ]
+                   }
+               ],
+    "components":  [
+                       {
+                           "key":  "FastFood.Auth:src/FastFood.Auth.Domain/Entities/CustomerIdentification/CustomerTypeEnum.cs",
+                           "enabled":  true,
+                           "qualifier":  "FIL",
+                           "name":  "CustomerTypeEnum.cs",
+                           "longName":  "src/FastFood.Auth.Domain/Entities/CustomerIdentification/CustomerTypeEnum.cs",
+                           "path":  "src/FastFood.Auth.Domain/Entities/CustomerIdentification/CustomerTypeEnum.cs"
+                       },
+                       {
+                           "key":  "FastFood.Auth:src/tests/FastFood.Auth.Tests.Unit/Infra.Persistence/Repositories/CustomerRepositoryTests.cs",
+                           "enabled":  true,
+                           "qualifier":  "UTS",
+                           "name":  "CustomerRepositoryTests.cs",
+                           "longName":  "src/tests/FastFood.Auth.Tests.Unit/Infra.Persistence/Repositories/CustomerRepositoryTests.cs",
+                           "path":  "src/tests/FastFood.Auth.Tests.Unit/Infra.Persistence/Repositories/CustomerRepositoryTests.cs"
+                       },
+                       {
+                           "key":  "FastFood.Auth:src/FastFood.Auth.Application/Presenters/Admin/AuthenticateAdminPresenter.cs",
+                           "enabled":  true,
+                           "qualifier":  "FIL",
+                           "name":  "AuthenticateAdminPresenter.cs",
+                           "longName":  "src/FastFood.Auth.Application/Presenters/Admin/AuthenticateAdminPresenter.cs",
+                           "path":  "src/FastFood.Auth.Application/Presenters/Admin/AuthenticateAdminPresenter.cs"
+                       },
+                       {
+                           "key":  "FastFood.Auth:src/FastFood.Auth.Infra.Persistence/Repositories/CustomerRepository.cs",
+                           "enabled":  true,
+                           "qualifier":  "FIL",
+                           "name":  "CustomerRepository.cs",
+                           "longName":  "src/FastFood.Auth.Infra.Persistence/Repositories/CustomerRepository.cs",
+                           "path":  "src/FastFood.Auth.Infra.Persistence/Repositories/CustomerRepository.cs"
+                       },
+                       {
+                           "key":  "FastFood.Auth:src/FastFood.Auth.Application/Presenters/Customer/CreateAnonymousCustomerPresenter.cs",
+                           "enabled":  true,
+                           "qualifier":  "FIL",
+                           "name":  "CreateAnonymousCustomerPresenter.cs",
+                           "longName":  "src/FastFood.Auth.Application/Presenters/Customer/CreateAnonymousCustomerPresenter.cs",
+                           "path":  "src/FastFood.Auth.Application/Presenters/Customer/CreateAnonymousCustomerPresenter.cs"
+                       },
+                       {
+                           "key":  "FastFood.Auth:src/FastFood.Auth.Application/Presenters/Customer/IdentifyCustomerPresenter.cs",
+                           "enabled":  true,
+                           "qualifier":  "FIL",
+                           "name":  "IdentifyCustomerPresenter.cs",
+                           "longName":  "src/FastFood.Auth.Application/Presenters/Customer/IdentifyCustomerPresenter.cs",
+                           "path":  "src/FastFood.Auth.Application/Presenters/Customer/IdentifyCustomerPresenter.cs"
+                       },
+                       {
+                           "key":  "FastFood.Auth:src/FastFood.Auth.Infra/Services/CognitoService.cs",
+                           "enabled":  true,
+                           "qualifier":  "FIL",
+                           "name":  "CognitoService.cs",
+                           "longName":  "src/FastFood.Auth.Infra/Services/CognitoService.cs",
+                           "path":  "src/FastFood.Auth.Infra/Services/CognitoService.cs"
+                       },
+                       {
+                           "key":  "FastFood.Auth:src/FastFood.Auth.Application/Presenters/Customer/RegisterCustomerPresenter.cs",
+                           "enabled":  true,
+                           "qualifier":  "FIL",
+                           "name":  "RegisterCustomerPresenter.cs",
+                           "longName":  "src/FastFood.Auth.Application/Presenters/Customer/RegisterCustomerPresenter.cs",
+                           "path":  "src/FastFood.Auth.Application/Presenters/Customer/RegisterCustomerPresenter.cs"
+                       },
+                       {
+                           "key":  "FastFood.Auth",
+                           "enabled":  true,
+                           "qualifier":  "TRK",
+                           "name":  "FastFood.Auth",
+                           "longName":  "FastFood.Auth"
+                       },
+                       {
+                           "key":  "FastFood.Auth:src/FastFood.Auth.Migrator/Program.cs",
+                           "enabled":  true,
+                           "qualifier":  "FIL",
+                           "name":  "Program.cs",
+                           "longName":  "src/FastFood.Auth.Migrator/Program.cs",
+                           "path":  "src/FastFood.Auth.Migrator/Program.cs"
+                       },
+                       {
+                           "key":  "FastFood.Auth:src/FastFood.Auth.Domain/Entities/CustomerIdentification/ValueObects/Cpf.cs",
+                           "enabled":  true,
+                           "qualifier":  "FIL",
+                           "name":  "Cpf.cs",
+                           "longName":  "src/FastFood.Auth.Domain/Entities/CustomerIdentification/ValueObects/Cpf.cs",
+                           "path":  "src/FastFood.Auth.Domain/Entities/CustomerIdentification/ValueObects/Cpf.cs"
+                       },
+                       {
+                           "key":  "FastFood.Auth:src/FastFood.Auth.Domain/Entities/CustomerIdentification/ValueObects/Email.cs",
+                           "enabled":  true,
+                           "qualifier":  "FIL",
+                           "name":  "Email.cs",
+                           "longName":  "src/FastFood.Auth.Domain/Entities/CustomerIdentification/ValueObects/Email.cs",
+                           "path":  "src/FastFood.Auth.Domain/Entities/CustomerIdentification/ValueObects/Email.cs"
+                       },
+                       {
+                           "key":  "FastFood.Auth:src/FastFood.Auth.Domain/Common/Exceptions/DomainException.cs",
+                           "enabled":  true,
+                           "qualifier":  "FIL",
+                           "name":  "DomainException.cs",
+                           "longName":  "src/FastFood.Auth.Domain/Common/Exceptions/DomainException.cs",
+                           "path":  "src/FastFood.Auth.Domain/Common/Exceptions/DomainException.cs"
+                       }
+                   ],
+    "facets":  [
+
+               ]
+}
