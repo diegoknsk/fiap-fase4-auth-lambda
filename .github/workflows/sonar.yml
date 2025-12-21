@@ -54,7 +54,7 @@ jobs:
           dotnet test FastFood.Auth.sln -c Release --no-build
           --logger "trx;LogFileName=test_results.trx"
           /p:CollectCoverage=true
-          /p:CoverletOutputFormat="opencover,cobertura"
+          /p:CoverletOutputFormat="opencover"
           /p:CoverletOutput=./TestResults/coverage/
 
       - name: Sonar - End
