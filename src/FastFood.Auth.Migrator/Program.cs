@@ -43,8 +43,6 @@ namespace FastFood.Auth.Migrator
                     Console.WriteLine("  2. Arquivo appsettings.Development.json (não commitado)");
                     Console.WriteLine("  3. Arquivo appsettings.json");
                     Console.WriteLine();
-                    Console.WriteLine("Exemplo de variável de ambiente:");
-                    Console.WriteLine("  ConnectionStrings__DefaultConnection=\"Host=host;Port=5432;Database=db;Username=user;Password=pass\"");
                     Environment.Exit(1);
                     return;
                 }
