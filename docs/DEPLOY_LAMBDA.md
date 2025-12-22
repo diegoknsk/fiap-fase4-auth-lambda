@@ -24,22 +24,25 @@ O processo de deploy é dividido em duas etapas distintas:
 
 O processo completo segue os seguintes passos:
 
-1. **Build da Imagem Docker** (GitHub Actions)
+1. **Build da Imagem Docker** (GitHub Actions - job `build-and-push`)
    - O workflow faz checkout do código
    - Executa `docker build` para criar a imagem
-   - Tag da imagem: `sha-<commit-sha>`
+   - Tag da imagem: `sha-<7-primeiros-caracteres-do-SHA>` (ex: `sha-abcdef1`)
+   - Exporta `ECR_IMAGE_URI` como output do job
 
-2. **Push para ECR** (GitHub Actions)
+2. **Push para ECR** (GitHub Actions - job `build-and-push`)
    - Login no ECR usando credenciais AWS
-   - Push da imagem com tag SHA: `docker push <ecr-uri>:sha-<commit-sha>`
+   - Push da imagem com tag SHA: `docker push <ecr-uri>:sha-<7-primeiros-caracteres>`
    - Push da imagem com tag `latest`: `docker push <ecr-uri>:latest`
+   - Exporta `ECR_IMAGE_URI` como output para uso no job `terraform-apply`
 
-3. **Deploy via Terraform** (GitHub Actions)
+3. **Deploy via Terraform** (GitHub Actions - job `terraform-apply`)
    - Executa `terraform init` no diretório `terraform/`
    - Executa `terraform plan` com variáveis:
      - `aws_region`: Região AWS
      - `lambda_function_name`: Nome da função Lambda
-     - `ecr_image_uri`: URI completa da imagem ECR
+     - `ecr_image_uri`: URI completa da imagem ECR (recebida do job `build-and-push`)
+     - `lambda_role_arn`: ARN da role IAM para o Lambda
    - Executa `terraform apply` para atualizar o Lambda
 
 4. **Atualização do Lambda**
@@ -57,7 +60,7 @@ Os seguintes secrets devem estar configurados no GitHub:
 - `AWS_SECRET_ACCESS_KEY`: Credencial secreta AWS
 - `AWS_REGION`: Região AWS onde o Lambda será deployado (ex: `us-east-1`)
 - `AWS_ACCOUNT_ID`: ID da conta AWS (ex: `118233104061`)
-- `ECR_REPOSITORY`: Nome do repositório ECR (ex: `auth-cpf-lambda`)
+- `ECR_REPOSITORY_NAME`: Nome do repositório ECR (ex: `auth-cpf-lambda`)
 - `LAMBDA_FUNCTION_NAME`: Nome da função Lambda (ex: `auth-cpf-lambda`)
 - `LAMBDA_ROLE_ARN`: ARN da role IAM para a função Lambda (ex: `arn:aws:iam::118233104061:role/lambda-execution-role`)
 
@@ -85,14 +88,14 @@ A URI completa da imagem ECR segue o formato:
 
 **Exemplo real:**
 ```
-118233104061.dkr.ecr.us-east-1.amazonaws.com/auth-cpf-lambda:sha-abcdef1234567890
+118233104061.dkr.ecr.us-east-1.amazonaws.com/auth-cpf-lambda:sha-abcdef1
 ```
 
 Onde:
 - `118233104061`: Account ID da AWS
 - `us-east-1`: Região AWS
 - `auth-cpf-lambda`: Nome do repositório ECR
-- `sha-abcdef1234567890`: Tag da imagem (baseada no commit SHA)
+- `sha-abcdef1`: Tag da imagem (baseada nos primeiros 7 caracteres do commit SHA)
 
 ## Comandos Terraform
 
@@ -202,11 +205,15 @@ O workflow `.github/workflows/deploy-lambda.yml` é executado:
 
 1. **build-and-push**:
    - Build da imagem Docker
-   - Push para ECR com tag SHA e `latest`
+   - Push para ECR com tag SHA (primeiros 7 caracteres) e `latest`
+   - Exporta `ECR_IMAGE_URI` como output para uso no job seguinte
+   - Tag da imagem: `sha-<7-primeiros-caracteres-do-SHA>`
+   - Exemplo: `sha-abcdef1`
 
-2. **deploy-lambda**:
+2. **terraform-apply**:
    - Executa Terraform para atualizar o Lambda
    - Depende do job `build-and-push` (só executa após push bem-sucedido)
+   - Recebe `ECR_IMAGE_URI` do job anterior via `needs.build-and-push.outputs.ecr_image_uri`
 
 ## Troubleshooting
 

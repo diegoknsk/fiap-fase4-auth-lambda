@@ -1,22 +1,23 @@
-name: Deploy Lambda via Terraform
+name: Deploy Lambda to AWS
 
 on:
   push:
-    branches: [main]
-  workflow_dispatch:
+    branches:
+      - main
+  workflow_dispatch: # Permite execução manual
 
 env:
   AWS_REGION: ${{ secrets.AWS_REGION }}
-  AWS_ACCOUNT_ID: ${{ secrets.AWS_ACCOUNT_ID }}
-  ECR_REPOSITORY: ${{ secrets.ECR_REPOSITORY }}
-  LAMBDA_FUNCTION_NAME: ${{ secrets.LAMBDA_FUNCTION_NAME }}
-  LAMBDA_ROLE_ARN: ${{ secrets.LAMBDA_ROLE_ARN }}
+  ECR_REPOSITORY_NAME: ${{ secrets.ECR_REPOSITORY_NAME }}
 
 jobs:
   build-and-push:
     name: Build and Push Docker Image to ECR
     runs-on: ubuntu-latest
-
+    
+    outputs:
+      ecr_image_uri: ${{ steps.build.outputs.ecr_image_uri }}
+    
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -32,34 +33,45 @@ jobs:
         id: login-ecr
         uses: aws-actions/amazon-ecr-login@v2
 
-      - name: Build, tag, and push image to Amazon ECR
-        id: build-image
-        env:
-          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
-          IMAGE_TAG: sha-${{ github.sha }}
+      - name: Set up variables
+        id: vars
         run: |
-          # Construir URI completa da imagem ECR
-          ECR_IMAGE_URI="${ECR_REGISTRY}/${ECR_REPOSITORY}:${IMAGE_TAG}"
+          ECR_REPOSITORY_URL="${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com/${{ env.ECR_REPOSITORY_NAME }}"
+          IMAGE_TAG="sha-${GITHUB_SHA::7}"
+          ECR_IMAGE_URI="${ECR_REPOSITORY_URL}:${IMAGE_TAG}"
           
-          # Build da imagem Docker
-          docker build -t $ECR_IMAGE_URI .
+          echo "ECR_REPOSITORY_URL=${ECR_REPOSITORY_URL}" >> $GITHUB_ENV
+          echo "IMAGE_TAG=${IMAGE_TAG}" >> $GITHUB_ENV
+          echo "ECR_IMAGE_URI=${ECR_IMAGE_URI}" >> $GITHUB_ENV
           
-          # Tag adicional como latest
-          docker tag $ECR_IMAGE_URI ${ECR_REGISTRY}/${ECR_REPOSITORY}:latest
-          
-          # Push da imagem com tag SHA
-          docker push $ECR_IMAGE_URI
-          
-          # Push da imagem com tag latest
-          docker push ${ECR_REGISTRY}/${ECR_REPOSITORY}:latest
-          
-          echo "Imagem ECR construída e enviada: ${ECR_IMAGE_URI}"
+          echo "ecr_repository_url=${ECR_REPOSITORY_URL}" >> $GITHUB_OUTPUT
+          echo "image_tag=${IMAGE_TAG}" >> $GITHUB_OUTPUT
+          echo "ecr_image_uri=${ECR_IMAGE_URI}" >> $GITHUB_OUTPUT
 
-  deploy-lambda:
+      - name: Build Docker image
+        id: build
+        run: |
+          docker build -t ${{ env.ECR_IMAGE_URI }} .
+          echo "ecr_image_uri=${{ env.ECR_IMAGE_URI }}" >> $GITHUB_OUTPUT
+
+      - name: Tag image as latest
+        run: |
+          docker tag ${{ env.ECR_IMAGE_URI }} ${{ env.ECR_REPOSITORY_URL }}:latest
+
+      - name: Push image to ECR
+        run: |
+          docker push ${{ env.ECR_IMAGE_URI }}
+          docker push ${{ env.ECR_REPOSITORY_URL }}:latest
+
+      - name: Output ECR Image URI
+        run: |
+          echo "ECR Image URI: ${{ steps.build.outputs.ecr_image_uri }}"
+
+  terraform-apply:
     name: Deploy Lambda via Terraform
-    runs-on: ubuntu-latest
     needs: build-and-push
-
+    runs-on: ubuntu-latest
+    
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -74,38 +86,26 @@ jobs:
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
         with:
-          terraform_version: "1.6.0"
+          terraform_version: 1.6.0
 
       - name: Terraform Init
         working-directory: ./terraform
-        run: |
-          # Inicializar Terraform
-          # Nota: Backend S3 deve estar configurado via variáveis de ambiente ou backend-config
-          terraform init
+        run: terraform init
 
       - name: Terraform Plan
         working-directory: ./terraform
-        env:
-          # Construir URI completa da imagem ECR: account-id.dkr.ecr.region.amazonaws.com/repository:tag
-          ECR_IMAGE_URI: ${{ env.AWS_ACCOUNT_ID }}.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com/${{ env.ECR_REPOSITORY }}:sha-${{ github.sha }}
         run: |
-          echo "Usando ECR Image URI: ${ECR_IMAGE_URI}"
           terraform plan \
             -var="aws_region=${{ env.AWS_REGION }}" \
-            -var="lambda_function_name=${{ env.LAMBDA_FUNCTION_NAME }}" \
-            -var="ecr_image_uri=${ECR_IMAGE_URI}" \
-            -var="lambda_role_arn=${{ env.LAMBDA_ROLE_ARN }}" \
-            -out=tfplan
+            -var="lambda_function_name=${{ secrets.LAMBDA_FUNCTION_NAME }}" \
+            -var="ecr_image_uri=${{ needs.build-and-push.outputs.ecr_image_uri }}" \
+            -var="lambda_role_arn=${{ secrets.LAMBDA_ROLE_ARN }}"
 
       - name: Terraform Apply
         working-directory: ./terraform
         run: |
-          terraform apply -auto-approve tfplan
-
-      - name: Terraform Output
-        working-directory: ./terraform
-        run: |
-          echo "Lambda Function Name: $(terraform output -raw lambda_function_name)"
-          echo "Lambda Function ARN: $(terraform output -raw lambda_function_arn)"
-          echo "Lambda Image URI: $(terraform output -raw lambda_function_image_uri)"
-
+          terraform apply -auto-approve \
+            -var="aws_region=${{ env.AWS_REGION }}" \
+            -var="lambda_function_name=${{ secrets.LAMBDA_FUNCTION_NAME }}" \
+            -var="ecr_image_uri=${{ needs.build-and-push.outputs.ecr_image_uri }}" \
+            -var="lambda_role_arn=${{ secrets.LAMBDA_ROLE_ARN }}"

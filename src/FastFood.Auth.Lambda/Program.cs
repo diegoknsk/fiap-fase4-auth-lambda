@@ -5,8 +5,12 @@ using FastFood.Auth.Infra.Persistence.Repositories;
 using FastFood.Auth.Infra.Services;
 using FastFood.Auth.Application.UseCases.Customer;
 using FastFood.Auth.Application.UseCases.Admin;
+using Amazon.Lambda.AspNetCoreServer.Hosting;
 
 var builder = WebApplication.CreateBuilder(args);
+
+// Configurar hosting Lambda para AWS (substitui Kestrel em produção)
+builder.Services.AddAWSLambdaHosting(LambdaEventSource.HttpApi);
 
 // Add services to the container.
 

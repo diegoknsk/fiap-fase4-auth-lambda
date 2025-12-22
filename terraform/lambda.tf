@@ -22,12 +22,12 @@ resource "aws_lambda_function" "lambda" {
   #     ENV_VAR = "value"
   #   }
   # }
-  
+
   # Tags padrão do projeto
   tags = {
-    Name        = var.lambda_function_name
-    ManagedBy   = "Terraform"
-    Project     = "FastFood-Auth"
+    Name      = var.lambda_function_name
+    ManagedBy = "Terraform"
+    Project   = "FastFood-Auth"
   }
 }
 
