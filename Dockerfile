@@ -41,8 +41,20 @@ RUN dotnet publish "FastFood.Auth.Lambda.csproj" \
 # Stage 2: Runtime - Imagem base AWS Lambda para .NET 8
 FROM public.ecr.aws/lambda/dotnet:8
 
+# Criar grupo e usuário não-root para execução da aplicação
+# Seguindo princípio de least privilege para resolver Security Hotspot do Sonar
+RUN groupadd -r appgroup && useradd -r -g appgroup appuser
+
 # Copiar aplicação publicada do stage de build
 COPY --from=build /app/publish ${LAMBDA_TASK_ROOT}
+
+# Ajustar permissões do diretório da aplicação para o usuário não-root
+# ${LAMBDA_TASK_ROOT} é o diretório padrão usado pela AWS Lambda
+RUN chown -R appuser:appgroup ${LAMBDA_TASK_ROOT}
+
+# Mudar para usuário não-root antes de executar a aplicação
+# Isso garante que a aplicação não execute com privilégios de root
+USER appuser
 
 # Configurar variáveis de ambiente
 ENV ASPNETCORE_ENVIRONMENT=Production
