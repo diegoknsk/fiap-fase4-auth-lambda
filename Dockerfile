@@ -41,14 +41,13 @@ RUN dotnet publish "FastFood.Auth.Lambda.csproj" \
 # Stage 2: Runtime - Imagem base AWS Lambda para .NET 8
 FROM public.ecr.aws/lambda/dotnet:8
 
-# Instalar shadow-utils para ter acesso aos comandos groupadd e useradd
+# Instalar shadow-utils e criar usuário não-root em um único RUN
 # Necessário para criar usuário não-root (segurança)
-# A imagem AWS Lambda usa microdnf como gerenciador de pacotes
-RUN microdnf install -y shadow-utils && microdnf clean all
-
-# Criar grupo e usuário não-root para execução da aplicação
-# Seguindo princípio de least privilege para resolver Security Hotspot do Sonar
-RUN groupadd -r appgroup && useradd -r -g appgroup appuser
+# A imagem AWS Lambda é baseada em Amazon Linux que usa yum
+RUN yum install -y shadow-utils && \
+    yum clean all && \
+    groupadd -r appgroup && \
+    useradd -r -g appgroup appuser
 
 # Copiar aplicação publicada do stage de build
 COPY --from=build /app/publish ${LAMBDA_TASK_ROOT}
