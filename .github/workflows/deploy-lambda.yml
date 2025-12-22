@@ -20,10 +20,10 @@ jobs:
     
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
 
       - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v4
+        uses: aws-actions/configure-aws-credentials@ff717079ee2060e4bcee96c4779b553acc87447c # v4
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
@@ -32,22 +32,24 @@ jobs:
 
       - name: Login to Amazon ECR
         id: login-ecr
-        uses: aws-actions/amazon-ecr-login@v2
+        uses: aws-actions/amazon-ecr-login@062b18b96a7aff071d4dc91bc00c4c1a7945b076 # v2
 
       - name: Set up variables
         id: vars
+        env:
+          AWS_ACCOUNT_ID: ${{ secrets.AWS_ACCOUNT_ID }}
         run: |
-          ECR_REPOSITORY_URL="${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com/${{ env.ECR_REPOSITORY_NAME }}"
+          ECR_REPOSITORY_URL="${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/${ECR_REPOSITORY_NAME}"
           IMAGE_TAG="sha-${GITHUB_SHA::7}"
           ECR_IMAGE_URI="${ECR_REPOSITORY_URL}:${IMAGE_TAG}"
           
-          echo "ECR_REPOSITORY_URL=${ECR_REPOSITORY_URL}" >> $GITHUB_ENV
-          echo "IMAGE_TAG=${IMAGE_TAG}" >> $GITHUB_ENV
-          echo "ECR_IMAGE_URI=${ECR_IMAGE_URI}" >> $GITHUB_ENV
+          echo "ECR_REPOSITORY_URL=${ECR_REPOSITORY_URL}" >> "$GITHUB_ENV"
+          echo "IMAGE_TAG=${IMAGE_TAG}" >> "$GITHUB_ENV"
+          echo "ECR_IMAGE_URI=${ECR_IMAGE_URI}" >> "$GITHUB_ENV"
           
-          echo "ecr_repository_url=${ECR_REPOSITORY_URL}" >> $GITHUB_OUTPUT
-          echo "image_tag=${IMAGE_TAG}" >> $GITHUB_OUTPUT
-          echo "ecr_image_uri=${ECR_IMAGE_URI}" >> $GITHUB_OUTPUT
+          echo "ecr_repository_url=${ECR_REPOSITORY_URL}" >> "$GITHUB_OUTPUT"
+          echo "image_tag=${IMAGE_TAG}" >> "$GITHUB_OUTPUT"
+          echo "ecr_image_uri=${ECR_IMAGE_URI}" >> "$GITHUB_OUTPUT"
 
       - name: Build Docker image
         id: build
@@ -75,10 +77,10 @@ jobs:
     
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
 
       - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v4
+        uses: aws-actions/configure-aws-credentials@ff717079ee2060e4bcee96c4779b553acc87447c # v4
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
@@ -86,7 +88,7 @@ jobs:
           aws-region: ${{ env.AWS_REGION }}
 
       - name: Setup Terraform
-        uses: hashicorp/setup-terraform@v3
+        uses: hashicorp/setup-terraform@b9cd54a3c349d3f38e8881555d616ced269862dd # v3
         with:
           terraform_version: 1.6.0
 
@@ -96,18 +98,24 @@ jobs:
 
       - name: Terraform Plan
         working-directory: ./terraform
+        env:
+          LAMBDA_FUNCTION_NAME: ${{ secrets.LAMBDA_FUNCTION_NAME }}
+          LAMBDA_ROLE_ARN: ${{ secrets.LAMBDA_ROLE_ARN }}
         run: |
           terraform plan \
-            -var="aws_region=${{ env.AWS_REGION }}" \
-            -var="lambda_function_name=${{ secrets.LAMBDA_FUNCTION_NAME }}" \
+            -var="aws_region=${AWS_REGION}" \
+            -var="lambda_function_name=${LAMBDA_FUNCTION_NAME}" \
             -var="ecr_image_uri=${{ needs.build-and-push.outputs.ecr_image_uri }}" \
-            -var="lambda_role_arn=${{ secrets.LAMBDA_ROLE_ARN }}"
+            -var="lambda_role_arn=${LAMBDA_ROLE_ARN}"
 
       - name: Terraform Apply
         working-directory: ./terraform
+        env:
+          LAMBDA_FUNCTION_NAME: ${{ secrets.LAMBDA_FUNCTION_NAME }}
+          LAMBDA_ROLE_ARN: ${{ secrets.LAMBDA_ROLE_ARN }}
         run: |
           terraform apply -auto-approve \
-            -var="aws_region=${{ env.AWS_REGION }}" \
-            -var="lambda_function_name=${{ secrets.LAMBDA_FUNCTION_NAME }}" \
+            -var="aws_region=${AWS_REGION}" \
+            -var="lambda_function_name=${LAMBDA_FUNCTION_NAME}" \
             -var="ecr_image_uri=${{ needs.build-and-push.outputs.ecr_image_uri }}" \
-            -var="lambda_role_arn=${{ secrets.LAMBDA_ROLE_ARN }}"
+            -var="lambda_role_arn=${LAMBDA_ROLE_ARN}"
