@@ -58,6 +58,7 @@ Os seguintes secrets devem estar configurados no GitHub:
 
 - `AWS_ACCESS_KEY_ID`: Credencial de acesso AWS
 - `AWS_SECRET_ACCESS_KEY`: Credencial secreta AWS
+- `AWS_SESSION_TOKEN`: Token de sessão AWS (obrigatório para AWS Academy - credenciais temporárias)
 - `AWS_REGION`: Região AWS onde o Lambda será deployado (ex: `us-east-1`)
 - `AWS_ACCOUNT_ID`: ID da conta AWS (ex: `118233104061`)
 - `ECR_REPOSITORY_NAME`: Nome do repositório ECR (ex: `auth-cpf-lambda`)
