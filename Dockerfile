@@ -43,9 +43,9 @@ FROM public.ecr.aws/lambda/dotnet:8
 
 # Instalar shadow-utils e criar usuário não-root em um único RUN
 # Necessário para criar usuário não-root (segurança)
-# A imagem AWS Lambda é baseada em Amazon Linux que usa yum
-RUN yum install -y shadow-utils && \
-    yum clean all && \
+# A imagem AWS Lambda para .NET 8 usa microdnf (Amazon Linux 2023)
+RUN microdnf install -y shadow-utils && \
+    microdnf clean all && \
     groupadd -r appgroup && \
     useradd -r -g appgroup appuser
 
