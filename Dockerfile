@@ -15,8 +15,21 @@ COPY ["src/FastFood.Auth.Infra.Persistence/FastFood.Auth.Infra.Persistence.cspro
 # Restaurar dependências NuGet
 RUN dotnet restore "src/FastFood.Auth.Lambda/FastFood.Auth.Lambda.csproj"
 
-# Copiar todo o código fonte
-COPY . .
+# Copiar código fonte explicitamente - apenas arquivos necessários para build
+# Domain
+COPY ["src/FastFood.Auth.Domain/", "src/FastFood.Auth.Domain/"]
+
+# Application
+COPY ["src/FastFood.Auth.Application/", "src/FastFood.Auth.Application/"]
+
+# Infra
+COPY ["src/FastFood.Auth.Infra/", "src/FastFood.Auth.Infra/"]
+
+# Infra.Persistence
+COPY ["src/FastFood.Auth.Infra.Persistence/", "src/FastFood.Auth.Infra.Persistence/"]
+
+# Lambda - projeto principal
+COPY ["src/FastFood.Auth.Lambda/", "src/FastFood.Auth.Lambda/"]
 
 # Publicar aplicação em modo Release
 WORKDIR "/src/src/FastFood.Auth.Lambda"

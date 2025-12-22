@@ -23,6 +23,8 @@ coverage/
 *.trx
 *.coverage
 *.coveragexml
+src/tests/
+tests/
 
 # Arquivos temporários
 *.tmp
@@ -34,11 +36,18 @@ coverage/
 docs/
 *.md
 !README.md
+*.drawio
+*.drawio.png
 
-# Arquivos de configuração local
-appsettings.Development.json
-appsettings.*.json.example
-*.Development.json
+# Arquivos de configuração local e sensíveis
+.env
+.env.*
+*.env
+# Ignorar arquivos de configuração de desenvolvimento e exemplo
+**/appsettings.Development.json
+**/appsettings.*.json.example
+**/*.Development.json
+# Nota: appsettings.json padrão será incluído (não está na lista de ignorados)
 
 # Arquivos Terraform (não necessários no build)
 terraform/
@@ -65,4 +74,7 @@ Thumbs.db
 
 # Arquivos de configuração do Sonar
 sonar-issues*.json
+
+# Arquivos de solução (não necessários para build individual)
+*.sln
 
