@@ -52,3 +52,47 @@ CodeCoverage/
 *.VisualState.xml
 TestResult.xml
 nunit-*.xml
+
+# Visual Studio
+.vs/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+*.slnx
+
+# Configuration files with sensitive data
+**/appsettings.Development.json
+**/appsettings.Production.json
+**/appsettings.*.json
+!**/appsettings.json
+!**/appsettings.*.example.json
+
+# Specific development config files
+src/FastFood.Auth.Migrator/appsettings.Development.json
+src/FastFood.Auth.Lambda/appsettings.Development.json
+
+# SonarQube
+.sonarqube/
+sonar-issues.json
+
+# SpecFlow generated files
+**/*.feature.cs
+
+# Launch settings (contém variáveis de ambiente locais)
+**/Properties/launchSettings.json
+
+# Terraform
+.terraform/
+*.tfstate
+*.tfstate.*
+*.tfplan
+*.tfvars
+!*.tfvars.example
+.terraform.lock.hcl
+crash.log
+crash.*.log
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json

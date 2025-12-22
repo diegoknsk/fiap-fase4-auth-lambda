@@ -1,0 +1,38 @@
+{
+  "Logging": {
+    "LogLevel": {
+      "Default": "Information",
+      "Microsoft.AspNetCore": "Warning"
+    }
+  },
+  "ConnectionStrings": {
+    "DefaultConnection": "Host=seu-host-rds.amazonaws.com;Port=5432;Database=dbAuth;Username=seu-usuario;Password=sua-senha"
+  },
+  "JwtSettings": {
+    "Issuer": "FastFood.Auth",
+    "Audience": "FastFood.API",
+    "ExpirationHours": "24"
+  },
+  "Cognito": {
+    "Region": "us-east-1",
+    "UserPoolId": "us-east-1_XXXXXXXXX",
+    "ClientId": "xxxxxxxxxxxxxxxxxxxxxxxxxx"
+  },
+  "AWS": {
+    "AccessKeyId": "",
+    "SecretAccessKey": "",
+    "SessionToken": ""
+  }
+}
+
+
+
+
+
+
+
+
+
+
+
+

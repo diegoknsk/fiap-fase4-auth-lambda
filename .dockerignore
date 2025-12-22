@@ -1,0 +1,80 @@
+# Diretórios de build e output
+bin/
+obj/
+out/
+publish/
+
+# Arquivos do Git
+.git/
+.gitignore
+.gitattributes
+
+# Arquivos de IDE
+.vs/
+.vscode/
+.idea/
+*.user
+*.suo
+*.sln.docstates
+
+# Arquivos de teste
+TestResults/
+coverage/
+*.trx
+*.coverage
+*.coveragexml
+src/tests/
+tests/
+
+# Arquivos temporários
+*.tmp
+*.temp
+*.log
+*.cache
+
+# Arquivos de documentação (não necessários no build)
+docs/
+*.md
+!README.md
+*.drawio
+*.drawio.png
+
+# Arquivos de configuração local e sensíveis
+.env
+.env.*
+*.env
+# Ignorar arquivos de configuração de desenvolvimento e exemplo
+**/appsettings.Development.json
+**/appsettings.*.json.example
+**/*.Development.json
+# Nota: appsettings.json padrão será incluído (não está na lista de ignorados)
+
+# Arquivos Terraform (não necessários no build)
+terraform/
+*.tf
+*.tfstate
+*.tfvars
+
+# Arquivos de story (não necessários no build)
+story/
+rules/
+
+# Node modules (se houver)
+node_modules/
+
+# Arquivos de sistema
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+*~
+
+# Arquivos de CI/CD (não necessários no build)
+.github/
+
+# Arquivos de configuração do Sonar
+sonar-issues*.json
+
+# Arquivos de solução (não necessários para build individual)
+*.sln
+
