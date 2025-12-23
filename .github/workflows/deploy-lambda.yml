@@ -33,6 +33,8 @@ jobs:
       - name: Login to Amazon ECR
         id: login-ecr
         uses: aws-actions/amazon-ecr-login@062b18b96a7aff071d4dc91bc00c4c1a7945b076 # v2
+        with:
+          registry-ids: ${{ secrets.AWS_ACCOUNT_ID }}
 
       - name: Set up variables
         id: vars
