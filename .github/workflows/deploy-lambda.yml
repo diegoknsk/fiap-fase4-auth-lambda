@@ -98,7 +98,28 @@ jobs:
 
       - name: Terraform Init
         working-directory: ./terraform
-        run: terraform init
+        env:
+          TF_BACKEND_BUCKET: ${{ secrets.TF_BACKEND_BUCKET }}
+          TF_BACKEND_KEY: ${{ secrets.TF_BACKEND_KEY }}
+          TF_BACKEND_REGION: ${{ secrets.AWS_REGION }}
+        run: |
+          if [ -z "$TF_BACKEND_BUCKET" ] || [ -z "$TF_BACKEND_KEY" ]; then
+            echo "❌ Erro: Secrets TF_BACKEND_BUCKET e TF_BACKEND_KEY devem estar configurados"
+            echo "Configure os secrets no GitHub: Settings → Secrets and variables → Actions"
+            echo "TF_BACKEND_BUCKET está vazio: $([ -z "$TF_BACKEND_BUCKET" ] && echo 'SIM' || echo 'NÃO')"
+            echo "TF_BACKEND_KEY está vazio: $([ -z "$TF_BACKEND_KEY" ] && echo 'SIM' || echo 'NÃO')"
+            exit 1
+          fi
+          echo "🔧 Configurando backend S3..."
+          echo "Bucket: ${TF_BACKEND_BUCKET}"
+          echo "Key: ${TF_BACKEND_KEY}"
+          echo "Region: ${TF_BACKEND_REGION}"
+          terraform init \
+            -input=false \
+            -reconfigure \
+            -backend-config="bucket=${TF_BACKEND_BUCKET}" \
+            -backend-config="key=${TF_BACKEND_KEY}" \
+            -backend-config="region=${TF_BACKEND_REGION}"
 
       - name: Terraform Plan
         working-directory: ./terraform
