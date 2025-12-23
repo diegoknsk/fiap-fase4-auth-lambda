@@ -16,7 +16,7 @@ jobs:
     runs-on: ubuntu-latest
     
     outputs:
-      ecr_image_uri: ${{ steps.build.outputs.ecr_image_uri }}
+      ecr_image_uri: ${{ steps.vars.outputs.ecr_image_uri }}
     
     steps:
       - name: Checkout code
@@ -59,7 +59,7 @@ jobs:
         id: build
         run: |
           docker build -t ${{ env.ECR_IMAGE_URI }} .
-          echo "ecr_image_uri=${{ env.ECR_IMAGE_URI }}" >> $GITHUB_OUTPUT
+          echo "✅ Imagem buildada: ${{ env.ECR_IMAGE_URI }}"
 
       - name: Tag image as latest
         run: |
@@ -72,7 +72,8 @@ jobs:
 
       - name: Output ECR Image URI
         run: |
-          echo "ECR Image URI: ${{ steps.build.outputs.ecr_image_uri }}"
+          echo "✅ ECR Image URI: ${{ steps.vars.outputs.ecr_image_uri }}"
+          echo "✅ Job output: ${{ needs.build-and-push.outputs.ecr_image_uri }}"
 
   terraform-apply:
     name: Deploy Lambda via Terraform
@@ -126,11 +127,18 @@ jobs:
         env:
           LAMBDA_FUNCTION_NAME: ${{ secrets.LAMBDA_FUNCTION_NAME }}
           LAMBDA_ROLE_ARN: ${{ secrets.LAMBDA_ROLE_ARN }}
+          ECR_IMAGE_URI: ${{ needs.build-and-push.outputs.ecr_image_uri }}
         run: |
+          echo "🔍 Verificando variáveis..."
+          echo "ECR_IMAGE_URI: ${ECR_IMAGE_URI}"
+          if [ -z "${ECR_IMAGE_URI}" ]; then
+            echo "❌ Erro: ECR_IMAGE_URI está vazio!"
+            exit 1
+          fi
           terraform plan \
             -var="aws_region=${AWS_REGION}" \
             -var="lambda_function_name=${LAMBDA_FUNCTION_NAME}" \
-            -var="ecr_image_uri=${{ needs.build-and-push.outputs.ecr_image_uri }}" \
+            -var="ecr_image_uri=${ECR_IMAGE_URI}" \
             -var="lambda_role_arn=${LAMBDA_ROLE_ARN}"
 
       - name: Terraform Apply
@@ -138,9 +146,16 @@ jobs:
         env:
           LAMBDA_FUNCTION_NAME: ${{ secrets.LAMBDA_FUNCTION_NAME }}
           LAMBDA_ROLE_ARN: ${{ secrets.LAMBDA_ROLE_ARN }}
+          ECR_IMAGE_URI: ${{ needs.build-and-push.outputs.ecr_image_uri }}
         run: |
+          echo "🔍 Verificando variáveis antes do apply..."
+          echo "ECR_IMAGE_URI: ${ECR_IMAGE_URI}"
+          if [ -z "${ECR_IMAGE_URI}" ]; then
+            echo "❌ Erro: ECR_IMAGE_URI está vazio!"
+            exit 1
+          fi
           terraform apply -auto-approve \
             -var="aws_region=${AWS_REGION}" \
             -var="lambda_function_name=${LAMBDA_FUNCTION_NAME}" \
-            -var="ecr_image_uri=${{ needs.build-and-push.outputs.ecr_image_uri }}" \
+            -var="ecr_image_uri=${ECR_IMAGE_URI}" \
             -var="lambda_role_arn=${LAMBDA_ROLE_ARN}"
