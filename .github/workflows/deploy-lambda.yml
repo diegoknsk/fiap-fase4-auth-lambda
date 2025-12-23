@@ -291,11 +291,20 @@ jobs:
             echo "  - Usando role: ${IMPORT_ROLE}"
             
             # Importa o Lambda para o estado do Terraform
+            # Nota: Para import, apenas variáveis básicas são necessárias
+            # As outras variáveis serão configuradas no próximo terraform apply
             IMPORT_OUTPUT=$(terraform import \
               -var="aws_region=${AWS_REGION}" \
               -var="lambda_function_name=${LAMBDA_FUNCTION_NAME}" \
               -var="ecr_image_uri=${IMPORT_IMAGE_URI}" \
               -var="lambda_role_arn=${IMPORT_ROLE}" \
+              -var="cognito_user_pool_id=dummy" \
+              -var="cognito_region=${AWS_REGION}" \
+              -var="cognito_client_id=dummy" \
+              -var="rds_connection_string=dummy" \
+              -var="jwt_secret=dummy" \
+              -var="jwt_issuer=dummy" \
+              -var="jwt_audience=dummy" \
               aws_lambda_function.lambda "${LAMBDA_FUNCTION_NAME}" 2>&1)
             IMPORT_EXIT_CODE=$?
             
@@ -345,18 +354,72 @@ jobs:
           LAMBDA_FUNCTION_NAME: ${{ secrets.LAMBDA_FUNCTION_NAME }}
           LAMBDA_ROLE_ARN: ${{ secrets.LAMBDA_ROLE_ARN }}
           ECR_IMAGE_URI: ${{ env.ECR_IMAGE_URI }}
+          LAMBDA_SECURITY_GROUP_NAME: ${{ secrets.LAMBDA_SECURITY_GROUP_NAME }}
+          LAMBDA_SECURITY_GROUP_ID: ${{ secrets.LAMBDA_SECURITY_GROUP_ID }}
+          COGNITO_USER_POOL_ID: ${{ secrets.COGNITO_USER_POOL_ID }}
+          COGNITO_REGION: ${{ secrets.COGNITO_REGION }}
+          COGNITO_CLIENT_ID: ${{ secrets.COGNITO_CLIENT_ID }}
+          RDS_CONNECTION_STRING: ${{ secrets.RDS_CONNECTION_STRING }}
+          JWT_SECRET: ${{ secrets.JWT_SECRET }}
+          JWT_ISSUER: ${{ secrets.JWT_ISSUER }}
+          JWT_AUDIENCE: ${{ secrets.JWT_AUDIENCE }}
+          JWT_EXPIRATION_HOURS: ${{ secrets.JWT_EXPIRATION_HOURS }}
         run: |
           echo "🔍 Verificando variáveis antes do plan..."
           echo "  - AWS_REGION: ${AWS_REGION}"
           echo "  - LAMBDA_FUNCTION_NAME: ${LAMBDA_FUNCTION_NAME}"
           echo "  - LAMBDA_ROLE_ARN: ${LAMBDA_ROLE_ARN}"
           echo "  - ECR_IMAGE_URI: ${ECR_IMAGE_URI}"
+          echo "  - LAMBDA_SECURITY_GROUP_NAME: ${LAMBDA_SECURITY_GROUP_NAME:-fiap-fase4-auth-sg (default)}"
+          echo "  - LAMBDA_SECURITY_GROUP_ID: ${LAMBDA_SECURITY_GROUP_ID:-não fornecido}"
+          echo "  - COGNITO_USER_POOL_ID: ${COGNITO_USER_POOL_ID:+***configurado***}"
+          echo "  - COGNITO_REGION: ${COGNITO_REGION}"
+          echo "  - COGNITO_CLIENT_ID: ${COGNITO_CLIENT_ID:+***configurado***}"
+          echo "  - RDS_CONNECTION_STRING: ${RDS_CONNECTION_STRING:+***configurado***}"
+          echo "  - JWT_SECRET: ${JWT_SECRET:+***configurado***}"
+          echo "  - JWT_ISSUER: ${JWT_ISSUER}"
+          echo "  - JWT_AUDIENCE: ${JWT_AUDIENCE}"
+          echo "  - JWT_EXPIRATION_HOURS: ${JWT_EXPIRATION_HOURS:-24 (default)}"
           echo ""
           
+          # Validações obrigatórias
           if [ -z "${ECR_IMAGE_URI}" ]; then
             echo "❌ Erro: ECR_IMAGE_URI está vazio!"
-            echo "Output do job: ${{ needs.build-and-push.outputs.ecr_image_uri }}"
-            echo "Output do step setup: ${{ steps.setup-ecr-uri.outputs.ecr_image_uri }}"
+            exit 1
+          fi
+          
+          if [ -z "${COGNITO_USER_POOL_ID}" ]; then
+            echo "❌ Erro: COGNITO_USER_POOL_ID é obrigatório!"
+            exit 1
+          fi
+          
+          if [ -z "${COGNITO_REGION}" ]; then
+            echo "❌ Erro: COGNITO_REGION é obrigatório!"
+            exit 1
+          fi
+          
+          if [ -z "${COGNITO_CLIENT_ID}" ]; then
+            echo "❌ Erro: COGNITO_CLIENT_ID é obrigatório!"
+            exit 1
+          fi
+          
+          if [ -z "${RDS_CONNECTION_STRING}" ]; then
+            echo "❌ Erro: RDS_CONNECTION_STRING é obrigatório!"
+            exit 1
+          fi
+          
+          if [ -z "${JWT_SECRET}" ]; then
+            echo "❌ Erro: JWT_SECRET é obrigatório!"
+            exit 1
+          fi
+          
+          if [ -z "${JWT_ISSUER}" ]; then
+            echo "❌ Erro: JWT_ISSUER é obrigatório!"
+            exit 1
+          fi
+          
+          if [ -z "${JWT_AUDIENCE}" ]; then
+            echo "❌ Erro: JWT_AUDIENCE é obrigatório!"
             exit 1
           fi
           
@@ -366,15 +429,44 @@ jobs:
             exit 1
           fi
           
+          # Valida JWT_SECRET tem pelo menos 32 caracteres
+          if [ ${#JWT_SECRET} -lt 32 ]; then
+            echo "⚠️ Aviso: JWT_SECRET deve ter no mínimo 32 caracteres (atual: ${#JWT_SECRET})"
+          fi
+          
           echo "✅ Todas as variáveis estão válidas"
           echo ""
           echo "📋 Executando terraform plan..."
-          terraform plan \
-            -var="aws_region=${AWS_REGION}" \
-            -var="lambda_function_name=${LAMBDA_FUNCTION_NAME}" \
-            -var="ecr_image_uri=${ECR_IMAGE_URI}" \
-            -var="lambda_role_arn=${LAMBDA_ROLE_ARN}" \
-            -out=tfplan
+          
+          # Constrói comando terraform plan com variáveis obrigatórias
+          TF_PLAN_ARGS=(
+            -var="aws_region=${AWS_REGION}"
+            -var="lambda_function_name=${LAMBDA_FUNCTION_NAME}"
+            -var="ecr_image_uri=${ECR_IMAGE_URI}"
+            -var="lambda_role_arn=${LAMBDA_ROLE_ARN}"
+            -var="cognito_user_pool_id=${COGNITO_USER_POOL_ID}"
+            -var="cognito_region=${COGNITO_REGION}"
+            -var="cognito_client_id=${COGNITO_CLIENT_ID}"
+            -var="rds_connection_string=${RDS_CONNECTION_STRING}"
+            -var="jwt_secret=${JWT_SECRET}"
+            -var="jwt_issuer=${JWT_ISSUER}"
+            -var="jwt_audience=${JWT_AUDIENCE}"
+          )
+          
+          # Adiciona variáveis opcionais se fornecidas
+          if [ -n "${LAMBDA_SECURITY_GROUP_ID}" ]; then
+            TF_PLAN_ARGS+=(-var="lambda_security_group_id=${LAMBDA_SECURITY_GROUP_ID}")
+          fi
+          
+          if [ -n "${LAMBDA_SECURITY_GROUP_NAME}" ]; then
+            TF_PLAN_ARGS+=(-var="lambda_security_group_name=${LAMBDA_SECURITY_GROUP_NAME}")
+          fi
+          
+          if [ -n "${JWT_EXPIRATION_HOURS}" ]; then
+            TF_PLAN_ARGS+=(-var="jwt_expiration_hours=${JWT_EXPIRATION_HOURS}")
+          fi
+          
+          terraform plan "${TF_PLAN_ARGS[@]}" -out=tfplan
           
           echo ""
           echo "📊 Resumo do plano:"
@@ -415,6 +507,16 @@ jobs:
           ECR_IMAGE_URI: ${{ env.ECR_IMAGE_URI }}
           AWS_ACCOUNT_ID: ${{ secrets.AWS_ACCOUNT_ID }}
           ECR_REPOSITORY_NAME: ${{ secrets.ECR_REPOSITORY_NAME }}
+          LAMBDA_SECURITY_GROUP_NAME: ${{ secrets.LAMBDA_SECURITY_GROUP_NAME }}
+          LAMBDA_SECURITY_GROUP_ID: ${{ secrets.LAMBDA_SECURITY_GROUP_ID }}
+          COGNITO_USER_POOL_ID: ${{ secrets.COGNITO_USER_POOL_ID }}
+          COGNITO_REGION: ${{ secrets.COGNITO_REGION }}
+          COGNITO_CLIENT_ID: ${{ secrets.COGNITO_CLIENT_ID }}
+          RDS_CONNECTION_STRING: ${{ secrets.RDS_CONNECTION_STRING }}
+          JWT_SECRET: ${{ secrets.JWT_SECRET }}
+          JWT_ISSUER: ${{ secrets.JWT_ISSUER }}
+          JWT_AUDIENCE: ${{ secrets.JWT_AUDIENCE }}
+          JWT_EXPIRATION_HOURS: ${{ secrets.JWT_EXPIRATION_HOURS }}
         run: |
           echo "🔍 Verificando variáveis antes do apply..."
           echo "ECR_IMAGE_URI recebida: '${ECR_IMAGE_URI}'"
@@ -445,7 +547,45 @@ jobs:
           echo "  - lambda_function_name: ${LAMBDA_FUNCTION_NAME}"
           echo "  - ecr_image_uri: ${ECR_IMAGE_URI}"
           echo "  - lambda_role_arn: ${LAMBDA_ROLE_ARN}"
+          echo "  - lambda_security_group_name: ${LAMBDA_SECURITY_GROUP_NAME:-fiap-fase4-auth-sg (default)}"
+          echo "  - lambda_security_group_id: ${LAMBDA_SECURITY_GROUP_ID:-não fornecido}"
+          echo "  - cognito_user_pool_id: ${COGNITO_USER_POOL_ID:+***configurado***}"
+          echo "  - cognito_region: ${COGNITO_REGION}"
+          echo "  - cognito_client_id: ${COGNITO_CLIENT_ID:+***configurado***}"
+          echo "  - rds_connection_string: ${RDS_CONNECTION_STRING:+***configurado***}"
+          echo "  - jwt_secret: ${JWT_SECRET:+***configurado***}"
+          echo "  - jwt_issuer: ${JWT_ISSUER}"
+          echo "  - jwt_audience: ${JWT_AUDIENCE}"
+          echo "  - jwt_expiration_hours: ${JWT_EXPIRATION_HOURS:-24 (default)}"
           echo ""
+          
+          # Constrói comando terraform apply com variáveis obrigatórias
+          TF_APPLY_ARGS=(
+            -var="aws_region=${AWS_REGION}"
+            -var="lambda_function_name=${LAMBDA_FUNCTION_NAME}"
+            -var="ecr_image_uri=${ECR_IMAGE_URI}"
+            -var="lambda_role_arn=${LAMBDA_ROLE_ARN}"
+            -var="cognito_user_pool_id=${COGNITO_USER_POOL_ID}"
+            -var="cognito_region=${COGNITO_REGION}"
+            -var="cognito_client_id=${COGNITO_CLIENT_ID}"
+            -var="rds_connection_string=${RDS_CONNECTION_STRING}"
+            -var="jwt_secret=${JWT_SECRET}"
+            -var="jwt_issuer=${JWT_ISSUER}"
+            -var="jwt_audience=${JWT_AUDIENCE}"
+          )
+          
+          # Adiciona variáveis opcionais se fornecidas
+          if [ -n "${LAMBDA_SECURITY_GROUP_ID}" ]; then
+            TF_APPLY_ARGS+=(-var="lambda_security_group_id=${LAMBDA_SECURITY_GROUP_ID}")
+          fi
+          
+          if [ -n "${LAMBDA_SECURITY_GROUP_NAME}" ]; then
+            TF_APPLY_ARGS+=(-var="lambda_security_group_name=${LAMBDA_SECURITY_GROUP_NAME}")
+          fi
+          
+          if [ -n "${JWT_EXPIRATION_HOURS}" ]; then
+            TF_APPLY_ARGS+=(-var="jwt_expiration_hours=${JWT_EXPIRATION_HOURS}")
+          fi
           
           # Verifica se há um plano salvo e aplica, senão aplica diretamente
           if [ -f "tfplan" ]; then
@@ -453,11 +593,7 @@ jobs:
             terraform apply tfplan
           else
             echo "📋 Aplicando mudanças diretamente..."
-            terraform apply -auto-approve \
-              -var="aws_region=${AWS_REGION}" \
-              -var="lambda_function_name=${LAMBDA_FUNCTION_NAME}" \
-              -var="ecr_image_uri=${ECR_IMAGE_URI}" \
-              -var="lambda_role_arn=${LAMBDA_ROLE_ARN}"
+            terraform apply -auto-approve "${TF_APPLY_ARGS[@]}"
           fi
           
           echo ""

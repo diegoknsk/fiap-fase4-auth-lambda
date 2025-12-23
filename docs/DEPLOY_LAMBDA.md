@@ -56,6 +56,7 @@ O processo completo segue os seguintes passos:
 
 Os seguintes secrets devem estar configurados no GitHub:
 
+#### Secrets Básicos (Obrigatórios)
 - `AWS_ACCESS_KEY_ID`: Credencial de acesso AWS
 - `AWS_SECRET_ACCESS_KEY`: Credencial secreta AWS
 - `AWS_SESSION_TOKEN`: Token de sessão AWS (obrigatório para AWS Academy - credenciais temporárias)
@@ -65,10 +66,31 @@ Os seguintes secrets devem estar configurados no GitHub:
 - `LAMBDA_FUNCTION_NAME`: Nome da função Lambda (ex: `auth-cpf-lambda`)
 - `LAMBDA_ROLE_ARN`: ARN da role IAM para a função Lambda (ex: `arn:aws:iam::118233104061:role/lambda-execution-role`)
 
+#### Secrets de VPC e Security Group (Opcionais)
+- `LAMBDA_SECURITY_GROUP_NAME`: Nome do Security Group para o Lambda (opcional, default: `fiap-fase4-auth-sg`)
+- `LAMBDA_SECURITY_GROUP_ID`: ID do Security Group para o Lambda (opcional, tem prioridade sobre nome)
+
+**Nota:** Se nenhum dos dois for fornecido, o Terraform usará o nome padrão `fiap-fase4-auth-sg`. As subnets são descobertas automaticamente da VPC default.
+
+#### Secrets do Cognito (Obrigatórios)
+- `COGNITO_USER_POOL_ID`: ID do User Pool do Cognito (ex: `us-east-1_XXXXXXXXX`)
+- `COGNITO_REGION`: Região do Cognito (ex: `us-east-1`)
+- `COGNITO_CLIENT_ID`: Client ID do aplicativo Cognito
+
+#### Secrets do RDS (Obrigatório)
+- `RDS_CONNECTION_STRING`: Connection string completa do PostgreSQL no formato `Host=...;Port=...;Database=...;Username=...;Password=...` (sensitive)
+
+#### Secrets JWT (Obrigatórios)
+- `JWT_SECRET`: Chave secreta para assinar tokens JWT (mínimo 32 caracteres, sensitive)
+- `JWT_ISSUER`: Emissor do token JWT (ex: `FastFood.Auth`)
+- `JWT_AUDIENCE`: Audiência do token JWT (ex: `FastFood.API`)
+- `JWT_EXPIRATION_HOURS`: Tempo de expiração em horas (opcional, default: `24`)
+
 ### Variáveis Terraform
 
 As seguintes variáveis são passadas para o Terraform via linha de comando:
 
+#### Variáveis Básicas (Obrigatórias)
 - `aws_region`: Região AWS (ex: `us-east-1`)
 - `lambda_function_name`: Nome da função Lambda (ex: `auth-cpf-lambda`)
 - `ecr_image_uri`: URI completa da imagem ECR com tag
@@ -78,6 +100,26 @@ As seguintes variáveis são passadas para o Terraform via linha de comando:
 ```bash
 aws lambda get-function --function-name auth-cpf-lambda --query 'Configuration.Role' --output text
 ```
+
+#### Variáveis de VPC e Security Group (Opcionais)
+- `lambda_security_group_name`: Nome do Security Group (opcional, default: `fiap-fase4-auth-sg`)
+- `lambda_security_group_id`: ID do Security Group (opcional, tem prioridade sobre nome)
+
+**Nota:** As subnets são descobertas automaticamente da VPC default, não requer parâmetro.
+
+#### Variáveis do Cognito (Obrigatórias)
+- `cognito_user_pool_id`: ID do User Pool do Cognito (ex: `us-east-1_XXXXXXXXX`)
+- `cognito_region`: Região do Cognito (ex: `us-east-1`)
+- `cognito_client_id`: Client ID do aplicativo Cognito
+
+#### Variáveis do RDS (Obrigatória)
+- `rds_connection_string`: Connection string completa do PostgreSQL (sensitive)
+
+#### Variáveis JWT (Obrigatórias)
+- `jwt_secret`: Chave secreta JWT (mínimo 32 caracteres, sensitive)
+- `jwt_issuer`: Emissor do token JWT (ex: `FastFood.Auth`)
+- `jwt_audience`: Audiência do token JWT (ex: `FastFood.API`)
+- `jwt_expiration_hours`: Tempo de expiração em horas (opcional, default: `24`)
 
 ### Formato da URI ECR
 
@@ -97,6 +139,209 @@ Onde:
 - `us-east-1`: Região AWS
 - `auth-cpf-lambda`: Nome do repositório ECR
 - `sha-abcdef1`: Tag da imagem (baseada nos primeiros 7 caracteres do commit SHA)
+
+## Configuração de VPC e Security Group
+
+O Lambda precisa estar configurado em uma VPC para acessar o banco de dados RDS. A configuração é feita automaticamente pelo Terraform:
+
+### Descoberta Automática
+
+- **VPC**: O Terraform usa automaticamente a VPC default da sua conta AWS
+- **Subnets**: As subnets são descobertas automaticamente da VPC default (não requer parâmetro)
+- **Security Group**: Pode ser localizado por nome ou ID
+
+### Parâmetros do Security Group
+
+O Security Group pode ser especificado de duas formas (em ordem de prioridade):
+
+1. **Por ID** (prioridade): Se `lambda_security_group_id` for fornecido, o Terraform busca pelo ID
+2. **Por Nome**: Se apenas `lambda_security_group_name` for fornecido, busca pelo nome
+3. **Padrão**: Se nenhum for fornecido, usa o nome padrão `fiap-fase4-auth-sg`
+
+### Como Obter o Security Group ID ou Nome
+
+**Via AWS Console:**
+1. Acesse o AWS Console
+2. Navegue até **VPC** > **Security Groups**
+3. Procure pelo Security Group que permite acesso ao RDS (porta 5432)
+4. Copie o **Security Group ID** (ex: `sg-0123456789abcdef0`) ou o **Name**
+
+**Via AWS CLI:**
+```bash
+# Listar Security Groups
+aws ec2 describe-security-groups --region us-east-1 --query 'SecurityGroups[*].[GroupId,GroupName]' --output table
+
+# Obter Security Group por nome
+aws ec2 describe-security-groups --region us-east-1 --filters "Name=group-name,Values=fiap-fase4-auth-sg" --query 'SecurityGroups[0].GroupId' --output text
+```
+
+### Requisitos do Security Group
+
+O Security Group deve permitir:
+- **Saída (Outbound)**: Tráfego para o RDS na porta 5432 (PostgreSQL)
+- **Entrada (Inbound)**: Geralmente não é necessário para Lambda acessar RDS
+
+**Nota:** O Lambda precisa estar na mesma VPC que o RDS para poder acessá-lo.
+
+## Configuração do Cognito
+
+O Lambda usa o AWS Cognito para autenticação de administradores. As seguintes informações são necessárias:
+
+### Parâmetros Obrigatórios
+
+- `cognito_user_pool_id`: ID do User Pool do Cognito
+- `cognito_region`: Região onde o User Pool está configurado
+- `cognito_client_id`: Client ID do aplicativo configurado no User Pool
+
+### Como Obter os Valores do Cognito
+
+**Via AWS Console:**
+
+1. **Cognito User Pool ID:**
+   - Acesse o AWS Console
+   - Navegue até **Amazon Cognito** > **User pools**
+   - Selecione seu User Pool
+   - O ID aparece no topo da página (formato: `us-east-1_XXXXXXXXX`)
+
+2. **Cognito Client ID:**
+   - No mesmo User Pool, vá em **App integration** > **App clients**
+   - Copie o **Client ID** (formato: string alfanumérica)
+
+3. **Cognito Region:**
+   - A região está visível no topo do console ou no próprio User Pool ID (ex: `us-east-1`)
+
+**Via AWS CLI:**
+```bash
+# Listar User Pools
+aws cognito-idp list-user-pools --max-results 10 --region us-east-1
+
+# Obter informações do User Pool
+aws cognito-idp describe-user-pool --user-pool-id us-east-1_XXXXXXXXX --region us-east-1
+
+# Listar App Clients
+aws cognito-idp list-user-pool-clients --user-pool-id us-east-1_XXXXXXXXX --region us-east-1
+```
+
+### Exemplos de Valores
+
+- `cognito_user_pool_id`: `us-east-1_AbCdEfGhIj`
+- `cognito_region`: `us-east-1`
+- `cognito_client_id`: `1b6gctiq6b27pjh53b0qdnudjl`
+
+## Configuração do RDS
+
+O Lambda precisa de uma connection string completa para se conectar ao banco de dados PostgreSQL no RDS.
+
+### Formato da Connection String
+
+A connection string deve seguir o formato:
+
+```
+Host=<endpoint-rds>;Port=<porta>;Database=<nome-banco>;Username=<usuario>;Password=<senha>
+```
+
+### Como Obter/Construir a Connection String
+
+**Componentes necessários:**
+
+1. **Host (Endpoint RDS):**
+   - Acesse o AWS Console
+   - Navegue até **RDS** > **Databases**
+   - Selecione seu banco de dados
+   - Copie o **Endpoint** (ex: `fastfood-auth-db.xxxxx.us-east-1.rds.amazonaws.com`)
+
+2. **Porta:**
+   - Geralmente `5432` para PostgreSQL
+
+3. **Database:**
+   - Nome do banco de dados criado (ex: `dbAuth`)
+
+4. **Username:**
+   - Usuário master do RDS (ex: `dbadmin`)
+
+5. **Password:**
+   - Senha configurada para o usuário master
+
+**Exemplo completo:**
+```
+Host=fastfood-auth-db.xxxxx.us-east-1.rds.amazonaws.com;Port=5432;Database=dbAuth;Username=dbadmin;Password=MinhaSenhaSegura123
+```
+
+**Via AWS CLI:**
+```bash
+# Obter endpoint do RDS
+aws rds describe-db-instances --region us-east-1 --query 'DBInstances[*].[DBInstanceIdentifier,Endpoint.Address,Endpoint.Port]' --output table
+```
+
+**⚠️ Importante:** A connection string é uma informação sensível e deve ser mantida em segredo. Use GitHub Secrets para armazená-la.
+
+## Configuração JWT
+
+O Lambda gera tokens JWT para autenticação de clientes. As seguintes configurações são necessárias:
+
+### Parâmetros Obrigatórios
+
+- `jwt_secret`: Chave secreta para assinar tokens JWT (mínimo 32 caracteres)
+- `jwt_issuer`: Emissor do token JWT (ex: `FastFood.Auth`)
+- `jwt_audience`: Audiência do token JWT (ex: `FastFood.API`)
+
+### Parâmetros Opcionais
+
+- `jwt_expiration_hours`: Tempo de expiração em horas (padrão: `24`)
+
+### Requisitos do JWT Secret
+
+- **Mínimo de 32 caracteres** (requisito do HMAC-SHA256)
+- **Chave forte e aleatória** (use gerador de chaves seguras)
+- **Nunca commitar** no código ou repositório
+
+### Exemplos de Valores
+
+- `jwt_secret`: `MySuperSecretKeyThatIsAtLeast32CharactersLongForHMACSHA256`
+- `jwt_issuer`: `FastFood.Auth`
+- `jwt_audience`: `FastFood.API`
+- `jwt_expiration_hours`: `24`
+
+### Gerar JWT Secret Seguro
+
+**Via PowerShell:**
+```powershell
+-join ((48..57) + (65..90) + (97..122) | Get-Random -Count 32 | ForEach-Object {[char]$_})
+```
+
+**Via Linux/Mac:**
+```bash
+openssl rand -base64 32
+```
+
+## Como Obter Valores dos Recursos Existentes
+
+### Security Group
+
+**Opção 1: Por Nome (Recomendado)**
+- Use o nome do Security Group: `fiap-fase4-auth-sg`
+- O Terraform buscará automaticamente pelo nome
+
+**Opção 2: Por ID**
+- Obtenha o ID via AWS Console ou CLI
+- Use `lambda_security_group_id` no lugar do nome
+
+**Nota:** As subnets são descobertas automaticamente da VPC default, não requer ação.
+
+### Cognito User Pool
+
+1. Acesse AWS Console > Cognito > User pools
+2. Selecione seu User Pool
+3. Copie o ID (formato: `us-east-1_XXXXXXXXX`)
+4. Vá em **App integration** > **App clients** e copie o Client ID
+
+### RDS Connection String
+
+1. Acesse AWS Console > RDS > Databases
+2. Selecione seu banco de dados
+3. Copie o **Endpoint** e **Port**
+4. Use as credenciais configuradas no RDS
+5. Construa a connection string no formato: `Host=...;Port=...;Database=...;Username=...;Password=...`
 
 ## Comandos Terraform
 
@@ -123,7 +368,16 @@ terraform plan \
   -var="aws_region=us-east-1" \
   -var="lambda_function_name=auth-cpf-lambda" \
   -var="ecr_image_uri=118233104061.dkr.ecr.us-east-1.amazonaws.com/auth-cpf-lambda:sha-abcdef" \
-  -var="lambda_role_arn=arn:aws:iam::118233104061:role/lambda-execution-role"
+  -var="lambda_role_arn=arn:aws:iam::118233104061:role/lambda-execution-role" \
+  -var="lambda_security_group_name=fiap-fase4-auth-sg" \
+  -var="cognito_user_pool_id=us-east-1_AbCdEfGhIj" \
+  -var="cognito_region=us-east-1" \
+  -var="cognito_client_id=1b6gctiq6b27pjh53b0qdnudjl" \
+  -var="rds_connection_string=Host=fastfood-auth-db.xxxxx.us-east-1.rds.amazonaws.com;Port=5432;Database=dbAuth;Username=dbadmin;Password=MinhaSenhaSegura123" \
+  -var="jwt_secret=MySuperSecretKeyThatIsAtLeast32CharactersLongForHMACSHA256" \
+  -var="jwt_issuer=FastFood.Auth" \
+  -var="jwt_audience=FastFood.API" \
+  -var="jwt_expiration_hours=24"
 ```
 
 ### Aplicação
@@ -133,7 +387,16 @@ terraform apply \
   -var="aws_region=us-east-1" \
   -var="lambda_function_name=auth-cpf-lambda" \
   -var="ecr_image_uri=118233104061.dkr.ecr.us-east-1.amazonaws.com/auth-cpf-lambda:sha-abcdef" \
-  -var="lambda_role_arn=arn:aws:iam::118233104061:role/lambda-execution-role"
+  -var="lambda_role_arn=arn:aws:iam::118233104061:role/lambda-execution-role" \
+  -var="lambda_security_group_name=fiap-fase4-auth-sg" \
+  -var="cognito_user_pool_id=us-east-1_AbCdEfGhIj" \
+  -var="cognito_region=us-east-1" \
+  -var="cognito_client_id=1b6gctiq6b27pjh53b0qdnudjl" \
+  -var="rds_connection_string=Host=fastfood-auth-db.xxxxx.us-east-1.rds.amazonaws.com;Port=5432;Database=dbAuth;Username=dbadmin;Password=MinhaSenhaSegura123" \
+  -var="jwt_secret=MySuperSecretKeyThatIsAtLeast32CharactersLongForHMACSHA256" \
+  -var="jwt_issuer=FastFood.Auth" \
+  -var="jwt_audience=FastFood.API" \
+  -var="jwt_expiration_hours=24"
 ```
 
 Ou usando `-auto-approve` para aprovação automática:
@@ -143,7 +406,16 @@ terraform apply -auto-approve \
   -var="aws_region=us-east-1" \
   -var="lambda_function_name=auth-cpf-lambda" \
   -var="ecr_image_uri=118233104061.dkr.ecr.us-east-1.amazonaws.com/auth-cpf-lambda:sha-abcdef" \
-  -var="lambda_role_arn=arn:aws:iam::118233104061:role/lambda-execution-role"
+  -var="lambda_role_arn=arn:aws:iam::118233104061:role/lambda-execution-role" \
+  -var="lambda_security_group_name=fiap-fase4-auth-sg" \
+  -var="cognito_user_pool_id=us-east-1_AbCdEfGhIj" \
+  -var="cognito_region=us-east-1" \
+  -var="cognito_client_id=1b6gctiq6b27pjh53b0qdnudjl" \
+  -var="rds_connection_string=Host=fastfood-auth-db.xxxxx.us-east-1.rds.amazonaws.com;Port=5432;Database=dbAuth;Username=dbadmin;Password=MinhaSenhaSegura123" \
+  -var="jwt_secret=MySuperSecretKeyThatIsAtLeast32CharactersLongForHMACSHA256" \
+  -var="jwt_issuer=FastFood.Auth" \
+  -var="jwt_audience=FastFood.API" \
+  -var="jwt_expiration_hours=24"
 ```
 
 ### Usando arquivo de variáveis (terraform.tfvars)
@@ -155,6 +427,24 @@ aws_region          = "us-east-1"
 lambda_function_name = "auth-cpf-lambda"
 ecr_image_uri        = "118233104061.dkr.ecr.us-east-1.amazonaws.com/auth-cpf-lambda:sha-abcdef"
 lambda_role_arn      = "arn:aws:iam::118233104061:role/lambda-execution-role"
+
+# VPC e Security Group (opcional)
+lambda_security_group_name = "fiap-fase4-auth-sg"
+# lambda_security_group_id = "sg-xxxxxxxxxxxxxxxxx"  # Opcional, tem prioridade sobre nome
+
+# Cognito
+cognito_user_pool_id = "us-east-1_AbCdEfGhIj"
+cognito_region        = "us-east-1"
+cognito_client_id    = "1b6gctiq6b27pjh53b0qdnudjl"
+
+# RDS
+rds_connection_string = "Host=fastfood-auth-db.xxxxx.us-east-1.rds.amazonaws.com;Port=5432;Database=dbAuth;Username=dbadmin;Password=MinhaSenhaSegura123"
+
+# JWT
+jwt_secret          = "MySuperSecretKeyThatIsAtLeast32CharactersLongForHMACSHA256"
+jwt_issuer          = "FastFood.Auth"
+jwt_audience        = "FastFood.API"
+jwt_expiration_hours = 24
 ```
 
 Então executar:
@@ -190,8 +480,9 @@ O processo de deploy é **idempotente**, o que significa que:
 terraform/
 ├── providers.tf      # Configuração do provider AWS e versão do Terraform
 ├── backend.tf        # Configuração do backend S3 (state remoto)
-├── variables.tf       # Variáveis de entrada (aws_region, lambda_function_name, ecr_image_uri)
-├── lambda.tf         # Recurso aws_lambda_function
+├── variables.tf      # Variáveis de entrada (VPC, Cognito, RDS, JWT, etc.)
+├── data.tf           # Data sources para localizar recursos existentes (VPC, Security Group, Subnets)
+├── lambda.tf         # Recurso aws_lambda_function com VPC e variáveis de ambiente
 └── outputs.tf        # Outputs do Terraform (ARN, nome, etc.)
 ```
 
@@ -257,6 +548,61 @@ terraform plan \
 ### Terraform não detecta mudanças
 
 **Solução**: Verifique se a `image_uri` realmente mudou. O Terraform só atualiza se a URI for diferente da atual.
+
+### Erro: "Security Group not found"
+
+**Solução**: Verifique se:
+1. O Security Group existe na região especificada
+2. O nome ou ID está correto
+3. As credenciais AWS têm permissão para acessar EC2/VPC
+
+**Como verificar:**
+```bash
+aws ec2 describe-security-groups --region us-east-1 --filters "Name=group-name,Values=fiap-fase4-auth-sg"
+```
+
+### Erro: "VPC default not found"
+
+**Solução**: Certifique-se de que existe uma VPC default na sua conta AWS. Se não existir, você pode criar uma ou usar uma VPC específica (requer modificação do Terraform).
+
+### Erro: "No subnets found in VPC"
+
+**Solução**: Verifique se a VPC default tem subnets configuradas. O Lambda precisa de pelo menos uma subnet para ser associado à VPC.
+
+**Como verificar:**
+```bash
+aws ec2 describe-subnets --filters "Name=vpc-id,Values=<vpc-id>" --region us-east-1
+```
+
+### Erro: "Cognito User Pool not found"
+
+**Solução**: Verifique se:
+1. O User Pool ID está correto (formato: `us-east-1_XXXXXXXXX`)
+2. O User Pool existe na região especificada
+3. As credenciais AWS têm permissão para acessar Cognito
+
+### Erro: "RDS connection failed"
+
+**Solução**: Verifique se:
+1. A connection string está no formato correto
+2. O Lambda está na mesma VPC que o RDS
+3. O Security Group permite tráfego na porta 5432
+4. As credenciais do RDS estão corretas
+
+### Erro: "JWT Secret must be at least 32 characters"
+
+**Solução**: Use uma chave secreta com no mínimo 32 caracteres. Gere uma nova chave usando:
+```bash
+openssl rand -base64 32
+```
+
+### Erro: "Lambda cannot access RDS"
+
+**Solução**: Verifique se:
+1. O Lambda está configurado na VPC (verifique `vpc_config` no Terraform)
+2. O Security Group do Lambda permite saída (outbound) para o RDS na porta 5432
+3. O Security Group do RDS permite entrada (inbound) do Security Group do Lambda na porta 5432
+4. O Lambda e o RDS estão na mesma VPC
 
 ## Validação e Testes
 

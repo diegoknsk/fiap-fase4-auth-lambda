@@ -14,14 +14,36 @@ resource "aws_lambda_function" "lambda" {
   # Se o Lambda já existe, obtenha o ARN da role do Lambda existente
   role = var.lambda_role_arn
 
-  # Outras configurações opcionais (descomentar e ajustar conforme necessário):
-  # timeout      = 30
-  # memory_size  = 512
-  # environment {
-  #   variables = {
-  #     ENV_VAR = "value"
-  #   }
-  # }
+  # Configurações de timeout e memória
+  timeout     = 30
+  memory_size = 512
+
+  # Configuração VPC: Lambda precisa estar na VPC para acessar o RDS
+  # Subnets são descobertas automaticamente da VPC default
+  # Security Group permite comunicação com o RDS na porta 5432
+  vpc_config {
+    subnet_ids         = data.aws_subnets.default.ids
+    security_group_ids = [local.lambda_security_group_id]
+  }
+
+  # Variáveis de ambiente para configuração do Lambda
+  environment {
+    variables = {
+      # Cognito - Autenticação de administradores
+      COGNITO__REGION     = var.cognito_region
+      COGNITO__USERPOOLID = var.cognito_user_pool_id
+      COGNITO__CLIENTID   = var.cognito_client_id
+
+      # RDS Connection String - Passada diretamente, já vem completa do parâmetro
+      ConnectionStrings__DefaultConnection = var.rds_connection_string
+
+      # JWT Settings - Configuração de tokens JWT
+      JwtSettings__Secret          = var.jwt_secret
+      JwtSettings__Issuer          = var.jwt_issuer
+      JwtSettings__Audience        = var.jwt_audience
+      JwtSettings__ExpirationHours = tostring(var.jwt_expiration_hours)
+    }
+  }
 
   # Tags padrão do projeto
   tags = {

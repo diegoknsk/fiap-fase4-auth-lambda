@@ -26,3 +26,64 @@ variable "lambda_role_arn" {
   # você pode obter o ARN da role do Lambda existente no console AWS ou via AWS CLI
 }
 
+# Security Group para Lambda (VPC)
+variable "lambda_security_group_name" {
+  type        = string
+  description = "Nome do Security Group para o Lambda. Se não fornecido, usa 'fiap-fase4-auth-sg'"
+  default     = "fiap-fase4-auth-sg"
+}
+
+variable "lambda_security_group_id" {
+  type        = string
+  description = "ID do Security Group para o Lambda. Se fornecido, tem prioridade sobre o nome"
+  default     = ""
+}
+
+# Cognito
+variable "cognito_user_pool_id" {
+  type        = string
+  description = "ID do User Pool do Cognito (ex: us-east-1_XXXXXXXXX)"
+  sensitive   = false
+}
+
+variable "cognito_region" {
+  type        = string
+  description = "Região do Cognito (ex: us-east-1)"
+}
+
+variable "cognito_client_id" {
+  type        = string
+  description = "Client ID do aplicativo Cognito"
+  sensitive   = false
+}
+
+# RDS / Banco de Dados
+variable "rds_connection_string" {
+  type        = string
+  description = "Connection string completa do PostgreSQL no formato 'Host=...;Port=...;Database=...;Username=...;Password=...'"
+  sensitive   = true
+}
+
+# JWT Settings
+variable "jwt_secret" {
+  type        = string
+  description = "Chave secreta para assinar tokens JWT (mínimo 32 caracteres)"
+  sensitive   = true
+}
+
+variable "jwt_issuer" {
+  type        = string
+  description = "Emissor do token JWT (ex: FastFood.Auth)"
+}
+
+variable "jwt_audience" {
+  type        = string
+  description = "Audiência do token JWT (ex: FastFood.API)"
+}
+
+variable "jwt_expiration_hours" {
+  type        = number
+  description = "Tempo de expiração do token JWT em horas"
+  default     = 24
+}
+

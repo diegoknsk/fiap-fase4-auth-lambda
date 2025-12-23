@@ -388,7 +388,9 @@ cp src/FastFood.Auth.Lambda/appsettings.Development.json.example src/FastFood.Au
 
 ### Produção (Lambda)
 
-Em produção, use **variáveis de ambiente** configuradas no Lambda ou **AWS Secrets Manager**.
+Em produção, use **variáveis de ambiente** configuradas no Lambda via **Terraform** ou **AWS Secrets Manager**.
+
+**Nota:** O Terraform configura automaticamente todas as variáveis de ambiente necessárias no Lambda durante o deploy. As variáveis são passadas via GitHub Secrets e configuradas no recurso `aws_lambda_function` através do bloco `environment`.
 
 #### Variáveis de Ambiente no Lambda
 
