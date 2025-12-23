@@ -1,90 +1,88 @@
-name: Deploy Lambda to AWS
+name: Deploy Lambda (ECR + Terraform)
 
 on:
   push:
-    branches:
-      - main
-  workflow_dispatch: # Permite execução manual
+  workflow_dispatch:
 
 env:
-  AWS_REGION: ${{ secrets.AWS_REGION }}
-  ECR_REPOSITORY_NAME: ${{ secrets.ECR_REPOSITORY_NAME }}
+  AWS_REGION: us-east-1
+  # EXEMPLO: 058264347413.dkr.ecr.us-east-1.amazonaws.com
+  ECR_REGISTRY: ${{ secrets.ECR_REGISTRY }}
+  # EXEMPLO: fastfood-auth-lambda (ou o repo que você criou no ECR)
+  ECR_REPOSITORY: ${{ secrets.ECR_REPOSITORY_NAME }}
 
 jobs:
   build-and-push:
     name: Build and Push Docker Image to ECR
     runs-on: ubuntu-latest
-    
+
     outputs:
-      ecr_image_uri: ${{ steps.build.outputs.ecr_image_uri }}
-    
+      ecr_image_uri: ${{ steps.out.outputs.ecr_image_uri }}
+
     steps:
       - name: Checkout code
-        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
-      - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@ff717079ee2060e4bcee96c4779b553acc87447c # v4
+      - name: Configure AWS credentials (AWS Academy)
+        uses: aws-actions/configure-aws-credentials@v4
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-session-token: ${{ secrets.AWS_SESSION_TOKEN }}
           aws-region: ${{ env.AWS_REGION }}
 
+      - name: Verify AWS identity
+        run: |
+          echo "Caller identity:"
+          aws sts get-caller-identity
+          echo "Region:"
+          aws configure get region
+          echo "ECR_REGISTRY: ${{ env.ECR_REGISTRY }}"
+          echo "ECR_REPOSITORY: ${{ env.ECR_REPOSITORY }}"
+          aws ecr describe-repositories --region $AWS_REGION --repository-names ${{ env.ECR_REPOSITORY }} || true
+
       - name: Login to Amazon ECR
         id: login-ecr
         uses: aws-actions/amazon-ecr-login@v2
-        with:
-          registries: ${{ secrets.AWS_ACCOUNT_ID }}
 
-      - name: Set up variables
-        id: vars
-        env:
-          AWS_ACCOUNT_ID: ${{ secrets.AWS_ACCOUNT_ID }}
-        run: |
-          ECR_REGISTRY="${{ steps.login-ecr.outputs.registry }}"
-          ECR_REPOSITORY_URL="${ECR_REGISTRY}/${ECR_REPOSITORY_NAME}"
-          IMAGE_TAG="sha-${GITHUB_SHA::7}"
-          ECR_IMAGE_URI="${ECR_REPOSITORY_URL}:${IMAGE_TAG}"
-          
-          echo "ECR_REGISTRY=${ECR_REGISTRY}" >> "$GITHUB_ENV"
-          echo "ECR_REPOSITORY_URL=${ECR_REPOSITORY_URL}" >> "$GITHUB_ENV"
-          echo "IMAGE_TAG=${IMAGE_TAG}" >> "$GITHUB_ENV"
-          echo "ECR_IMAGE_URI=${ECR_IMAGE_URI}" >> "$GITHUB_ENV"
-          
-          echo "ecr_repository_url=${ECR_REPOSITORY_URL}" >> "$GITHUB_OUTPUT"
-          echo "image_tag=${IMAGE_TAG}" >> "$GITHUB_OUTPUT"
-          echo "ecr_image_uri=${ECR_IMAGE_URI}" >> "$GITHUB_OUTPUT"
+      - name: Generate image tag
+        id: tag
+        run: echo "TAG=sha-$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
 
-      - name: Build Docker image
-        id: build
+      - name: Build image
         run: |
-          docker build -t ${{ env.ECR_IMAGE_URI }} .
-          echo "ecr_image_uri=${{ env.ECR_IMAGE_URI }}" >> $GITHUB_OUTPUT
+          docker build -t ${{ env.ECR_REGISTRY }}/${{ env.ECR_REPOSITORY }}:${{ steps.tag.outputs.TAG }} .
 
-      - name: Tag image as latest
+      - name: Tag latest
         run: |
-          docker tag ${{ env.ECR_IMAGE_URI }} ${{ env.ECR_REPOSITORY_URL }}:latest
+          docker tag \
+            ${{ env.ECR_REGISTRY }}/${{ env.ECR_REPOSITORY }}:${{ steps.tag.outputs.TAG }} \
+            ${{ env.ECR_REGISTRY }}/${{ env.ECR_REPOSITORY }}:latest
 
-      - name: Push image to ECR
+      - name: Push image
         run: |
-          docker push ${{ env.ECR_IMAGE_URI }}
-          docker push ${{ env.ECR_REPOSITORY_URL }}:latest
+          docker push ${{ env.ECR_REGISTRY }}/${{ env.ECR_REPOSITORY }}:${{ steps.tag.outputs.TAG }}
+          docker push ${{ env.ECR_REGISTRY }}/${{ env.ECR_REPOSITORY }}:latest
 
       - name: Output ECR Image URI
+        id: out
         run: |
-          echo "ECR Image URI: ${{ steps.build.outputs.ecr_image_uri }}"
+          echo "ecr_image_uri=${{ env.ECR_REGISTRY }}/${{ env.ECR_REPOSITORY }}:${{ steps.tag.outputs.TAG }}" >> $GITHUB_OUTPUT
+          echo "✅ Pushed: ${{ env.ECR_REGISTRY }}/${{ env.ECR_REPOSITORY }}:${{ steps.tag.outputs.TAG }}"
 
   terraform-apply:
     name: Deploy Lambda via Terraform
     needs: build-and-push
     runs-on: ubuntu-latest
-    
+
     steps:
       - name: Checkout code
-        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        uses: actions/checkout@v4
 
-      - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@ff717079ee2060e4bcee96c4779b553acc87447c # v4
+      - name: Configure AWS credentials (AWS Academy)
+        uses: aws-actions/configure-aws-credentials@v4
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
@@ -92,7 +90,7 @@ jobs:
           aws-region: ${{ env.AWS_REGION }}
 
       - name: Setup Terraform
-        uses: hashicorp/setup-terraform@b9cd54a3c349d3f38e8881555d616ced269862dd # v3
+        uses: hashicorp/setup-terraform@v3
         with:
           terraform_version: 1.6.0
 
