@@ -43,3 +43,9 @@ USER 1001:1001
 
 ENV ASPNETCORE_ENVIRONMENT=Production
 ENV DOTNET_ENVIRONMENT=Production
+
+# Para AddAWSLambdaHosting, não usamos handler tradicional
+# O Lambda runtime executa o assembly diretamente
+# Usamos variável de ambiente _HANDLER para indicar o assembly
+# O formato é apenas o nome do assembly DLL (sem extensão .dll)
+ENV _HANDLER=FastFood.Auth.Lambda
