@@ -53,3 +53,19 @@ resource "aws_lambda_function" "lambda" {
   }
 }
 
+# Lambda Function URL para acesso direto à API
+# Permite acesso HTTP direto sem necessidade de API Gateway
+resource "aws_lambda_function_url" "lambda_url" {
+  function_name      = aws_lambda_function.lambda.function_name
+  authorization_type = "NONE"  # NONE = acesso público, AWS_IAM = requer autenticação IAM
+
+  cors {
+    allow_credentials = false
+    allow_origins    = ["*"]  # Permite qualquer origem (ajuste conforme necessário)
+    allow_methods    = ["*"]  # Permite todos os métodos HTTP
+    allow_headers    = ["*"]  # Permite todos os headers
+    expose_headers   = ["*"]  # Expõe todos os headers na resposta
+    max_age          = 86400  # Cache de preflight por 24 horas
+  }
+}
+

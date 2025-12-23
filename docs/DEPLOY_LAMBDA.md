@@ -640,9 +640,75 @@ cd terraform
 terraform output
 ```
 
+Isso mostrará todos os outputs, incluindo a `lambda_function_url` que pode ser usada para acessar a API diretamente.
+
+## Acesso à API Lambda
+
+A Lambda está configurada com **Lambda Function URL**, permitindo acesso HTTP direto sem necessidade de API Gateway.
+
+### Obter a URL da Function
+
+Após o deploy, obtenha a URL através do output do Terraform:
+
+```bash
+cd terraform
+terraform output lambda_function_url
+```
+
+Ou via AWS Console:
+1. Acesse **AWS Lambda** > **Functions**
+2. Selecione sua função Lambda
+3. Vá na aba **Configuration** > **Function URL**
+4. Copie a URL (formato: `https://xxxxxxxxxxxx.lambda-url.us-east-1.on.aws/`)
+
+### Endpoints Disponíveis
+
+A API expõe os seguintes endpoints:
+
+#### Customer Endpoints
+- `POST /api/customer/anonymous` - Criar customer anônimo
+- `POST /api/customer/register` - Registrar customer por CPF
+- `POST /api/customer/identify` - Identificar customer existente por CPF
+
+#### Admin Endpoints
+- `POST /api/admin/login` - Autenticar admin via AWS Cognito
+
+### Exemplo de Uso
+
+```bash
+# Criar customer anônimo
+curl -X POST https://xxxxxxxxxxxx.lambda-url.us-east-1.on.aws/api/customer/anonymous \
+  -H "Content-Type: application/json"
+
+# Registrar customer por CPF
+curl -X POST https://xxxxxxxxxxxx.lambda-url.us-east-1.on.aws/api/customer/register \
+  -H "Content-Type: application/json" \
+  -d '{"cpf": "12345678901"}'
+
+# Login de admin
+curl -X POST https://xxxxxxxxxxxx.lambda-url.us-east-1.on.aws/api/admin/login \
+  -H "Content-Type: application/json" \
+  -d '{"username": "admin", "password": "senha123"}'
+```
+
+### Configuração de CORS
+
+A Function URL está configurada com CORS permitindo:
+- **Origins**: Qualquer origem (`*`)
+- **Methods**: Todos os métodos HTTP
+- **Headers**: Todos os headers
+
+**Nota de Segurança**: Para produção, considere restringir as origens permitidas no CORS e usar `authorization_type = "AWS_IAM"` para autenticação IAM.
+
+### Alternativa: API Gateway
+
+Se precisar de recursos avançados como rate limiting, custom domain, ou autenticação mais robusta, você pode configurar um API Gateway apontando para a Lambda. No entanto, a Function URL é suficiente para a maioria dos casos de uso.
+
 ## Referências
 
 - [AWS Lambda Container Images](https://docs.aws.amazon.com/lambda/latest/dg/images-create.html)
+- [AWS Lambda Function URLs](https://docs.aws.amazon.com/lambda/latest/dg/lambda-urls.html)
 - [Terraform AWS Provider - Lambda Function](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/lambda_function)
+- [Terraform AWS Provider - Lambda Function URL](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/lambda_function_url)
 - [GitHub Actions - Deploy to AWS](https://docs.github.com/en/actions/deployment/deploying-to-your-cloud-provider/deploying-to-amazon-ecs)
 

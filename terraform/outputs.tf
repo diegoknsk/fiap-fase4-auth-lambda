@@ -20,3 +20,8 @@ output "lambda_function_last_modified" {
   value       = aws_lambda_function.lambda.last_modified
 }
 
+output "lambda_function_url" {
+  description = "URL da função Lambda para acesso direto via HTTP (Function URL)"
+  value       = aws_lambda_function_url.lambda_url.function_url
+}
+
