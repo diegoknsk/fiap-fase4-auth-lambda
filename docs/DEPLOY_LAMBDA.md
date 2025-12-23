@@ -604,6 +604,135 @@ openssl rand -base64 32
 3. O Security Group do RDS permite entrada (inbound) do Security Group do Lambda na porta 5432
 4. O Lambda e o RDS estão na mesma VPC
 
+### Erro: "502 Bad Gateway" ao acessar Function URL
+
+O erro **502 Bad Gateway** geralmente indica que a Lambda está crashando ou não consegue processar a requisição. Siga estes passos para diagnosticar:
+
+#### 1. Verificar Logs do CloudWatch
+
+O primeiro passo é verificar os logs da Lambda no CloudWatch:
+
+```bash
+# Via AWS CLI - listar grupos de log
+aws logs describe-log-groups --log-group-name-prefix "/aws/lambda/fiap-fase4-infra-auth-lambda" --region us-east-1
+
+# Ver logs recentes
+aws logs tail /aws/lambda/fiap-fase4-infra-auth-lambda --follow --region us-east-1
+```
+
+**Via AWS Console:**
+1. Acesse **CloudWatch** > **Log groups**
+2. Procure por `/aws/lambda/<nome-da-funcao>`
+3. Verifique os logs mais recentes para erros
+
+#### 2. Verificar Variáveis de Ambiente
+
+Certifique-se de que todas as variáveis de ambiente estão configuradas corretamente:
+
+```bash
+# Via AWS CLI
+aws lambda get-function-configuration --function-name fiap-fase4-infra-auth-lambda --region us-east-1 --query 'Environment.Variables'
+```
+
+**Verificar:**
+- `ConnectionStrings__DefaultConnection` - Connection string do RDS está correta?
+- `COGNITO__REGION`, `COGNITO__USERPOOLID`, `COGNITO__CLIENTID` - Configurações do Cognito estão corretas?
+- `JwtSettings__Secret` - Tem pelo menos 32 caracteres?
+- `JwtSettings__Issuer`, `JwtSettings__Audience` - Estão configurados?
+
+#### 3. Verificar Connection String do RDS
+
+A connection string deve estar no formato correto:
+
+```
+Host=<endpoint-rds>;Port=5432;Database=<nome-banco>;Username=<usuario>;Password=<senha>
+```
+
+**Testar conexão manualmente:**
+```bash
+# Se tiver psql instalado
+psql "Host=<endpoint-rds>;Port=5432;Database=<nome-banco>;Username=<usuario>;Password=<senha>"
+```
+
+#### 4. Verificar Timeout e Memória
+
+Lambda em VPC tem cold start mais longo. Verifique se o timeout está adequado:
+
+```bash
+aws lambda get-function-configuration --function-name fiap-fase4-infra-auth-lambda --region us-east-1 --query '[Timeout,MemorySize]'
+```
+
+**Recomendações:**
+- **Timeout**: Mínimo 60 segundos para Lambda em VPC
+- **Memória**: 512 MB ou mais
+
+#### 5. Verificar VPC e Security Groups
+
+Lambda em VPC precisa de:
+- Subnets configuradas corretamente
+- Security Group permitindo saída (outbound) para RDS na porta 5432
+- NAT Gateway ou VPC Endpoint para acessar serviços AWS (Cognito, ECR, etc.)
+
+**Verificar Security Group:**
+```bash
+aws ec2 describe-security-groups --group-ids <security-group-id> --region us-east-1 --query 'SecurityGroups[0].IpPermissionsEgress'
+```
+
+#### 6. Verificar Permissões IAM
+
+A role do Lambda precisa de permissões para:
+- Acessar VPC
+- Acessar CloudWatch Logs
+- Acessar Cognito (se necessário)
+- Acessar Secrets Manager (se usar)
+
+#### 7. Problemas Comuns e Soluções
+
+**Problema: Connection String vazia ou incorreta**
+- **Sintoma**: Erro ao inicializar DbContext
+- **Solução**: Verifique a variável `ConnectionStrings__DefaultConnection` no Terraform
+
+**Problema: Cold Start muito longo**
+- **Sintoma**: Timeout na primeira requisição
+- **Solução**: Aumente o timeout para 60s ou mais, ou use Provisioned Concurrency
+
+**Problema: Lambda não consegue acessar RDS**
+- **Sintoma**: Timeout ou erro de conexão
+- **Solução**: Verifique Security Groups e VPC configuration
+
+**Problema: Erro ao inicializar serviços**
+- **Sintoma**: Erro no startup da aplicação
+- **Solução**: Verifique logs do CloudWatch para ver exceções na inicialização
+
+#### 8. Testar Localmente
+
+Antes de fazer deploy, teste localmente com as mesmas variáveis de ambiente:
+
+```bash
+# Configurar variáveis de ambiente
+export ConnectionStrings__DefaultConnection="Host=...;Port=5432;Database=...;Username=...;Password=..."
+export COGNITO__REGION="us-east-1"
+export COGNITO__USERPOOLID="us-east-1_XXXXXXXXX"
+export COGNITO__CLIENTID="..."
+export JwtSettings__Secret="..."
+export JwtSettings__Issuer="FastFood.Auth"
+export JwtSettings__Audience="FastFood.API"
+
+# Executar localmente
+dotnet run --project src/FastFood.Auth.Lambda
+```
+
+#### 9. Verificar Health Check
+
+Crie um endpoint simples para verificar se a Lambda está respondendo:
+
+```csharp
+[HttpGet("health")]
+public IActionResult Health() => Ok(new { status = "healthy" });
+```
+
+Acesse: `https://<function-url>/api/health`
+
 ## Validação e Testes
 
 ### Validar configuração Terraform

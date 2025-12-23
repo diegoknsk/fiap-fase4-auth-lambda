@@ -15,7 +15,8 @@ resource "aws_lambda_function" "lambda" {
   role = var.lambda_role_arn
 
   # Configurações de timeout e memória
-  timeout     = 30
+  # Timeout aumentado para 60s devido a cold start em VPC e inicialização do DbContext
+  timeout     = 60
   memory_size = 512
 
   # Configuração VPC: Lambda precisa estar na VPC para acessar o RDS
