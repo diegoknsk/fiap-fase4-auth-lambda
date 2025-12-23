@@ -16,7 +16,7 @@ jobs:
     runs-on: ubuntu-latest
     
     outputs:
-      ecr_image_uri: ${{ steps.vars.outputs.ecr_image_uri }}
+      ecr_image_uri: ${{ steps.set-output.outputs.ecr_image_uri }}
     
     steps:
       - name: Checkout code
@@ -89,10 +89,28 @@ jobs:
           docker push ${{ env.ECR_IMAGE_URI }}
           docker push ${{ env.ECR_REPOSITORY_URL }}:latest
 
-      - name: Output ECR Image URI
+      - name: Set job output
+        id: set-output
+        env:
+          VARS_OUTPUT: ${{ steps.vars.outputs.ecr_image_uri }}
+          ENV_ECR_IMAGE_URI: ${{ env.ECR_IMAGE_URI }}
         run: |
-          echo "✅ Step vars output: ${{ steps.vars.outputs.ecr_image_uri }}"
-          echo "✅ Job output será: ${{ steps.vars.outputs.ecr_image_uri }}"
+          # Tenta usar o output do step vars primeiro, depois a variável de ambiente
+          if [ -n "${VARS_OUTPUT}" ]; then
+            ECR_IMAGE_URI="${VARS_OUTPUT}"
+            echo "✅ Usando output do step vars: ${ECR_IMAGE_URI}"
+          elif [ -n "${ENV_ECR_IMAGE_URI}" ]; then
+            ECR_IMAGE_URI="${ENV_ECR_IMAGE_URI}"
+            echo "✅ Usando variável de ambiente: ${ECR_IMAGE_URI}"
+          else
+            echo "❌ Erro: ECR_IMAGE_URI não encontrado em nenhum lugar!"
+            echo "VARS_OUTPUT: ${VARS_OUTPUT}"
+            echo "ENV_ECR_IMAGE_URI: ${ENV_ECR_IMAGE_URI}"
+            exit 1
+          fi
+          # Define o output do job
+          echo "ecr_image_uri=${ECR_IMAGE_URI}" >> "$GITHUB_OUTPUT"
+          echo "✅ Output do job definido: ${ECR_IMAGE_URI}"
 
   terraform-apply:
     name: Deploy Lambda via Terraform
