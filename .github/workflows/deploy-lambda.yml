@@ -210,6 +210,135 @@ jobs:
           fi
           echo "✅ Validação final: ECR_IMAGE_URI=${FINAL_URI}"
 
+      - name: Verificar e importar Lambda existente (se necessário)
+        working-directory: ./terraform
+        id: import-lambda
+        env:
+          LAMBDA_FUNCTION_NAME: ${{ secrets.LAMBDA_FUNCTION_NAME }}
+          LAMBDA_ROLE_ARN: ${{ secrets.LAMBDA_ROLE_ARN }}
+          ECR_IMAGE_URI: ${{ env.ECR_IMAGE_URI }}
+        run: |
+          echo "🔍 Verificando se Lambda '${LAMBDA_FUNCTION_NAME}' existe na AWS..."
+          
+          # Verifica se o Lambda existe na AWS
+          LAMBDA_EXISTS=false
+          if aws lambda get-function \
+            --function-name "${LAMBDA_FUNCTION_NAME}" \
+            --region "${AWS_REGION}" > /dev/null 2>&1; then
+            LAMBDA_EXISTS=true
+            echo "✅ Lambda encontrado na AWS: ${LAMBDA_FUNCTION_NAME}"
+          else
+            echo "ℹ️ Lambda não existe na AWS, será criado pelo Terraform"
+            echo "lambda_imported=false" >> "$GITHUB_OUTPUT"
+            echo "lambda_exists=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          
+          # Obtém informações completas do Lambda na AWS
+          echo ""
+          echo "🔍 Informações do Lambda na AWS:"
+          LAMBDA_FULL_INFO=$(aws lambda get-function \
+            --function-name "${LAMBDA_FUNCTION_NAME}" \
+            --region "${AWS_REGION}" \
+            --output json 2>/dev/null)
+          
+          if [ -n "${LAMBDA_FULL_INFO}" ]; then
+            # Extrai informações principais
+            LAMBDA_INFO=$(echo "${LAMBDA_FULL_INFO}" | jq -r '.Configuration | [.FunctionName, .FunctionArn, .Role, .LastModified, .PackageType, .ImageUri, .State] | @json')
+            echo "${LAMBDA_INFO}" | jq -r '.[]' | paste - - - - - - - | column -t -s $'\t' || echo "${LAMBDA_INFO}"
+            
+            CURRENT_IMAGE_URI=$(echo "${LAMBDA_FULL_INFO}" | jq -r '.Configuration.ImageUri // empty')
+            CURRENT_ROLE=$(echo "${LAMBDA_FULL_INFO}" | jq -r '.Configuration.Role // empty')
+            CURRENT_TAGS=$(echo "${LAMBDA_FULL_INFO}" | jq -r '.Tags // {}')
+            
+            echo ""
+            echo "  - Image URI atual: ${CURRENT_IMAGE_URI}"
+            echo "  - Role atual: ${CURRENT_ROLE}"
+            echo "  - Tags:"
+            echo "${CURRENT_TAGS}" | jq -r 'to_entries[] | "    - \(.key): \(.value)"' || echo "    (sem tags ou erro ao ler)"
+            
+            # Verifica se há tags indicando gerenciamento por outro Terraform
+            MANAGED_BY=$(echo "${CURRENT_TAGS}" | jq -r '.ManagedBy // empty')
+            if [ -n "${MANAGED_BY}" ] && [ "${MANAGED_BY}" != "Terraform" ]; then
+              echo ""
+              echo "⚠️ ATENÇÃO: Lambda pode estar sendo gerenciado por outro Terraform!"
+              echo "   Tag ManagedBy: ${MANAGED_BY}"
+              echo "   Este Terraform gerenciará apenas a image_uri"
+            fi
+          fi
+          
+          # Verifica se o Lambda já está no estado do Terraform
+          echo ""
+          echo "🔍 Verificando estado do Terraform..."
+          if terraform state show aws_lambda_function.lambda > /dev/null 2>&1; then
+            echo "✅ Lambda já está no estado do Terraform"
+            echo "lambda_imported=false" >> "$GITHUB_OUTPUT"
+            echo "lambda_exists=true" >> "$GITHUB_OUTPUT"
+            
+            # Mostra diferenças
+            echo ""
+            echo "📊 Estado atual no Terraform:"
+            terraform state show aws_lambda_function.lambda | grep -E "(function_name|image_uri|role)" || true
+          else
+            echo "⚠️ Lambda existe na AWS mas NÃO está no estado do Terraform"
+            echo "📥 Tentando importar Lambda para o estado do Terraform..."
+            
+            # Usa a URI atual do Lambda ou a nova URI do ECR
+            IMPORT_IMAGE_URI="${CURRENT_IMAGE_URI:-${ECR_IMAGE_URI}}"
+            IMPORT_ROLE="${CURRENT_ROLE:-${LAMBDA_ROLE_ARN}}"
+            
+            echo "  - Usando image_uri: ${IMPORT_IMAGE_URI}"
+            echo "  - Usando role: ${IMPORT_ROLE}"
+            
+            # Importa o Lambda para o estado do Terraform
+            IMPORT_OUTPUT=$(terraform import \
+              -var="aws_region=${AWS_REGION}" \
+              -var="lambda_function_name=${LAMBDA_FUNCTION_NAME}" \
+              -var="ecr_image_uri=${IMPORT_IMAGE_URI}" \
+              -var="lambda_role_arn=${IMPORT_ROLE}" \
+              aws_lambda_function.lambda "${LAMBDA_FUNCTION_NAME}" 2>&1)
+            IMPORT_EXIT_CODE=$?
+            
+            if [ ${IMPORT_EXIT_CODE} -eq 0 ]; then
+              echo "✅ Lambda importado com sucesso para o estado do Terraform"
+              echo "lambda_imported=true" >> "$GITHUB_OUTPUT"
+            else
+              echo "⚠️ Aviso: Falha ao importar Lambda"
+              echo "Output do import:"
+              echo "${IMPORT_OUTPUT}"
+              echo ""
+              
+              # Verifica se o erro é porque o Lambda foi criado por outro Terraform
+              if echo "${IMPORT_OUTPUT}" | grep -qi "already managed\|already exists\|ResourceConflict"; then
+                echo "💡 DIAGNÓSTICO: Lambda pode estar sendo gerenciado por outro Terraform"
+                echo ""
+                echo "📋 Estratégia recomendada:"
+                echo "   1. Este Terraform gerenciará APENAS a image_uri (via lifecycle ignore_changes)"
+                echo "   2. Outros atributos serão ignorados para evitar conflitos"
+                echo "   3. O Terraform tentará atualizar apenas a image_uri no próximo apply"
+                echo ""
+                echo "⚠️ Se o erro persistir, você pode precisar:"
+                echo "   - Remover o Lambda do estado do outro Terraform (se possível)"
+                echo "   - Ou usar terraform import manualmente antes do próximo deploy"
+              else
+                echo "💡 Possíveis causas:"
+                echo "   - O Lambda já está no estado (mas não foi detectado)"
+                echo "   - Há diferenças nas configurações que impedem o import"
+                echo "   - Problemas de permissão IAM"
+                echo ""
+                echo "📋 Próximos passos:"
+                echo "   - O Terraform tentará atualizar no próximo apply"
+                echo "   - Se o erro persistir, verifique as configurações do Lambda"
+              fi
+              echo "lambda_imported=false" >> "$GITHUB_OUTPUT"
+            fi
+            echo "lambda_exists=true" >> "$GITHUB_OUTPUT"
+          fi
+          
+          echo ""
+          echo "🔍 Estado atual do Terraform:"
+          terraform state list 2>/dev/null | head -20 || echo "Estado vazio ou não inicializado"
+
       - name: Terraform Plan
         working-directory: ./terraform
         env:
@@ -217,20 +346,39 @@ jobs:
           LAMBDA_ROLE_ARN: ${{ secrets.LAMBDA_ROLE_ARN }}
           ECR_IMAGE_URI: ${{ env.ECR_IMAGE_URI }}
         run: |
-          echo "🔍 Verificando variáveis..."
-          echo "ECR_IMAGE_URI: ${ECR_IMAGE_URI}"
+          echo "🔍 Verificando variáveis antes do plan..."
+          echo "  - AWS_REGION: ${AWS_REGION}"
+          echo "  - LAMBDA_FUNCTION_NAME: ${LAMBDA_FUNCTION_NAME}"
+          echo "  - LAMBDA_ROLE_ARN: ${LAMBDA_ROLE_ARN}"
+          echo "  - ECR_IMAGE_URI: ${ECR_IMAGE_URI}"
+          echo ""
+          
           if [ -z "${ECR_IMAGE_URI}" ]; then
             echo "❌ Erro: ECR_IMAGE_URI está vazio!"
             echo "Output do job: ${{ needs.build-and-push.outputs.ecr_image_uri }}"
             echo "Output do step setup: ${{ steps.setup-ecr-uri.outputs.ecr_image_uri }}"
             exit 1
           fi
-          echo "✅ ECR_IMAGE_URI final: ${ECR_IMAGE_URI}"
+          
+          # Valida formato da URI
+          if [[ ! "${ECR_IMAGE_URI}" =~ ^[0-9]+\.dkr\.ecr\..+ ]]; then
+            echo "❌ Erro: ECR_IMAGE_URI está em formato inválido: ${ECR_IMAGE_URI}"
+            exit 1
+          fi
+          
+          echo "✅ Todas as variáveis estão válidas"
+          echo ""
+          echo "📋 Executando terraform plan..."
           terraform plan \
             -var="aws_region=${AWS_REGION}" \
             -var="lambda_function_name=${LAMBDA_FUNCTION_NAME}" \
             -var="ecr_image_uri=${ECR_IMAGE_URI}" \
-            -var="lambda_role_arn=${LAMBDA_ROLE_ARN}"
+            -var="lambda_role_arn=${LAMBDA_ROLE_ARN}" \
+            -out=tfplan
+          
+          echo ""
+          echo "📊 Resumo do plano:"
+          terraform show -json tfplan | jq -r '.resource_changes[] | select(.type == "aws_lambda_function") | "  - \(.type).\(.name): \(.change.actions[])"' 2>/dev/null || echo "  (jq não disponível, pulando resumo)"
 
       - name: Verificar se imagem existe no ECR
         env:
@@ -291,14 +439,44 @@ jobs:
           fi
           
           echo "✅ ECR_IMAGE_URI válida e completa: ${ECR_IMAGE_URI}"
-          echo "🔍 Passando para Terraform:"
+          echo ""
+          echo "🔍 Variáveis que serão passadas para Terraform:"
           echo "  - aws_region: ${AWS_REGION}"
           echo "  - lambda_function_name: ${LAMBDA_FUNCTION_NAME}"
           echo "  - ecr_image_uri: ${ECR_IMAGE_URI}"
           echo "  - lambda_role_arn: ${LAMBDA_ROLE_ARN}"
+          echo ""
           
-          terraform apply -auto-approve \
-            -var="aws_region=${AWS_REGION}" \
-            -var="lambda_function_name=${LAMBDA_FUNCTION_NAME}" \
-            -var="ecr_image_uri=${ECR_IMAGE_URI}" \
-            -var="lambda_role_arn=${LAMBDA_ROLE_ARN}"
+          # Verifica se há um plano salvo e aplica, senão aplica diretamente
+          if [ -f "tfplan" ]; then
+            echo "📋 Aplicando plano salvo (tfplan)..."
+            terraform apply tfplan
+          else
+            echo "📋 Aplicando mudanças diretamente..."
+            terraform apply -auto-approve \
+              -var="aws_region=${AWS_REGION}" \
+              -var="lambda_function_name=${LAMBDA_FUNCTION_NAME}" \
+              -var="ecr_image_uri=${ECR_IMAGE_URI}" \
+              -var="lambda_role_arn=${LAMBDA_ROLE_ARN}"
+          fi
+          
+          echo ""
+          echo "📊 Outputs do Terraform após apply:"
+          terraform output -json 2>/dev/null | jq -r 'to_entries[] | "  - \(.key): \(.value.value)"' || terraform output
+
+      - name: Debug - Informações finais do Lambda
+        working-directory: ./terraform
+        env:
+          LAMBDA_FUNCTION_NAME: ${{ secrets.LAMBDA_FUNCTION_NAME }}
+        run: |
+          echo "🔍 Informações finais do Lambda após deploy:"
+          echo ""
+          echo "📋 Estado do Terraform:"
+          terraform state show aws_lambda_function.lambda 2>/dev/null | grep -E "(function_name|arn|image_uri|last_modified)" || echo "  (Lambda não encontrado no estado)"
+          echo ""
+          echo "📋 Informações na AWS:"
+          aws lambda get-function \
+            --function-name "${LAMBDA_FUNCTION_NAME}" \
+            --region "${AWS_REGION}" \
+            --query 'Configuration.[FunctionName,FunctionArn,ImageUri,LastModified,State,StateReason]' \
+            --output table 2>/dev/null || echo "  (Erro ao consultar Lambda na AWS)"
