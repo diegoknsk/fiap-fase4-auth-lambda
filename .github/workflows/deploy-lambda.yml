@@ -16,7 +16,7 @@ jobs:
     runs-on: ubuntu-latest
     
     outputs:
-      ecr_image_uri: ${{ steps.set-output.outputs.ecr_image_uri }}
+      ecr_image_uri: ${{ steps.vars.outputs.ecr_image_uri }}
     
     steps:
       - name: Checkout code
@@ -89,28 +89,17 @@ jobs:
           docker push ${{ env.ECR_IMAGE_URI }}
           docker push ${{ env.ECR_REPOSITORY_URL }}:latest
 
-      - name: Set job output
-        id: set-output
-        env:
-          VARS_OUTPUT: ${{ steps.vars.outputs.ecr_image_uri }}
-          ENV_ECR_IMAGE_URI: ${{ env.ECR_IMAGE_URI }}
+      - name: Verify job output
         run: |
-          # Tenta usar o output do step vars primeiro, depois a variável de ambiente
-          if [ -n "${VARS_OUTPUT}" ]; then
-            ECR_IMAGE_URI="${VARS_OUTPUT}"
-            echo "✅ Usando output do step vars: ${ECR_IMAGE_URI}"
-          elif [ -n "${ENV_ECR_IMAGE_URI}" ]; then
-            ECR_IMAGE_URI="${ENV_ECR_IMAGE_URI}"
-            echo "✅ Usando variável de ambiente: ${ECR_IMAGE_URI}"
+          echo "🔍 Verificando output do job..."
+          echo "Output do step vars: ${{ steps.vars.outputs.ecr_image_uri }}"
+          echo "Output do job será: ${{ steps.vars.outputs.ecr_image_uri }}"
+          if [ -z "${{ steps.vars.outputs.ecr_image_uri }}" ]; then
+            echo "⚠️ Aviso: Output do step vars está vazio!"
+            echo "Variável de ambiente ECR_IMAGE_URI: ${ECR_IMAGE_URI}"
           else
-            echo "❌ Erro: ECR_IMAGE_URI não encontrado em nenhum lugar!"
-            echo "VARS_OUTPUT: ${VARS_OUTPUT}"
-            echo "ENV_ECR_IMAGE_URI: ${ENV_ECR_IMAGE_URI}"
-            exit 1
+            echo "✅ Output do job está definido corretamente"
           fi
-          # Define o output do job
-          echo "ecr_image_uri=${ECR_IMAGE_URI}" >> "$GITHUB_OUTPUT"
-          echo "✅ Output do job definido: ${ECR_IMAGE_URI}"
 
   terraform-apply:
     name: Deploy Lambda via Terraform
@@ -159,28 +148,46 @@ jobs:
             -backend-config="key=${TF_BACKEND_KEY}" \
             -backend-config="region=${TF_BACKEND_REGION}"
 
-      - name: Debug - Verificar outputs do job anterior
+      - name: Debug - Verificar e configurar ECR_IMAGE_URI
+        id: setup-ecr-uri
         run: |
           echo "🔍 Debug - Outputs do job build-and-push:"
-          echo "ecr_image_uri: ${{ needs.build-and-push.outputs.ecr_image_uri }}"
+          ECR_URI="${{ needs.build-and-push.outputs.ecr_image_uri }}"
+          echo "ecr_image_uri (direto): ${ECR_URI}"
           echo ""
-          echo "🔍 Todos os outputs disponíveis:"
+          echo "🔍 Todos os outputs disponíveis (JSON):"
           echo "${{ toJSON(needs.build-and-push.outputs) }}"
+          echo ""
+          if [ -n "${ECR_URI}" ]; then
+            echo "✅ ECR_URI encontrado: ${ECR_URI}"
+            echo "ECR_IMAGE_URI=${ECR_URI}" >> "$GITHUB_ENV"
+            echo "ecr_image_uri=${ECR_URI}" >> "$GITHUB_OUTPUT"
+          else
+            echo "❌ ECR_URI está vazio do output do job!"
+            echo "Tentando construir manualmente..."
+            # Constrói manualmente como fallback
+            ECR_URI="${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/${ECR_REPOSITORY_NAME}:sha-${GITHUB_SHA::7}"
+            echo "ECR_IMAGE_URI=${ECR_URI}" >> "$GITHUB_ENV"
+            echo "ecr_image_uri=${ECR_URI}" >> "$GITHUB_OUTPUT"
+            echo "✅ ECR_URI construído manualmente: ${ECR_URI}"
+          fi
 
       - name: Terraform Plan
         working-directory: ./terraform
         env:
           LAMBDA_FUNCTION_NAME: ${{ secrets.LAMBDA_FUNCTION_NAME }}
           LAMBDA_ROLE_ARN: ${{ secrets.LAMBDA_ROLE_ARN }}
-          ECR_IMAGE_URI: ${{ needs.build-and-push.outputs.ecr_image_uri }}
+          ECR_IMAGE_URI: ${{ env.ECR_IMAGE_URI }}
         run: |
           echo "🔍 Verificando variáveis..."
           echo "ECR_IMAGE_URI: ${ECR_IMAGE_URI}"
           if [ -z "${ECR_IMAGE_URI}" ]; then
             echo "❌ Erro: ECR_IMAGE_URI está vazio!"
-            echo "Verifique se o job build-and-push exportou o output corretamente."
+            echo "Output do job: ${{ needs.build-and-push.outputs.ecr_image_uri }}"
+            echo "Output do step setup: ${{ steps.setup-ecr-uri.outputs.ecr_image_uri }}"
             exit 1
           fi
+          echo "✅ ECR_IMAGE_URI final: ${ECR_IMAGE_URI}"
           terraform plan \
             -var="aws_region=${AWS_REGION}" \
             -var="lambda_function_name=${LAMBDA_FUNCTION_NAME}" \
@@ -192,7 +199,7 @@ jobs:
         env:
           LAMBDA_FUNCTION_NAME: ${{ secrets.LAMBDA_FUNCTION_NAME }}
           LAMBDA_ROLE_ARN: ${{ secrets.LAMBDA_ROLE_ARN }}
-          ECR_IMAGE_URI: ${{ needs.build-and-push.outputs.ecr_image_uri }}
+          ECR_IMAGE_URI: ${{ env.ECR_IMAGE_URI }}
         run: |
           echo "🔍 Verificando variáveis antes do apply..."
           echo "ECR_IMAGE_URI: ${ECR_IMAGE_URI}"
