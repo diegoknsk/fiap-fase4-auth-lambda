@@ -34,12 +34,31 @@ resource "aws_security_group" "vpc_endpoint_cognito" {
   }
 }
 
+# Data source para descobrir zonas de disponibilidade que suportam VPC Endpoint do Cognito
+data "aws_vpc_endpoint_service" "cognito_idp" {
+  service      = "cognito-idp"
+  service_type = "Interface"
+}
+
+# Filtrar subnets que estão em zonas de disponibilidade suportadas
+data "aws_subnets" "cognito_endpoint_supported" {
+  filter {
+    name   = "vpc-id"
+    values = [data.aws_vpc.default.id]
+  }
+  
+  filter {
+    name   = "availability-zone"
+    values = data.aws_vpc_endpoint_service.cognito_idp.availability_zones
+  }
+}
+
 # VPC Endpoint para Cognito Identity Provider
 resource "aws_vpc_endpoint" "cognito_idp" {
   vpc_id              = data.aws_vpc.default.id
-  service_name        = "com.amazonaws.${var.aws_region}.cognito-idp"
+  service_name        = data.aws_vpc_endpoint_service.cognito_idp.service_name
   vpc_endpoint_type   = "Interface"
-  subnet_ids          = data.aws_subnets.default.ids
+  subnet_ids          = data.aws_subnets.cognito_endpoint_supported.ids
   security_group_ids  = [aws_security_group.vpc_endpoint_cognito.id]
   
   # Aceitar requisições sem necessidade de aprovação manual
