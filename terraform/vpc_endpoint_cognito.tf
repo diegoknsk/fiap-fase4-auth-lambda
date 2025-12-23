@@ -3,28 +3,28 @@
 # Mais seguro e econômico que NAT Gateway
 
 # Security Group para o VPC Endpoint
-# Permite tráfego HTTPS (porta 443) de/para o Lambda
+# Permite tráfego HTTPS (porta 443) apenas do Security Group do Lambda
 resource "aws_security_group" "vpc_endpoint_cognito" {
   name        = "vpc-endpoint-cognito-sg"
   description = "Security Group para VPC Endpoint do Cognito"
   vpc_id      = data.aws_vpc.default.id
 
-  # Permitir tráfego HTTPS de saída (do Lambda para o Cognito)
-  egress {
-    description = "HTTPS para Cognito"
-    from_port  = 443
-    to_port    = 443
-    protocol   = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
+  # Permitir tráfego HTTPS de entrada APENAS do Security Group do Lambda
+  ingress {
+    description     = "HTTPS do Lambda"
+    from_port       = 443
+    to_port         = 443
+    protocol        = "tcp"
+    security_groups = [local.lambda_security_group_id]
   }
 
-  # Permitir tráfego HTTPS de entrada (respostas do Cognito)
-  ingress {
-    description = "HTTPS do Cognito"
-    from_port   = 443
-    to_port     = 443
-    protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
+  # Permitir tráfego HTTPS de saída (respostas para o Lambda)
+  egress {
+    description     = "HTTPS para Lambda"
+    from_port       = 443
+    to_port         = 443
+    protocol        = "tcp"
+    security_groups = [local.lambda_security_group_id]
   }
 
   tags = {
@@ -32,6 +32,18 @@ resource "aws_security_group" "vpc_endpoint_cognito" {
     ManagedBy = "Terraform"
     Project   = "FastFood-Auth"
   }
+}
+
+# Regra de saída HTTPS no Security Group do Lambda para acessar o VPC Endpoint
+# Permite saída HTTPS (porta 443) do Lambda para o VPC Endpoint
+resource "aws_security_group_rule" "lambda_https_egress" {
+  type              = "egress"
+  from_port         = 443
+  to_port           = 443
+  protocol          = "tcp"
+  security_group_id = local.lambda_security_group_id
+  cidr_blocks       = ["0.0.0.0/0"]  # Permite saída HTTPS para qualquer destino (incluindo VPC Endpoint)
+  description       = "Allow HTTPS to Cognito VPC Endpoint"
 }
 
 # Data source para descobrir zonas de disponibilidade que suportam VPC Endpoint do Cognito
