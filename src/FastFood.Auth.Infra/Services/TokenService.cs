@@ -15,8 +15,9 @@ public class TokenService(IConfiguration configuration) : ITokenService
     public string GenerateToken(Guid customerId, out DateTime expiresAt)
     {
         // JWT Secret deve vir EXCLUSIVAMENTE de variável de ambiente por segurança
-        var secret = Environment.GetEnvironmentVariable("JwtSettings_Secret")
-            ?? throw new InvalidOperationException("JWT Secret não configurado. Configure a variável de ambiente 'JwtSettings_Secret' (mínimo 32 caracteres).");
+        // Usa dois underscores (__) para corresponder ao formato do Terraform/ASP.NET Core
+        var secret = Environment.GetEnvironmentVariable("JwtSettings__Secret")
+            ?? throw new InvalidOperationException("JWT Secret não configurado. Configure a variável de ambiente 'JwtSettings__Secret' (mínimo 32 caracteres).");
         
         if (secret.Length < 32)
         {

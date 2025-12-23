@@ -19,7 +19,8 @@ public class WebApplicationFactoryFixture : WebApplicationFactory<Program>
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
         // Configurar variável de ambiente para JWT Secret (obrigatório)
-        Environment.SetEnvironmentVariable("JwtSettings_Secret", "TestSecretKeyForJWTTokenGenerationInBDDTests12345678901234567890");
+        // Usa dois underscores (__) para corresponder ao formato do Terraform/ASP.NET Core
+        Environment.SetEnvironmentVariable("JwtSettings__Secret", "TestSecretKeyForJWTTokenGenerationInBDDTests12345678901234567890");
 
         builder.ConfigureAppConfiguration(config =>
         {

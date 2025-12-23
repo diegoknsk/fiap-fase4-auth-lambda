@@ -19,7 +19,8 @@ public class TokenServiceTests : IDisposable
     public TokenServiceTests()
     {
         // Configurar variável de ambiente para o secret (obrigatório agora)
-        Environment.SetEnvironmentVariable("JwtSettings_Secret", TestSecret);
+        // Usa dois underscores (__) para corresponder ao formato do Terraform/ASP.NET Core
+        Environment.SetEnvironmentVariable("JwtSettings__Secret", TestSecret);
 
         _configurationMock = new Mock<IConfiguration>();
         _jwtSettingsSectionMock = new Mock<IConfigurationSection>();
@@ -41,7 +42,7 @@ public class TokenServiceTests : IDisposable
     public void Dispose()
     {
         // Limpar variável de ambiente após os testes
-        Environment.SetEnvironmentVariable("JwtSettings_Secret", null);
+        Environment.SetEnvironmentVariable("JwtSettings__Secret", null);
     }
 
     [Fact]
@@ -202,7 +203,7 @@ public class TokenServiceTests : IDisposable
     public void GenerateToken_WithMissingSecret_ShouldThrowInvalidOperationException()
     {
         // Arrange
-        Environment.SetEnvironmentVariable("JwtSettings_Secret", null);
+        Environment.SetEnvironmentVariable("JwtSettings__Secret", null);
         var tokenService = new TokenService(_configurationMock.Object);
         var customerId = Guid.NewGuid();
 
@@ -212,14 +213,14 @@ public class TokenServiceTests : IDisposable
         Assert.Contains("JWT Secret não configurado", exception.Message);
         
         // Restaurar para outros testes
-        Environment.SetEnvironmentVariable("JwtSettings_Secret", TestSecret);
+        Environment.SetEnvironmentVariable("JwtSettings__Secret", TestSecret);
     }
 
     [Fact]
     public void GenerateToken_WithSecretTooShort_ShouldThrowInvalidOperationException()
     {
         // Arrange
-        Environment.SetEnvironmentVariable("JwtSettings_Secret", "short");
+        Environment.SetEnvironmentVariable("JwtSettings__Secret", "short");
         var tokenService = new TokenService(_configurationMock.Object);
         var customerId = Guid.NewGuid();
 
@@ -229,7 +230,7 @@ public class TokenServiceTests : IDisposable
         Assert.Contains("mínimo 32 caracteres", exception.Message);
         
         // Restaurar para outros testes
-        Environment.SetEnvironmentVariable("JwtSettings_Secret", TestSecret);
+        Environment.SetEnvironmentVariable("JwtSettings__Secret", TestSecret);
     }
 
     [Fact]
