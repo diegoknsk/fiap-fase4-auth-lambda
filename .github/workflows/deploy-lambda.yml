@@ -41,10 +41,27 @@ jobs:
         env:
           AWS_ACCOUNT_ID: ${{ secrets.AWS_ACCOUNT_ID }}
         run: |
+          # Tenta obter o registry do output do login, se não estiver disponível, constrói manualmente
           ECR_REGISTRY="${{ steps.login-ecr.outputs.registry }}"
+          
+          if [ -z "${ECR_REGISTRY}" ]; then
+            echo "⚠️ Registry não encontrado no output, construindo manualmente..."
+            ECR_REGISTRY="${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com"
+            echo "✅ Registry construído: ${ECR_REGISTRY}"
+          else
+            echo "✅ Registry obtido do login: ${ECR_REGISTRY}"
+          fi
+          
+          echo "🔍 Debug - ECR_REGISTRY: ${ECR_REGISTRY}"
+          echo "🔍 Debug - ECR_REPOSITORY_NAME: ${ECR_REPOSITORY_NAME}"
+          
           ECR_REPOSITORY_URL="${ECR_REGISTRY}/${ECR_REPOSITORY_NAME}"
           IMAGE_TAG="sha-${GITHUB_SHA::7}"
           ECR_IMAGE_URI="${ECR_REPOSITORY_URL}:${IMAGE_TAG}"
+          
+          echo "🔍 Debug - ECR_REPOSITORY_URL: ${ECR_REPOSITORY_URL}"
+          echo "🔍 Debug - IMAGE_TAG: ${IMAGE_TAG}"
+          echo "🔍 Debug - ECR_IMAGE_URI: ${ECR_IMAGE_URI}"
           
           echo "ECR_REGISTRY=${ECR_REGISTRY}" >> "$GITHUB_ENV"
           echo "ECR_REPOSITORY_URL=${ECR_REPOSITORY_URL}" >> "$GITHUB_ENV"
@@ -54,6 +71,8 @@ jobs:
           echo "ecr_repository_url=${ECR_REPOSITORY_URL}" >> "$GITHUB_OUTPUT"
           echo "image_tag=${IMAGE_TAG}" >> "$GITHUB_OUTPUT"
           echo "ecr_image_uri=${ECR_IMAGE_URI}" >> "$GITHUB_OUTPUT"
+          
+          echo "✅ Output definido: ecr_image_uri=${ECR_IMAGE_URI}"
 
       - name: Build Docker image
         id: build
@@ -72,8 +91,8 @@ jobs:
 
       - name: Output ECR Image URI
         run: |
-          echo "✅ ECR Image URI: ${{ steps.vars.outputs.ecr_image_uri }}"
-          echo "✅ Job output: ${{ needs.build-and-push.outputs.ecr_image_uri }}"
+          echo "✅ Step vars output: ${{ steps.vars.outputs.ecr_image_uri }}"
+          echo "✅ Job output será: ${{ steps.vars.outputs.ecr_image_uri }}"
 
   terraform-apply:
     name: Deploy Lambda via Terraform
@@ -122,6 +141,14 @@ jobs:
             -backend-config="key=${TF_BACKEND_KEY}" \
             -backend-config="region=${TF_BACKEND_REGION}"
 
+      - name: Debug - Verificar outputs do job anterior
+        run: |
+          echo "🔍 Debug - Outputs do job build-and-push:"
+          echo "ecr_image_uri: ${{ needs.build-and-push.outputs.ecr_image_uri }}"
+          echo ""
+          echo "🔍 Todos os outputs disponíveis:"
+          echo "${{ toJSON(needs.build-and-push.outputs) }}"
+
       - name: Terraform Plan
         working-directory: ./terraform
         env:
@@ -133,6 +160,7 @@ jobs:
           echo "ECR_IMAGE_URI: ${ECR_IMAGE_URI}"
           if [ -z "${ECR_IMAGE_URI}" ]; then
             echo "❌ Erro: ECR_IMAGE_URI está vazio!"
+            echo "Verifique se o job build-and-push exportou o output corretamente."
             exit 1
           fi
           terraform plan \
