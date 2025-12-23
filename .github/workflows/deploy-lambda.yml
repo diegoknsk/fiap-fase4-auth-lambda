@@ -41,23 +41,37 @@ jobs:
         env:
           AWS_ACCOUNT_ID: ${{ secrets.AWS_ACCOUNT_ID }}
         run: |
+          # Valida que AWS_ACCOUNT_ID está disponível
+          if [ -z "${AWS_ACCOUNT_ID}" ]; then
+            echo "❌ Erro: AWS_ACCOUNT_ID não está disponível!"
+            exit 1
+          fi
+          
           # Tenta obter o registry do output do login, se não estiver disponível, constrói manualmente
           ECR_REGISTRY="${{ steps.login-ecr.outputs.registry }}"
           
-          if [ -z "${ECR_REGISTRY}" ]; then
-            echo "⚠️ Registry não encontrado no output, construindo manualmente..."
+          if [ -z "${ECR_REGISTRY}" ] || [[ ! "${ECR_REGISTRY}" =~ ^[0-9]+\.dkr\.ecr\..+ ]]; then
+            echo "⚠️ Registry não encontrado no output ou inválido, construindo manualmente..."
             ECR_REGISTRY="${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com"
             echo "✅ Registry construído: ${ECR_REGISTRY}"
           else
             echo "✅ Registry obtido do login: ${ECR_REGISTRY}"
           fi
           
+          echo "🔍 Debug - AWS_ACCOUNT_ID: ${AWS_ACCOUNT_ID}"
+          echo "🔍 Debug - AWS_REGION: ${AWS_REGION}"
           echo "🔍 Debug - ECR_REGISTRY: ${ECR_REGISTRY}"
           echo "🔍 Debug - ECR_REPOSITORY_NAME: ${ECR_REPOSITORY_NAME}"
           
           ECR_REPOSITORY_URL="${ECR_REGISTRY}/${ECR_REPOSITORY_NAME}"
           IMAGE_TAG="sha-${GITHUB_SHA::7}"
           ECR_IMAGE_URI="${ECR_REPOSITORY_URL}:${IMAGE_TAG}"
+          
+          # Valida que a URI está completa
+          if [[ ! "${ECR_IMAGE_URI}" =~ ^[0-9]+\.dkr\.ecr\..+ ]]; then
+            echo "❌ Erro: ECR_IMAGE_URI construída está inválida: ${ECR_IMAGE_URI}"
+            exit 1
+          fi
           
           echo "🔍 Debug - ECR_REPOSITORY_URL: ${ECR_REPOSITORY_URL}"
           echo "🔍 Debug - IMAGE_TAG: ${IMAGE_TAG}"
@@ -150,6 +164,9 @@ jobs:
 
       - name: Debug - Verificar e configurar ECR_IMAGE_URI
         id: setup-ecr-uri
+        env:
+          AWS_ACCOUNT_ID: ${{ secrets.AWS_ACCOUNT_ID }}
+          ECR_REPOSITORY_NAME: ${{ secrets.ECR_REPOSITORY_NAME }}
         run: |
           echo "🔍 Debug - Outputs do job build-and-push:"
           ECR_URI="${{ needs.build-and-push.outputs.ecr_image_uri }}"
@@ -158,19 +175,40 @@ jobs:
           echo "🔍 Todos os outputs disponíveis (JSON):"
           echo "${{ toJSON(needs.build-and-push.outputs) }}"
           echo ""
-          if [ -n "${ECR_URI}" ]; then
-            echo "✅ ECR_URI encontrado: ${ECR_URI}"
+          
+          # Valida se a URI está completa (deve começar com número do account)
+          if [ -n "${ECR_URI}" ] && [[ "${ECR_URI}" =~ ^[0-9]+\.dkr\.ecr\..+ ]]; then
+            echo "✅ ECR_URI válida encontrada: ${ECR_URI}"
             echo "ECR_IMAGE_URI=${ECR_URI}" >> "$GITHUB_ENV"
             echo "ecr_image_uri=${ECR_URI}" >> "$GITHUB_OUTPUT"
           else
-            echo "❌ ECR_URI está vazio do output do job!"
+            echo "⚠️ ECR_URI está vazia, inválida ou incompleta do output do job!"
+            echo "URI recebida: '${ECR_URI}'"
             echo "Tentando construir manualmente..."
             # Constrói manualmente como fallback
-            ECR_URI="${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/${ECR_REPOSITORY_NAME}:sha-${GITHUB_SHA::7}"
+            if [ -z "${AWS_ACCOUNT_ID}" ]; then
+              echo "❌ Erro: AWS_ACCOUNT_ID não está disponível!"
+              exit 1
+            fi
+            if [ -z "${ECR_REPOSITORY_NAME}" ]; then
+              echo "❌ Erro: ECR_REPOSITORY_NAME não está disponível!"
+              exit 1
+            fi
+            IMAGE_TAG="sha-${GITHUB_SHA::7}"
+            ECR_URI="${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/${ECR_REPOSITORY_NAME}:${IMAGE_TAG}"
             echo "ECR_IMAGE_URI=${ECR_URI}" >> "$GITHUB_ENV"
             echo "ecr_image_uri=${ECR_URI}" >> "$GITHUB_OUTPUT"
             echo "✅ ECR_URI construído manualmente: ${ECR_URI}"
           fi
+          
+          # Validação final antes de continuar
+          FINAL_URI="${ECR_IMAGE_URI:-${ECR_URI}}"
+          if [[ ! "${FINAL_URI}" =~ ^[0-9]+\.dkr\.ecr\..+ ]]; then
+            echo "❌ Erro crítico: ECR_IMAGE_URI final está inválida: ${FINAL_URI}"
+            echo "Formato esperado: <account-id>.dkr.ecr.<region>.amazonaws.com/<repo>:<tag>"
+            exit 1
+          fi
+          echo "✅ Validação final: ECR_IMAGE_URI=${FINAL_URI}"
 
       - name: Terraform Plan
         working-directory: ./terraform
@@ -194,19 +232,71 @@ jobs:
             -var="ecr_image_uri=${ECR_IMAGE_URI}" \
             -var="lambda_role_arn=${LAMBDA_ROLE_ARN}"
 
+      - name: Verificar se imagem existe no ECR
+        env:
+          AWS_ACCOUNT_ID: ${{ secrets.AWS_ACCOUNT_ID }}
+          ECR_REPOSITORY_NAME: ${{ secrets.ECR_REPOSITORY_NAME }}
+        run: |
+          echo "🔍 Verificando se a imagem existe no ECR..."
+          IMAGE_TAG="sha-${GITHUB_SHA::7}"
+          IMAGE_URI="${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/${ECR_REPOSITORY_NAME}:${IMAGE_TAG}"
+          echo "Verificando imagem: ${IMAGE_URI}"
+          
+          # Verifica se a imagem existe no ECR
+          if aws ecr describe-images \
+            --repository-name "${ECR_REPOSITORY_NAME}" \
+            --image-ids imageTag="${IMAGE_TAG}" \
+            --region "${AWS_REGION}" > /dev/null 2>&1; then
+            echo "✅ Imagem encontrada no ECR: ${IMAGE_URI}"
+          else
+            echo "❌ Erro: Imagem não encontrada no ECR: ${IMAGE_URI}"
+            echo "Verificando tags disponíveis..."
+            aws ecr describe-images \
+              --repository-name "${ECR_REPOSITORY_NAME}" \
+              --region "${AWS_REGION}" \
+              --query 'imageDetails[*].imageTags' \
+              --output table || true
+            exit 1
+          fi
+
       - name: Terraform Apply
         working-directory: ./terraform
         env:
           LAMBDA_FUNCTION_NAME: ${{ secrets.LAMBDA_FUNCTION_NAME }}
           LAMBDA_ROLE_ARN: ${{ secrets.LAMBDA_ROLE_ARN }}
           ECR_IMAGE_URI: ${{ env.ECR_IMAGE_URI }}
+          AWS_ACCOUNT_ID: ${{ secrets.AWS_ACCOUNT_ID }}
+          ECR_REPOSITORY_NAME: ${{ secrets.ECR_REPOSITORY_NAME }}
         run: |
           echo "🔍 Verificando variáveis antes do apply..."
-          echo "ECR_IMAGE_URI: ${ECR_IMAGE_URI}"
-          if [ -z "${ECR_IMAGE_URI}" ]; then
-            echo "❌ Erro: ECR_IMAGE_URI está vazio!"
+          echo "ECR_IMAGE_URI recebida: '${ECR_IMAGE_URI}'"
+          
+          # Se a URI estiver vazia ou incompleta, reconstrói
+          if [ -z "${ECR_IMAGE_URI}" ] || [[ ! "${ECR_IMAGE_URI}" =~ ^[0-9]+\.dkr\.ecr\..+ ]]; then
+            echo "⚠️ ECR_IMAGE_URI está vazia ou incompleta, reconstruindo..."
+            if [ -z "${AWS_ACCOUNT_ID}" ] || [ -z "${ECR_REPOSITORY_NAME}" ]; then
+              echo "❌ Erro: AWS_ACCOUNT_ID ou ECR_REPOSITORY_NAME não estão disponíveis para reconstruir URI!"
+              exit 1
+            fi
+            IMAGE_TAG="sha-${GITHUB_SHA::7}"
+            ECR_IMAGE_URI="${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/${ECR_REPOSITORY_NAME}:${IMAGE_TAG}"
+            echo "✅ ECR_IMAGE_URI reconstruída: ${ECR_IMAGE_URI}"
+          fi
+          
+          # Validação final obrigatória
+          if [[ ! "${ECR_IMAGE_URI}" =~ ^[0-9]+\.dkr\.ecr\..+ ]]; then
+            echo "❌ Erro crítico: ECR_IMAGE_URI final está inválida: ${ECR_IMAGE_URI}"
+            echo "Formato esperado: <account-id>.dkr.ecr.<region>.amazonaws.com/<repo>:<tag>"
             exit 1
           fi
+          
+          echo "✅ ECR_IMAGE_URI válida e completa: ${ECR_IMAGE_URI}"
+          echo "🔍 Passando para Terraform:"
+          echo "  - aws_region: ${AWS_REGION}"
+          echo "  - lambda_function_name: ${LAMBDA_FUNCTION_NAME}"
+          echo "  - ecr_image_uri: ${ECR_IMAGE_URI}"
+          echo "  - lambda_role_arn: ${LAMBDA_ROLE_ARN}"
+          
           terraform apply -auto-approve \
             -var="aws_region=${AWS_REGION}" \
             -var="lambda_function_name=${LAMBDA_FUNCTION_NAME}" \
