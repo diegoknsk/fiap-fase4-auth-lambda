@@ -47,7 +47,6 @@ ENV DOTNET_ENVIRONMENT=Production
 # Para AddAWSLambdaHosting com LambdaEventSource.HttpApi
 # A imagem base public.ecr.aws/lambda/dotnet:8 requer um handler no formato:
 # Assembly::Namespace.Class::Method
-# Com AddAWSLambdaHosting, o handler gerado automaticamente é:
-# Assembly::LambdaBootstrap::BootstrapAsync (no namespace raiz do assembly)
-# Como o namespace do assembly é FastFood.Auth.Lambda, o handler completo é:
-CMD ["FastFood.Auth.Lambda::FastFood.Auth.Lambda.LambdaBootstrap::BootstrapAsync"]
+# Criamos uma classe LambdaEntryPoint que herda de APIGatewayHttpApiV2ProxyFunction
+# O handler é: Assembly::Namespace.Class::FunctionHandlerAsync
+CMD ["FastFood.Auth.Lambda::FastFood.Auth.Lambda.LambdaEntryPoint::FunctionHandlerAsync"]
