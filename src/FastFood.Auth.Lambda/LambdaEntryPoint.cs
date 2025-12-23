@@ -8,6 +8,11 @@ using FastFood.Auth.Infra.Services;
 using FastFood.Auth.Application.UseCases.Customer;
 using FastFood.Auth.Application.UseCases.Admin;
 using Microsoft.Extensions.Logging;
+using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Hosting;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Configuration;
+using Microsoft.AspNetCore.Routing;
 
 namespace FastFood.Auth.Lambda;
 
@@ -35,6 +40,13 @@ public class LambdaEntryPoint : APIGatewayHttpApiV2ProxyFunction
 /// </summary>
 public class Startup
 {
+    private readonly IConfiguration _configuration;
+
+    public Startup(IConfiguration configuration)
+    {
+        _configuration = configuration;
+    }
+
     public void ConfigureServices(IServiceCollection services)
     {
         // Configurar hosting Lambda para AWS
@@ -48,11 +60,8 @@ public class Startup
         // Configurar DbContext com PostgreSQL
         // A connection string vem da variável de ambiente ConnectionStrings__DefaultConnection
         services.AddDbContext<AuthDbContext>(options =>
-        {
-            var connectionString = Environment.GetEnvironmentVariable("ConnectionStrings__DefaultConnection")
-                ?? throw new InvalidOperationException("ConnectionStrings__DefaultConnection não configurado");
-            options.UseNpgsql(connectionString);
-        });
+            options.UseNpgsql(_configuration.GetConnectionString("DefaultConnection") 
+                ?? throw new InvalidOperationException("ConnectionStrings__DefaultConnection não configurado")));
 
         // Registrar repositórios e serviços
         services.AddScoped<ICustomerRepository, CustomerRepository>();
@@ -83,7 +92,7 @@ public class Startup
                 context.Response.StatusCode = 500;
                 context.Response.ContentType = "application/json";
                 
-                var logger = context.RequestServices.GetRequiredService<ILogger<Program>>();
+                var logger = context.RequestServices.GetRequiredService<ILogger<Startup>>();
                 var exception = context.Features.Get<Microsoft.AspNetCore.Diagnostics.IExceptionHandlerFeature>()?.Error;
                 
                 if (exception != null)
@@ -98,8 +107,12 @@ public class Startup
             });
         });
 
+        app.UseRouting();
         app.UseAuthorization();
-        app.MapControllers();
+        app.UseEndpoints(endpoints =>
+        {
+            endpoints.MapControllers();
+        });
     }
 }
 
