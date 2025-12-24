@@ -8,6 +8,7 @@ using FastFood.Auth.Application.UseCases.Customer;
 using FastFood.Auth.Application.UseCases.Admin;
 using Amazon.Lambda.AspNetCoreServer.Hosting;
 using Microsoft.Extensions.Logging;
+using Microsoft.AspNetCore.Mvc.ApplicationModels;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -20,29 +21,58 @@ builder.Logging.SetMinimumLevel(LogLevel.Information);
 // Configurar hosting Lambda para AWS (substitui Kestrel em produção)
 builder.Services.AddAWSLambdaHosting(LambdaEventSource.HttpApi);
 
-// Add services to the container.
+// Determinar qual modo a Lambda está executando (Customer, Admin ou Migrator)
+// Default é "Customer" para manter compatibilidade
+var lambdaMode = builder.Configuration["LAMBDA_MODE"] ?? "Customer";
+var isCustomerMode = lambdaMode.Equals("Customer", StringComparison.OrdinalIgnoreCase);
+var isAdminMode = lambdaMode.Equals("Admin", StringComparison.OrdinalIgnoreCase);
+var isMigratorMode = lambdaMode.Equals("Migrator", StringComparison.OrdinalIgnoreCase);
 
-builder.Services.AddControllers();
+// Add services to the container.
+// Filtrar controllers baseado no modo da Lambda
+builder.Services.AddControllers(options =>
+{
+    // Adicionar convenção para filtrar controllers baseado no modo
+    options.Conventions.Add(new ControllerFilterConvention(isCustomerMode, isAdminMode, isMigratorMode));
+});
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
-// Configurar DbContext com PostgreSQL
-builder.Services.AddDbContext<AuthDbContext>(options =>
-    options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
+// Configurar DbContext com PostgreSQL (apenas se houver connection string)
+var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
+if (!string.IsNullOrEmpty(connectionString))
+{
+    builder.Services.AddDbContext<AuthDbContext>(options =>
+        options.UseNpgsql(connectionString));
+}
 
-// Registrar repositórios e serviços
-builder.Services.AddScoped<ICustomerRepository, CustomerRepository>();
+// Registrar serviços comuns
 builder.Services.AddScoped<ITokenService, TokenService>();
-builder.Services.AddScoped<ICognitoService, CognitoService>();
-builder.Services.AddScoped<IMigrationService, MigrationService>();
 
-// Registrar UseCases
-builder.Services.AddScoped<CreateAnonymousCustomerUseCase>();
-builder.Services.AddScoped<RegisterCustomerUseCase>();
-builder.Services.AddScoped<IdentifyCustomerUseCase>();
-builder.Services.AddScoped<AuthenticateAdminUseCase>();
-builder.Services.AddScoped<RunMigrationsUseCase>();
+// Registrar serviços específicos por modo
+if (isCustomerMode)
+{
+    builder.Services.AddScoped<ICustomerRepository, CustomerRepository>();
+    // Registrar UseCases de Customer
+    builder.Services.AddScoped<CreateAnonymousCustomerUseCase>();
+    builder.Services.AddScoped<RegisterCustomerUseCase>();
+    builder.Services.AddScoped<IdentifyCustomerUseCase>();
+}
+
+if (isAdminMode)
+{
+    builder.Services.AddScoped<ICognitoService, CognitoService>();
+    // Registrar UseCases de Admin
+    builder.Services.AddScoped<AuthenticateAdminUseCase>();
+}
+
+if (isMigratorMode)
+{
+    builder.Services.AddScoped<IMigrationService, MigrationService>();
+    // Registrar UseCases de Migrator
+    builder.Services.AddScoped<RunMigrationsUseCase>();
+}
 
 // Presenters são classes static, não precisam ser registradas no DI
 
@@ -92,3 +122,55 @@ app.Run();
 // Em .NET 8, o compilador gera automaticamente uma classe Program implícita
 // Esta declaração partial permite que WebApplicationFactory<Program> funcione
 public partial class Program { }
+
+/// <summary>
+/// Convenção para filtrar controllers baseado no modo da Lambda (Customer, Admin ou Migrator)
+/// </summary>
+public class ControllerFilterConvention : IControllerModelConvention
+{
+    private readonly bool _isCustomerMode;
+    private readonly bool _isAdminMode;
+    private readonly bool _isMigratorMode;
+
+    public ControllerFilterConvention(bool isCustomerMode, bool isAdminMode, bool isMigratorMode)
+    {
+        _isCustomerMode = isCustomerMode;
+        _isAdminMode = isAdminMode;
+        _isMigratorMode = isMigratorMode;
+    }
+
+    public void Apply(ControllerModel controller)
+    {
+        var controllerName = controller.ControllerType.Name;
+
+        // Se estiver em modo Migrator, manter apenas MigrationController
+        if (_isMigratorMode)
+        {
+            if (controllerName != "MigrationController")
+            {
+                controller.Selectors.Clear();
+            }
+            return;
+        }
+
+        // Se estiver em modo Customer, remover AdminController e MigrationController
+        if (_isCustomerMode)
+        {
+            if (controllerName == "AdminController" || controllerName == "MigrationController")
+            {
+                controller.Selectors.Clear();
+                return;
+            }
+        }
+
+        // Se estiver em modo Admin, remover CustomerController e MigrationController
+        if (_isAdminMode)
+        {
+            if (controllerName == "CustomerController" || controllerName == "MigrationController")
+            {
+                controller.Selectors.Clear();
+                return;
+            }
+        }
+    }
+}
