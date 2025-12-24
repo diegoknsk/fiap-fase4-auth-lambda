@@ -22,7 +22,13 @@ resource "aws_lambda_function" "lambda" {
   # VPC e Security Group são gerenciados em outro lugar
   # O Terraform apenas atualiza a imagem do Lambda
   lifecycle {
-    ignore_changes = [vpc_config]
+    ignore_changes = [
+      vpc_config,
+      role,           # Role pode ser diferente se gerenciada em outro lugar
+      timeout,        # Timeout pode ser diferente
+      memory_size,    # Memory pode ser diferente
+      tags,           # Tags podem ser diferentes
+    ]
   }
 
   # Variáveis de ambiente para configuração do Lambda

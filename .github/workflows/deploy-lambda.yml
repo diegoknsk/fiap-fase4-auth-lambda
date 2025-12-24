@@ -334,10 +334,10 @@ jobs:
           # Verifica se o Lambda já está no estado do Terraform
           echo ""
           echo "🔍 Verificando estado do Terraform..."
+          LAMBDA_IN_STATE=false
           if terraform state show aws_lambda_function.lambda > /dev/null 2>&1; then
+            LAMBDA_IN_STATE=true
             echo "✅ Lambda já está no estado do Terraform"
-            echo "lambda_imported=false" >> "$GITHUB_OUTPUT"
-            echo "lambda_exists=true" >> "$GITHUB_OUTPUT"
             
             # Mostra diferenças
             echo ""
@@ -345,68 +345,80 @@ jobs:
             terraform state show aws_lambda_function.lambda | grep -E "(function_name|image_uri|role)" || true
           else
             echo "⚠️ Lambda existe na AWS mas NÃO está no estado do Terraform"
-            echo "📥 Tentando importar Lambda para o estado do Terraform..."
-            
-            # Usa a URI atual do Lambda ou a nova URI do ECR
-            IMPORT_IMAGE_URI="${CURRENT_IMAGE_URI:-${ECR_IMAGE_URI}}"
-            IMPORT_ROLE="${CURRENT_ROLE:-${LAMBDA_ROLE_ARN}}"
-            
-            echo "  - Usando image_uri: ${IMPORT_IMAGE_URI}"
-            echo "  - Usando role: ${IMPORT_ROLE}"
-            
-            # Importa o Lambda para o estado do Terraform
-            # Nota: Para import, apenas variáveis básicas são necessárias
-            # As outras variáveis serão configuradas no próximo terraform apply
-            IMPORT_OUTPUT=$(terraform import \
-              -var="aws_region=${AWS_REGION}" \
-              -var="lambda_function_name=${LAMBDA_FUNCTION_NAME}" \
-              -var="lambda_mode=${LAMBDA_MODE}" \
-              -var="ecr_image_uri=${IMPORT_IMAGE_URI}" \
-              -var="lambda_role_arn=${IMPORT_ROLE}" \
-              -var="cognito_user_pool_id=dummy" \
-              -var="cognito_region=${AWS_REGION}" \
-              -var="cognito_client_id=dummy" \
-              -var="rds_connection_string=dummy" \
-              -var="jwt_secret=dummy" \
-              -var="jwt_issuer=dummy" \
-              -var="jwt_audience=dummy" \
-              aws_lambda_function.lambda "${LAMBDA_FUNCTION_NAME}" 2>&1)
-            IMPORT_EXIT_CODE=$?
-            
-            if [ ${IMPORT_EXIT_CODE} -eq 0 ]; then
-              echo "✅ Lambda importado com sucesso para o estado do Terraform"
-              echo "lambda_imported=true" >> "$GITHUB_OUTPUT"
+          fi
+          
+          # Sempre tenta importar/atualizar o estado para garantir sincronização
+          # Se já estiver no estado, o import vai atualizar com os valores atuais da AWS
+          echo ""
+          echo "📥 Importando/atualizando Lambda no estado do Terraform..."
+          
+          # Usa a URI atual do Lambda (importa o estado atual, não a nova)
+          IMPORT_IMAGE_URI="${CURRENT_IMAGE_URI:-${ECR_IMAGE_URI}}"
+          IMPORT_ROLE="${CURRENT_ROLE:-${LAMBDA_ROLE_ARN}}"
+          
+          echo "  - Usando image_uri atual: ${IMPORT_IMAGE_URI}"
+          echo "  - Usando role atual: ${IMPORT_ROLE}"
+          
+          # Importa o Lambda para o estado do Terraform
+          # Se já estiver no estado, o import vai atualizar
+          IMPORT_OUTPUT=$(terraform import \
+            -var="aws_region=${AWS_REGION}" \
+            -var="lambda_function_name=${LAMBDA_FUNCTION_NAME}" \
+            -var="lambda_mode=${LAMBDA_MODE}" \
+            -var="ecr_image_uri=${IMPORT_IMAGE_URI}" \
+            -var="lambda_role_arn=${IMPORT_ROLE}" \
+            -var="cognito_user_pool_id=dummy" \
+            -var="cognito_region=${AWS_REGION}" \
+            -var="cognito_client_id=dummy" \
+            -var="rds_connection_string=dummy" \
+            -var="jwt_secret=dummy" \
+            -var="jwt_issuer=dummy" \
+            -var="jwt_audience=dummy" \
+            aws_lambda_function.lambda "${LAMBDA_FUNCTION_NAME}" 2>&1)
+          IMPORT_EXIT_CODE=$?
+          
+          if [ ${IMPORT_EXIT_CODE} -eq 0 ]; then
+            echo "✅ Lambda importado/atualizado com sucesso no estado do Terraform"
+            echo "lambda_imported=true" >> "$GITHUB_OUTPUT"
+          else
+            # Se o erro for porque já está no estado, verifica se realmente está
+            if echo "${IMPORT_OUTPUT}" | grep -qi "already in state\|already managed"; then
+              echo "ℹ️ Lambda já está no estado do Terraform (isso é esperado)"
+              # Verifica novamente para garantir
+              if terraform state show aws_lambda_function.lambda > /dev/null 2>&1; then
+                echo "✅ Confirmado: Lambda está no estado do Terraform"
+                echo "lambda_imported=true" >> "$GITHUB_OUTPUT"
+              else
+                echo "⚠️ Aviso: Lambda deveria estar no estado mas não foi encontrado"
+                echo "lambda_imported=false" >> "$GITHUB_OUTPUT"
+              fi
             else
-              echo "⚠️ Aviso: Falha ao importar Lambda"
+              echo "❌ Erro: Falha ao importar Lambda existente"
               echo "Output do import:"
               echo "${IMPORT_OUTPUT}"
               echo ""
-              
-              # Verifica se o erro é porque o Lambda foi criado por outro Terraform
-              if echo "${IMPORT_OUTPUT}" | grep -qi "already managed\|already exists\|ResourceConflict"; then
-                echo "💡 DIAGNÓSTICO: Lambda pode estar sendo gerenciado por outro Terraform"
-                echo ""
-                echo "📋 Estratégia recomendada:"
-                echo "   1. Este Terraform gerenciará APENAS a image_uri (via lifecycle ignore_changes)"
-                echo "   2. Outros atributos serão ignorados para evitar conflitos"
-                echo "   3. O Terraform tentará atualizar apenas a image_uri no próximo apply"
-                echo ""
-                echo "⚠️ Se o erro persistir, você pode precisar:"
-                echo "   - Remover o Lambda do estado do outro Terraform (se possível)"
-                echo "   - Ou usar terraform import manualmente antes do próximo deploy"
-              else
-                echo "💡 Possíveis causas:"
-                echo "   - O Lambda já está no estado (mas não foi detectado)"
-                echo "   - Há diferenças nas configurações que impedem o import"
-                echo "   - Problemas de permissão IAM"
-                echo ""
-                echo "📋 Próximos passos:"
-                echo "   - O Terraform tentará atualizar no próximo apply"
-                echo "   - Se o erro persistir, verifique as configurações do Lambda"
-              fi
+              echo "💡 O Lambda existe na AWS mas não pôde ser importado para o Terraform"
+              echo "   Isso pode causar problemas se o Terraform tentar criar o Lambda"
+              echo ""
+              echo "📋 Possíveis soluções:"
+              echo "   1. Verificar se o Lambda realmente existe: aws lambda get-function --function-name ${LAMBDA_FUNCTION_NAME}"
+              echo "   2. Verificar permissões IAM do workflow"
+              echo "   3. Importar manualmente: terraform import aws_lambda_function.lambda ${LAMBDA_FUNCTION_NAME}"
               echo "lambda_imported=false" >> "$GITHUB_OUTPUT"
+              # Não falha aqui, mas avisa que pode haver problemas
             fi
-            echo "lambda_exists=true" >> "$GITHUB_OUTPUT"
+          fi
+          echo "lambda_exists=true" >> "$GITHUB_OUTPUT"
+          
+          # Verificação final: garantir que o Lambda está no estado antes de continuar
+          echo ""
+          echo "🔍 Verificação final do estado do Terraform..."
+          if terraform state show aws_lambda_function.lambda > /dev/null 2>&1; then
+            echo "✅ Lambda confirmado no estado do Terraform - pronto para atualizar image_uri"
+          else
+            echo "⚠️ ATENÇÃO: Lambda NÃO está no estado do Terraform"
+            echo "   O Terraform pode tentar criar o Lambda, o que causará erro"
+            echo "   Continuando, mas pode falhar no apply..."
           fi
           
           echo ""
