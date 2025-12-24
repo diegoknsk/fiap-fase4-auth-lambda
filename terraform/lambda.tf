@@ -19,12 +19,10 @@ resource "aws_lambda_function" "lambda" {
   timeout     = 60
   memory_size = 512
 
-  # Configuração VPC: Lambda precisa estar na VPC para acessar o RDS
-  # Subnets são descobertas automaticamente da VPC default
-  # Security Group permite comunicação com o RDS na porta 5432
-  vpc_config {
-    subnet_ids         = data.aws_subnets.default.ids
-    security_group_ids = [local.lambda_security_group_id]
+  # VPC e Security Group são gerenciados em outro lugar
+  # O Terraform apenas atualiza a imagem do Lambda
+  lifecycle {
+    ignore_changes = [vpc_config]
   }
 
   # Variáveis de ambiente para configuração do Lambda

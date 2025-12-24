@@ -26,19 +26,6 @@ variable "lambda_role_arn" {
   # você pode obter o ARN da role do Lambda existente no console AWS ou via AWS CLI
 }
 
-# Security Group para Lambda (VPC)
-variable "lambda_security_group_name" {
-  type        = string
-  description = "Nome do Security Group para o Lambda. Se não fornecido, usa 'fiap-fase4-auth-sg'"
-  default     = "fiap-fase4-auth-sg"
-}
-
-variable "lambda_security_group_id" {
-  type        = string
-  description = "ID do Security Group para o Lambda. Se fornecido, tem prioridade sobre o nome"
-  default     = ""
-}
-
 # Modo da Lambda
 variable "lambda_mode" {
   type        = string

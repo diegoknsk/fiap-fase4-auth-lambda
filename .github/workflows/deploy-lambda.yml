@@ -152,8 +152,9 @@ jobs:
           # Usar uma única role ARN para todos os lambdas
           LAMBDA_ROLE_ARN: ${{ secrets.LAMBDA_ROLE_ARN }}
         run: |
-          LAMBDA_MODE_UPPER=$(echo "${{ matrix.lambda_mode }}" | tr '[:lower:]' '[:upper:]')
-          LAMBDA_MODE_LOWER=$(echo "${{ matrix.lambda_mode }}" | tr '[:upper:]' '[:lower:]')
+          # Manter o valor original do matrix (Customer, Admin, Migrator) para o Terraform
+          LAMBDA_MODE="${{ matrix.lambda_mode }}"
+          LAMBDA_MODE_UPPER=$(echo "${LAMBDA_MODE}" | tr '[:lower:]' '[:upper:]')
           
           # Valores padrão baseados no modo
           case "${LAMBDA_MODE_UPPER}" in
@@ -167,7 +168,7 @@ jobs:
               DEFAULT_FUNCTION_NAME="fiap-fase4-infra-auth-migrator-lambda"
               ;;
             *)
-              echo "❌ Erro: Modo Lambda inválido: ${LAMBDA_MODE_UPPER}"
+              echo "❌ Erro: Modo Lambda inválido: ${LAMBDA_MODE}"
               exit 1
               ;;
           esac
@@ -179,9 +180,9 @@ jobs:
           LAMBDA_FUNCTION_NAME=$(eval echo \$${FUNCTION_NAME_VAR})
           if [ -z "${LAMBDA_FUNCTION_NAME}" ]; then
             LAMBDA_FUNCTION_NAME="${DEFAULT_FUNCTION_NAME}"
-            echo "ℹ️ Usando nome padrão para ${LAMBDA_MODE_UPPER}: ${LAMBDA_FUNCTION_NAME}"
+            echo "ℹ️ Usando nome padrão para ${LAMBDA_MODE}: ${LAMBDA_FUNCTION_NAME}"
           else
-            echo "ℹ️ Usando nome customizado para ${LAMBDA_MODE_UPPER}: ${LAMBDA_FUNCTION_NAME}"
+            echo "ℹ️ Usando nome customizado para ${LAMBDA_MODE}: ${LAMBDA_FUNCTION_NAME}"
           fi
           
           # Usar a mesma role ARN para todos (pode ser definida via secret ou será validada depois)
@@ -190,11 +191,12 @@ jobs:
             echo "   O Terraform pode usar um valor padrão ou falhar se for obrigatório"
           fi
           
-          echo "🔍 Modo Lambda: ${{ matrix.lambda_mode }}"
+          echo "🔍 Modo Lambda: ${LAMBDA_MODE}"
           echo "🔍 Lambda Function Name: ${LAMBDA_FUNCTION_NAME}"
           echo "🔍 Lambda Role ARN: ${LAMBDA_ROLE_ARN:-não configurado}"
           
-          echo "lambda_mode=${LAMBDA_MODE_LOWER}" >> "$GITHUB_OUTPUT"
+          # Passar o valor original (Customer, Admin, Migrator) para o Terraform
+          echo "lambda_mode=${LAMBDA_MODE}" >> "$GITHUB_OUTPUT"
           echo "lambda_function_name=${LAMBDA_FUNCTION_NAME}" >> "$GITHUB_OUTPUT"
           echo "lambda_role_arn=${LAMBDA_ROLE_ARN}" >> "$GITHUB_OUTPUT"
 
@@ -418,8 +420,6 @@ jobs:
           LAMBDA_ROLE_ARN: ${{ steps.lambda-config.outputs.lambda_role_arn }}
           LAMBDA_MODE: ${{ steps.lambda-config.outputs.lambda_mode }}
           ECR_IMAGE_URI: ${{ env.ECR_IMAGE_URI }}
-          LAMBDA_SECURITY_GROUP_NAME: ${{ secrets.LAMBDA_SECURITY_GROUP_NAME }}
-          LAMBDA_SECURITY_GROUP_ID: ${{ secrets.LAMBDA_SECURITY_GROUP_ID }}
           COGNITO_USER_POOL_ID: ${{ secrets.COGNITO_USER_POOL_ID }}
           COGNITO_REGION: ${{ secrets.COGNITO_REGION }}
           COGNITO_CLIENT_ID: ${{ secrets.COGNITO_CLIENT_ID }}
@@ -434,8 +434,6 @@ jobs:
           echo "  - LAMBDA_FUNCTION_NAME: ${LAMBDA_FUNCTION_NAME}"
           echo "  - LAMBDA_ROLE_ARN: ${LAMBDA_ROLE_ARN}"
           echo "  - ECR_IMAGE_URI: ${ECR_IMAGE_URI}"
-          echo "  - LAMBDA_SECURITY_GROUP_NAME: ${LAMBDA_SECURITY_GROUP_NAME:-fiap-fase4-auth-sg (default)}"
-          echo "  - LAMBDA_SECURITY_GROUP_ID: ${LAMBDA_SECURITY_GROUP_ID:-não fornecido}"
           echo "  - COGNITO_USER_POOL_ID: ${COGNITO_USER_POOL_ID:+***configurado***}"
           echo "  - COGNITO_REGION: ${COGNITO_REGION}"
           echo "  - COGNITO_CLIENT_ID: ${COGNITO_CLIENT_ID:+***configurado***}"
@@ -519,14 +517,6 @@ jobs:
           )
           
           # Adiciona variáveis opcionais se fornecidas
-          if [ -n "${LAMBDA_SECURITY_GROUP_ID}" ]; then
-            TF_PLAN_ARGS+=(-var="lambda_security_group_id=${LAMBDA_SECURITY_GROUP_ID}")
-          fi
-          
-          if [ -n "${LAMBDA_SECURITY_GROUP_NAME}" ]; then
-            TF_PLAN_ARGS+=(-var="lambda_security_group_name=${LAMBDA_SECURITY_GROUP_NAME}")
-          fi
-          
           if [ -n "${JWT_EXPIRATION_HOURS}" ]; then
             TF_PLAN_ARGS+=(-var="jwt_expiration_hours=${JWT_EXPIRATION_HOURS}")
           fi
@@ -573,8 +563,6 @@ jobs:
           ECR_IMAGE_URI: ${{ env.ECR_IMAGE_URI }}
           AWS_ACCOUNT_ID: ${{ secrets.AWS_ACCOUNT_ID }}
           ECR_REPOSITORY_NAME: ${{ secrets.ECR_REPOSITORY_NAME }}
-          LAMBDA_SECURITY_GROUP_NAME: ${{ secrets.LAMBDA_SECURITY_GROUP_NAME }}
-          LAMBDA_SECURITY_GROUP_ID: ${{ secrets.LAMBDA_SECURITY_GROUP_ID }}
           COGNITO_USER_POOL_ID: ${{ secrets.COGNITO_USER_POOL_ID }}
           COGNITO_REGION: ${{ secrets.COGNITO_REGION }}
           COGNITO_CLIENT_ID: ${{ secrets.COGNITO_CLIENT_ID }}
@@ -613,8 +601,6 @@ jobs:
           echo "  - lambda_function_name: ${LAMBDA_FUNCTION_NAME}"
           echo "  - ecr_image_uri: ${ECR_IMAGE_URI}"
           echo "  - lambda_role_arn: ${LAMBDA_ROLE_ARN}"
-          echo "  - lambda_security_group_name: ${LAMBDA_SECURITY_GROUP_NAME:-fiap-fase4-auth-sg (default)}"
-          echo "  - lambda_security_group_id: ${LAMBDA_SECURITY_GROUP_ID:-não fornecido}"
           echo "  - cognito_user_pool_id: ${COGNITO_USER_POOL_ID:+***configurado***}"
           echo "  - cognito_region: ${COGNITO_REGION}"
           echo "  - cognito_client_id: ${COGNITO_CLIENT_ID:+***configurado***}"
@@ -642,14 +628,6 @@ jobs:
           )
           
           # Adiciona variáveis opcionais se fornecidas
-          if [ -n "${LAMBDA_SECURITY_GROUP_ID}" ]; then
-            TF_APPLY_ARGS+=(-var="lambda_security_group_id=${LAMBDA_SECURITY_GROUP_ID}")
-          fi
-          
-          if [ -n "${LAMBDA_SECURITY_GROUP_NAME}" ]; then
-            TF_APPLY_ARGS+=(-var="lambda_security_group_name=${LAMBDA_SECURITY_GROUP_NAME}")
-          fi
-          
           if [ -n "${JWT_EXPIRATION_HOURS}" ]; then
             TF_APPLY_ARGS+=(-var="jwt_expiration_hours=${JWT_EXPIRATION_HOURS}")
           fi
