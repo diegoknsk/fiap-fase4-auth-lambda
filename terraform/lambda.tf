@@ -91,6 +91,15 @@ resource "aws_lambda_function_url" "lambda_url" {
   }
 }
 
+# Política de recursos para permitir invocação pública da Function URL
+resource "aws_lambda_permission" "lambda_url_permission" {
+  statement_id  = "AllowPublicInvoke"
+  action        = "lambda:InvokeFunctionUrl"
+  function_name = module.auth_lambda.function_name
+  principal     = "*"
+  function_url_auth_type = "NONE"
+}
+
 # ============================================================================
 # LAMBDA 2: auth-admin-lambda
 # Lambda para administração do Cognito (SEM VPC)
@@ -152,6 +161,15 @@ resource "aws_lambda_function_url" "lambda_admin_url" {
     expose_headers    = ["*"]
     max_age           = 86400
   }
+}
+
+# Política de recursos para permitir invocação pública da Function URL
+resource "aws_lambda_permission" "lambda_admin_url_permission" {
+  statement_id  = "AllowPublicInvoke"
+  action        = "lambda:InvokeFunctionUrl"
+  function_name = module.auth_admin_lambda.function_name
+  principal     = "*"
+  function_url_auth_type = "NONE"
 }
 
 # ============================================================================
@@ -216,4 +234,13 @@ resource "aws_lambda_function_url" "lambda_migrator_url" {
     expose_headers    = ["*"]
     max_age           = 86400
   }
+}
+
+# Política de recursos para permitir invocação pública da Function URL
+resource "aws_lambda_permission" "lambda_migrator_url_permission" {
+  statement_id  = "AllowPublicInvoke"
+  action        = "lambda:InvokeFunctionUrl"
+  function_name = module.auth_migrator_lambda.function_name
+  principal     = "*"
+  function_url_auth_type = "NONE"
 }
