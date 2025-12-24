@@ -43,7 +43,7 @@ output "lambda_auth_migrator_name" {
 # Outputs do Security Group
 output "lambda_security_group_id" {
   description = "ID do Security Group da função Lambda"
-  value       = aws_security_group.sg_lambda.id
+  value       = local.sg_lambda_id
 }
 
 output "lambda_security_group_name" {

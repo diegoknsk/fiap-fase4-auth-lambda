@@ -37,7 +37,7 @@ module "auth_lambda" {
 
   # Configuração de VPC - usando Security Group "lambda_auth_sg"
   vpc_config = {
-    security_group_ids = [aws_security_group.sg_lambda.id]
+    security_group_ids = [local.sg_lambda_id]
     subnet_ids         = data.aws_subnets.eks_supported.ids
   }
 
