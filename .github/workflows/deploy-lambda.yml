@@ -433,6 +433,23 @@ jobs:
             exit 1
           fi
           
+          # Verifica se o Lambda é do tipo Image (não Zip)
+          LAMBDA_INFO=$(aws lambda get-function \
+            --function-name "${LAMBDA_FUNCTION_NAME}" \
+            --region "${AWS_REGION}" \
+            --query 'Configuration.PackageType' \
+            --output text 2>/dev/null)
+          
+          if [ "${LAMBDA_INFO}" != "Image" ]; then
+            echo "❌ ERRO CRÍTICO: Lambda '${LAMBDA_FUNCTION_NAME}' não é do tipo Image!"
+            echo "   PackageType atual: ${LAMBDA_INFO}"
+            echo "   Este workflow só funciona com Lambdas do tipo Image (container)"
+            echo "   Falhando o workflow"
+            exit 1
+          fi
+          
+          echo "✅ Lambda é do tipo Image (container)"
+          
           # Verifica se o Lambda está no estado do Terraform
           if ! terraform state show aws_lambda_function.lambda > /dev/null 2>&1; then
             echo "❌ ERRO CRÍTICO: Lambda NÃO está no estado do Terraform!"
@@ -441,8 +458,55 @@ jobs:
             exit 1
           fi
           
+          # Verifica se o package_type no estado está correto
+          STATE_PACKAGE_TYPE=$(terraform state show aws_lambda_function.lambda 2>/dev/null | grep -E "^\s+package_type" | awk '{print $3}' | tr -d '"' || echo "")
+          if [ -n "${STATE_PACKAGE_TYPE}" ] && [ "${STATE_PACKAGE_TYPE}" != "Image" ]; then
+            echo "⚠️ ATENÇÃO: package_type no estado do Terraform está incorreto: ${STATE_PACKAGE_TYPE}"
+            echo "   Tentando corrigir o estado..."
+            # Atualiza o estado para garantir que package_type seja Image
+            terraform state show aws_lambda_function.lambda > /tmp/lambda_state.txt 2>/dev/null || true
+            echo "   Estado atual do Lambda no Terraform:"
+            terraform state show aws_lambda_function.lambda | grep -E "(package_type|image_uri|function_name)" || true
+          fi
+          
           echo "✅ Lambda existe na AWS e está no estado do Terraform"
           echo "✅ Seguro para executar Terraform Plan (apenas atualizará image_uri)"
+
+      - name: Terraform Refresh (sincronizar estado com AWS)
+        working-directory: ./terraform
+        env:
+          LAMBDA_FUNCTION_NAME: ${{ steps.lambda-config.outputs.lambda_function_name }}
+          LAMBDA_ROLE_ARN: ${{ steps.lambda-config.outputs.lambda_role_arn }}
+          LAMBDA_MODE: ${{ steps.lambda-config.outputs.lambda_mode }}
+          ECR_IMAGE_URI: ${{ env.ECR_IMAGE_URI }}
+          COGNITO_USER_POOL_ID: ${{ secrets.COGNITO_USER_POOL_ID }}
+          COGNITO_REGION: ${{ secrets.COGNITO_REGION }}
+          COGNITO_CLIENT_ID: ${{ secrets.COGNITO_CLIENT_ID }}
+          RDS_CONNECTION_STRING: ${{ secrets.RDS_CONNECTION_STRING }}
+          JWT_SECRET: ${{ secrets.JWT_SECRET }}
+          JWT_ISSUER: ${{ secrets.JWT_ISSUER }}
+          JWT_AUDIENCE: ${{ secrets.JWT_AUDIENCE }}
+          JWT_EXPIRATION_HOURS: ${{ secrets.JWT_EXPIRATION_HOURS }}
+        run: |
+          echo "🔄 Sincronizando estado do Terraform com a AWS..."
+          echo "   Isso garante que o estado está atualizado com as configurações reais do Lambda"
+          
+          terraform refresh \
+            -var="aws_region=${AWS_REGION}" \
+            -var="lambda_function_name=${LAMBDA_FUNCTION_NAME}" \
+            -var="lambda_mode=${LAMBDA_MODE}" \
+            -var="ecr_image_uri=${ECR_IMAGE_URI}" \
+            -var="lambda_role_arn=${LAMBDA_ROLE_ARN}" \
+            -var="cognito_user_pool_id=${COGNITO_USER_POOL_ID}" \
+            -var="cognito_region=${COGNITO_REGION}" \
+            -var="cognito_client_id=${COGNITO_CLIENT_ID}" \
+            -var="rds_connection_string=${RDS_CONNECTION_STRING}" \
+            -var="jwt_secret=${JWT_SECRET}" \
+            -var="jwt_issuer=${JWT_ISSUER}" \
+            -var="jwt_audience=${JWT_AUDIENCE}" \
+            -var="jwt_expiration_hours=${JWT_EXPIRATION_HOURS:-24}" || true
+          
+          echo "✅ Estado sincronizado"
 
       - name: Terraform Plan
         working-directory: ./terraform

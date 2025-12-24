@@ -7,12 +7,15 @@
 
 resource "aws_lambda_function" "lambda" {
   function_name = var.lambda_function_name
-  package_type  = "Image"
+  package_type  = "Image"  # CRÍTICO: Lambda usa imagem de container, não Zip
   image_uri     = var.ecr_image_uri
 
   # Role IAM: obrigatória para o Lambda funcionar
   # Se o Lambda já existe, obtenha o ARN da role do Lambda existente
   role = var.lambda_role_arn
+  
+  # Para package_type "Image", handler e runtime NÃO são necessários
+  # Esses campos são apenas para package_type "Zip"
 
   # Configurações de timeout e memória
   # Timeout aumentado para 60s devido a cold start em VPC e inicialização do DbContext
