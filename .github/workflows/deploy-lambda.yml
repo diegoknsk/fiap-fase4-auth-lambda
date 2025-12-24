@@ -108,9 +108,62 @@ jobs:
             lambda-auth-migrator.zip
           retention-days: 1
 
+  terraform-apply:
+    name: Create/Update Lambda Infrastructure
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+
+      - name: Set project name
+        id: project-name
+        run: |
+          PROJECT_NAME="${{ secrets.PROJECT_NAME }}"
+          if [ -z "${PROJECT_NAME}" ]; then
+            PROJECT_NAME="autenticacao"
+          fi
+          echo "project_name=${PROJECT_NAME}" >> $GITHUB_OUTPUT
+          echo "Using project name: ${PROJECT_NAME}"
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@ff717079ee2060e4bcee96c4779b553acc87447c # v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-session-token: ${{ secrets.AWS_SESSION_TOKEN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: "1.5.0"
+
+      - name: Terraform Init
+        working-directory: terraform
+        run: terraform init
+
+      - name: Terraform Plan
+        working-directory: terraform
+        env:
+          TF_VAR_aws_region: ${{ env.AWS_REGION }}
+          TF_VAR_project_name: ${{ steps.project-name.outputs.project_name }}
+          TF_VAR_env: ${{ secrets.ENV || 'dev' }}
+          TF_VAR_lab_role: ${{ secrets.LAB_ROLE }}
+        run: terraform plan
+
+      - name: Terraform Apply
+        working-directory: terraform
+        env:
+          TF_VAR_aws_region: ${{ env.AWS_REGION }}
+          TF_VAR_project_name: ${{ steps.project-name.outputs.project_name }}
+          TF_VAR_env: ${{ secrets.ENV || 'dev' }}
+          TF_VAR_lab_role: ${{ secrets.LAB_ROLE }}
+        run: terraform apply -auto-approve
+
   deploy-lambdas:
     name: Deploy Lambda Functions
-    needs: build-and-package
+    needs: [build-and-package, terraform-apply]
     runs-on: ubuntu-latest
     strategy:
       matrix:
