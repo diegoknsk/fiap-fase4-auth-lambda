@@ -39,13 +39,11 @@ builder.Services.AddControllers(options =>
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
-// Configurar DbContext com PostgreSQL (apenas se houver connection string)
-var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
-if (!string.IsNullOrEmpty(connectionString))
-{
-    builder.Services.AddDbContext<AuthDbContext>(options =>
-        options.UseNpgsql(connectionString));
-}
+// Configurar DbContext com PostgreSQL
+// A connection string vem da variável de ambiente ConnectionStrings__DefaultConnection
+builder.Services.AddDbContext<AuthDbContext>(options =>
+    options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")
+        ?? throw new InvalidOperationException("ConnectionStrings__DefaultConnection não configurado")));
 
 // Registrar serviços comuns
 builder.Services.AddScoped<ITokenService, TokenService>();

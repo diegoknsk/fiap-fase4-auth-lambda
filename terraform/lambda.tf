@@ -15,9 +15,11 @@ locals {
     var.jwt_audience != "" ? { JwtSettings__Audience = var.jwt_audience } : {}
   )
 
-  # Variáveis de ambiente para auth-admin-lambda (Cognito)
+  # Variáveis de ambiente para auth-admin-lambda (Cognito + RDS)
+  # Nota: RDS connection string é necessária mesmo que não use, para manter compatibilidade com código original
   auth_admin_lambda_env = merge(
     { LAMBDA_MODE = "Admin" },
+    var.rds_connection_string != "" ? { ConnectionStrings__DefaultConnection = var.rds_connection_string } : {},
     var.cognito_region != "" ? { COGNITO__REGION = var.cognito_region } : {},
     var.cognito_user_pool_id != "" ? { COGNITO__USERPOOLID = var.cognito_user_pool_id } : {},
     var.cognito_client_id != "" ? { COGNITO__CLIENTID = var.cognito_client_id } : {}
