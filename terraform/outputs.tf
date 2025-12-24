@@ -60,3 +60,19 @@ output "lambda_security_group_name" {
   description = "Nome do Security Group da função Lambda (fixo: lambda_auth_sg)"
   value       = "lambda_auth_sg"
 }
+
+# Outputs dos repositórios ECR
+output "ecr_auth_lambda_repository_url" {
+  description = "URL do repositório ECR para auth-lambda"
+  value       = aws_ecr_repository.auth_lambda.repository_url
+}
+
+output "ecr_auth_admin_lambda_repository_url" {
+  description = "URL do repositório ECR para auth-admin-lambda"
+  value       = aws_ecr_repository.auth_admin_lambda.repository_url
+}
+
+output "ecr_auth_migrator_lambda_repository_url" {
+  description = "URL do repositório ECR para auth-migrator-lambda"
+  value       = aws_ecr_repository.auth_migrator_lambda.repository_url
+}

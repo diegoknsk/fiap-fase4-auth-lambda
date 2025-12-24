@@ -77,3 +77,21 @@ variable "jwt_audience" {
   description = "Audience do token JWT"
   default     = ""
 }
+
+variable "lambda_auth_image_uri" {
+  type        = string
+  description = "URI da imagem ECR para auth-lambda (ex: 123456789012.dkr.ecr.us-east-1.amazonaws.com/project-auth-lambda:latest)"
+  default     = ""
+}
+
+variable "lambda_auth_admin_image_uri" {
+  type        = string
+  description = "URI da imagem ECR para auth-admin-lambda"
+  default     = ""
+}
+
+variable "lambda_auth_migrator_image_uri" {
+  type        = string
+  description = "URI da imagem ECR para auth-migrator-lambda"
+  default     = ""
+}

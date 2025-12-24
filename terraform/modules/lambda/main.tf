@@ -1,7 +1,7 @@
 resource "aws_lambda_function" "function" {
   function_name = "${var.project_name}-${var.function_name}"
-  handler       = var.handler
-  runtime       = var.runtime
+  handler       = var.package_type == "Image" ? null : var.handler
+  runtime       = var.package_type == "Image" ? null : var.runtime
   role          = var.role_arn
 
   timeout      = var.timeout
@@ -12,6 +12,9 @@ resource "aws_lambda_function" "function" {
   # O arquivo placeholder.zip deve existir no diretório do módulo
   filename         = var.package_type == "Zip" ? "${path.module}/placeholder.zip" : null
   source_code_hash = var.package_type == "Zip" ? (var.source_code_hash != "placeholder" ? var.source_code_hash : filebase64sha256("${path.module}/placeholder.zip")) : null
+
+  # Para Image: usar image_uri
+  image_uri = var.package_type == "Image" ? var.image_uri : null
 
   dynamic "environment" {
     for_each = length(var.environment_variables) > 0 ? [1] : []
@@ -43,7 +46,8 @@ resource "aws_lambda_function" "function" {
   lifecycle {
     ignore_changes = [
       filename,
-      source_code_hash
+      source_code_hash,
+      image_uri
     ]
   }
 }

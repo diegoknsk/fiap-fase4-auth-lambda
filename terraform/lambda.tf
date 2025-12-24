@@ -44,9 +44,9 @@ module "auth_lambda" {
   project_name  = var.project_name
   env           = var.env
 
-  # Configurações para .NET 8 custom runtime
-  handler = "bootstrap"
-  runtime = "provided.al2" # .NET 8 custom runtime
+  # Configurações para .NET 8 container image
+  handler = var.lambda_auth_image_uri != "" ? null : "bootstrap"
+  runtime = var.lambda_auth_image_uri != "" ? null : "provided.al2"
 
   # IAM role usando LabRole (ou variável equivalente)
   role_arn = var.lab_role
@@ -55,10 +55,12 @@ module "auth_lambda" {
   timeout     = 900 # Máximo: 900 segundos (15 minutos)
   memory_size = 512
 
-  # Tipo de pacote - ZIP (deploy direto via arquivo ZIP)
-  package_type = "Zip"
+  # Tipo de pacote - Image (container) ou Zip (fallback)
+  package_type = var.lambda_auth_image_uri != "" ? "Image" : "Zip"
   # O arquivo ZIP será atualizado via deploy (usar placeholder.zip inicial)
-  source_code_hash = "placeholder" # Será atualizado no deploy
+  source_code_hash = var.lambda_auth_image_uri != "" ? null : "placeholder"
+  # URI da imagem ECR (quando usando container image)
+  image_uri = var.lambda_auth_image_uri != "" ? var.lambda_auth_image_uri : null
 
   # Variáveis de ambiente (RDS + Cognito + JWT)
   environment_variables = local.auth_lambda_env
@@ -72,8 +74,8 @@ module "auth_lambda" {
     subnet_ids         = data.aws_subnets.eks_supported.ids
   }
 
-  # Deploy via ZIP (código atualizado via GitHub Actions)
-  depends_on_resources = []
+  # Deploy via Image (ECR) ou ZIP (fallback)
+  depends_on_resources = var.lambda_auth_image_uri != "" ? [aws_ecr_repository.auth_lambda] : []
 
   common_tags = {
     Service = "auth-lambda"
@@ -113,9 +115,9 @@ module "auth_admin_lambda" {
   project_name  = var.project_name
   env           = var.env
 
-  # Configurações para .NET 8 custom runtime
-  handler = "bootstrap"
-  runtime = "provided.al2"
+  # Configurações para .NET 8 container image
+  handler = var.lambda_auth_admin_image_uri != "" ? null : "bootstrap"
+  runtime = var.lambda_auth_admin_image_uri != "" ? null : "provided.al2"
 
   # IAM role usando LabRole
   role_arn = var.lab_role
@@ -124,19 +126,21 @@ module "auth_admin_lambda" {
   timeout     = 30
   memory_size = 512
 
-  # Tipo de pacote - ZIP (deploy direto via arquivo ZIP)
-  package_type = "Zip"
+  # Tipo de pacote - Image (container) ou Zip (fallback)
+  package_type = var.lambda_auth_admin_image_uri != "" ? "Image" : "Zip"
   # O arquivo ZIP será atualizado via deploy (usar placeholder.zip inicial)
-  source_code_hash = "placeholder" # Será atualizado no deploy
+  source_code_hash = var.lambda_auth_admin_image_uri != "" ? null : "placeholder"
+  # URI da imagem ECR (quando usando container image)
+  image_uri = var.lambda_auth_admin_image_uri != "" ? var.lambda_auth_admin_image_uri : null
 
-  # Variáveis de ambiente (Cognito)
+  # Variáveis de ambiente (Cognito + RDS)
   environment_variables = local.auth_admin_lambda_env
 
   # Sem limite de execuções concorrentes
   reserved_concurrent_executions = null
 
-  # Deploy via ZIP (código atualizado via GitHub Actions)
-  depends_on_resources = []
+  # Deploy via Image (ECR) ou ZIP (fallback)
+  depends_on_resources = var.lambda_auth_admin_image_uri != "" ? [aws_ecr_repository.auth_admin_lambda] : []
 
   common_tags = {
     Service = "auth-admin-lambda"
@@ -187,9 +191,9 @@ module "auth_migrator_lambda" {
   project_name  = var.project_name
   env           = var.env
 
-  # Configurações para .NET 8 custom runtime
-  handler = "bootstrap"
-  runtime = "provided.al2"
+  # Configurações para .NET 8 container image
+  handler = var.lambda_auth_migrator_image_uri != "" ? null : "bootstrap"
+  runtime = var.lambda_auth_migrator_image_uri != "" ? null : "provided.al2"
 
   # IAM role usando LabRole
   role_arn = var.lab_role
@@ -198,10 +202,12 @@ module "auth_migrator_lambda" {
   timeout     = 900 # Máximo: 900 segundos (15 minutos)
   memory_size = 512
 
-  # Tipo de pacote - ZIP (deploy direto via arquivo ZIP)
-  package_type = "Zip"
+  # Tipo de pacote - Image (container) ou Zip (fallback)
+  package_type = var.lambda_auth_migrator_image_uri != "" ? "Image" : "Zip"
   # O arquivo ZIP será atualizado via deploy (usar placeholder.zip inicial)
-  source_code_hash = "placeholder" # Será atualizado no deploy
+  source_code_hash = var.lambda_auth_migrator_image_uri != "" ? null : "placeholder"
+  # URI da imagem ECR (quando usando container image)
+  image_uri = var.lambda_auth_migrator_image_uri != "" ? var.lambda_auth_migrator_image_uri : null
 
   # Variáveis de ambiente (RDS)
   environment_variables = local.auth_migrator_lambda_env
@@ -215,8 +221,8 @@ module "auth_migrator_lambda" {
     subnet_ids         = data.aws_subnets.eks_supported.ids
   }
 
-  # Deploy via ZIP (código atualizado via GitHub Actions)
-  depends_on_resources = []
+  # Deploy via Image (ECR) ou ZIP (fallback)
+  depends_on_resources = var.lambda_auth_migrator_image_uri != "" ? [aws_ecr_repository.auth_migrator_lambda] : []
 
   common_tags = {
     Service = "auth-migrator-lambda"

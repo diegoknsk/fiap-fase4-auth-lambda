@@ -43,13 +43,19 @@ variable "memory_size" {
 }
 
 variable "package_type" {
-  description = "Tipo de pacote: Zip (deploy via arquivo ZIP)"
+  description = "Tipo de pacote: Zip (deploy via arquivo ZIP) ou Image (container image)"
   type        = string
   default     = "Zip"
   validation {
-    condition     = var.package_type == "Zip"
-    error_message = "package_type deve ser 'Zip' (deploy via ZIP)."
+    condition     = contains(["Zip", "Image"], var.package_type)
+    error_message = "package_type deve ser 'Zip' ou 'Image'."
   }
+}
+
+variable "image_uri" {
+  description = "URI da imagem ECR (obrigatório quando package_type = 'Image')"
+  type        = string
+  default     = null
 }
 
 variable "source_code_hash" {

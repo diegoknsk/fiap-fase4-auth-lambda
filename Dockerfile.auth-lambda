@@ -1,0 +1,53 @@
+# Dockerfile para auth-lambda - AWS Lambda Container Image - .NET 8
+# Multi-stage build para otimizar tamanho da imagem final
+
+# Stage 1: Build
+FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
+WORKDIR /src
+
+# Copiar arquivos de projeto (.csproj) para restaurar dependências
+COPY ["src/FastFood.Auth.Lambda/FastFood.Auth.Lambda.csproj", "src/FastFood.Auth.Lambda/"]
+COPY ["src/FastFood.Auth.Application/FastFood.Auth.Application.csproj", "src/FastFood.Auth.Application/"]
+COPY ["src/FastFood.Auth.Domain/FastFood.Auth.Domain.csproj", "src/FastFood.Auth.Domain/"]
+COPY ["src/FastFood.Auth.Infra/FastFood.Auth.Infra.csproj", "src/FastFood.Auth.Infra/"]
+COPY ["src/FastFood.Auth.Infra.Persistence/FastFood.Auth.Infra.Persistence.csproj", "src/FastFood.Auth.Infra.Persistence/"]
+
+# Restaurar dependências NuGet
+RUN dotnet restore "src/FastFood.Auth.Lambda/FastFood.Auth.Lambda.csproj"
+
+# Copiar código fonte explicitamente - apenas arquivos necessários para build
+COPY ["src/FastFood.Auth.Domain/", "src/FastFood.Auth.Domain/"]
+COPY ["src/FastFood.Auth.Application/", "src/FastFood.Auth.Application/"]
+COPY ["src/FastFood.Auth.Infra/", "src/FastFood.Auth.Infra/"]
+COPY ["src/FastFood.Auth.Infra.Persistence/", "src/FastFood.Auth.Infra.Persistence/"]
+COPY ["src/FastFood.Auth.Lambda/", "src/FastFood.Auth.Lambda/"]
+
+# Publicar aplicação em modo Release
+WORKDIR "/src/src/FastFood.Auth.Lambda"
+RUN dotnet publish "FastFood.Auth.Lambda.csproj" \
+    -c Release \
+    -o /app/publish \
+    --no-restore
+
+# Stage 2: Runtime - AWS Lambda .NET 8
+FROM public.ecr.aws/lambda/dotnet:8
+
+# Copiar aplicação publicada do stage de build
+COPY --from=build /app/publish ${LAMBDA_TASK_ROOT}
+
+# Rodar como não-root sem depender de groupadd/useradd.
+# 1001:1001 é um UID/GID arbitrário não-root (não precisa existir no /etc/passwd).
+RUN chown -R 1001:1001 ${LAMBDA_TASK_ROOT}
+
+USER 1001:1001
+
+ENV ASPNETCORE_ENVIRONMENT=Production
+ENV DOTNET_ENVIRONMENT=Production
+
+# Para AddAWSLambdaHosting com LambdaEventSource.HttpApi
+# A imagem base public.ecr.aws/lambda/dotnet:8 requer um handler no formato:
+# Assembly::Namespace.Class::Method
+# Criamos uma classe LambdaEntryPoint que herda de APIGatewayHttpApiV2ProxyFunction
+# O handler é: Assembly::Namespace.Class::FunctionHandlerAsync
+CMD ["FastFood.Auth.Lambda::FastFood.Auth.Lambda.LambdaEntryPoint::FunctionHandlerAsync"]
+

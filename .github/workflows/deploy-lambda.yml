@@ -8,8 +8,100 @@ on:
 
 env:
   AWS_REGION: ${{ secrets.AWS_REGION }}
+  AWS_ACCOUNT_ID: ${{ secrets.AWS_ACCOUNT_ID || '058264347413' }}
 
 jobs:
+  build-and-push-images:
+    name: Build and Push Docker Images to ECR
+    runs-on: ubuntu-latest
+    
+    outputs:
+      lambda_auth_image_uri: ${{ steps.meta-auth.outputs.image }}
+      lambda_auth_admin_image_uri: ${{ steps.meta-admin.outputs.image }}
+      lambda_auth_migrator_image_uri: ${{ steps.meta-migrator.outputs.image }}
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Set project name for ECR
+        id: project-name-ecr
+        run: |
+          PROJECT_NAME="${{ secrets.PROJECT_NAME }}"
+          if [ -z "${PROJECT_NAME}" ]; then
+            PROJECT_NAME="autenticacao"
+          fi
+          echo "project_name=${PROJECT_NAME}" >> $GITHUB_OUTPUT
+          echo "Using project name for ECR: ${PROJECT_NAME}"
+
+      - name: Build and push auth-lambda image
+        id: build-auth
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ./Dockerfile.auth-lambda
+          push: true
+          tags: |
+            ${{ env.AWS_ACCOUNT_ID }}.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com/${{ steps.project-name-ecr.outputs.project_name }}-auth-lambda:${{ github.sha }}
+            ${{ env.AWS_ACCOUNT_ID }}.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com/${{ steps.project-name-ecr.outputs.project_name }}-auth-lambda:latest
+          cache-from: type=registry,ref=${{ env.AWS_ACCOUNT_ID }}.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com/${{ steps.project-name-ecr.outputs.project_name }}-auth-lambda:buildcache
+          cache-to: type=registry,ref=${{ env.AWS_ACCOUNT_ID }}.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com/${{ steps.project-name-ecr.outputs.project_name }}-auth-lambda:buildcache,mode=max
+
+      - name: Set auth-lambda image URI
+        id: meta-auth
+        run: |
+          echo "image=${{ env.AWS_ACCOUNT_ID }}.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com/${{ steps.project-name-ecr.outputs.project_name }}-auth-lambda:${{ github.sha }}" >> $GITHUB_OUTPUT
+
+      - name: Build and push auth-admin-lambda image
+        id: build-admin
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ./Dockerfile.auth-admin-lambda
+          push: true
+          tags: |
+            ${{ env.AWS_ACCOUNT_ID }}.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com/${{ steps.project-name-ecr.outputs.project_name }}-auth-admin-lambda:${{ github.sha }}
+            ${{ env.AWS_ACCOUNT_ID }}.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com/${{ steps.project-name-ecr.outputs.project_name }}-auth-admin-lambda:latest
+          cache-from: type=registry,ref=${{ env.AWS_ACCOUNT_ID }}.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com/${{ steps.project-name-ecr.outputs.project_name }}-auth-admin-lambda:buildcache
+          cache-to: type=registry,ref=${{ env.AWS_ACCOUNT_ID }}.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com/${{ steps.project-name-ecr.outputs.project_name }}-auth-admin-lambda:buildcache,mode=max
+
+      - name: Set auth-admin-lambda image URI
+        id: meta-admin
+        run: |
+          echo "image=${{ env.AWS_ACCOUNT_ID }}.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com/${{ steps.project-name-ecr.outputs.project_name }}-auth-admin-lambda:${{ github.sha }}" >> $GITHUB_OUTPUT
+
+      - name: Build and push auth-migrator-lambda image
+        id: build-migrator
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ./Dockerfile.auth-migrator-lambda
+          push: true
+          tags: |
+            ${{ env.AWS_ACCOUNT_ID }}.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com/${{ steps.project-name-ecr.outputs.project_name }}-auth-migrator-lambda:${{ github.sha }}
+            ${{ env.AWS_ACCOUNT_ID }}.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com/${{ steps.project-name-ecr.outputs.project_name }}-auth-migrator-lambda:latest
+          cache-from: type=registry,ref=${{ env.AWS_ACCOUNT_ID }}.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com/${{ steps.project-name-ecr.outputs.project_name }}-auth-migrator-lambda:buildcache
+          cache-to: type=registry,ref=${{ env.AWS_ACCOUNT_ID }}.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com/${{ steps.project-name-ecr.outputs.project_name }}-auth-migrator-lambda:buildcache,mode=max
+
+      - name: Set auth-migrator-lambda image URI
+        id: meta-migrator
+        run: |
+          echo "image=${{ env.AWS_ACCOUNT_ID }}.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com/${{ steps.project-name-ecr.outputs.project_name }}-auth-migrator-lambda:${{ github.sha }}" >> $GITHUB_OUTPUT
+
   build-and-package:
     name: Build and Package .NET Lambda Functions
     runs-on: ubuntu-latest
@@ -36,28 +128,32 @@ jobs:
           dotnet publish src/FastFood.Auth.Lambda/FastFood.Auth.Lambda.csproj \
             -c Release \
             -o publish/auth-lambda \
-            --self-contained false
+            --self-contained true \
+            -r linux-x64
 
       - name: Build Lambda (auth-admin-lambda)
         run: |
           dotnet publish src/FastFood.Auth.Lambda/FastFood.Auth.Lambda.csproj \
             -c Release \
             -o publish/auth-admin-lambda \
-            --self-contained false
+            --self-contained true \
+            -r linux-x64
 
       - name: Build Migrator Lambda (auth-migrator-lambda)
         run: |
           dotnet publish src/FastFood.Auth.Migrator/FastFood.Auth.Migrator.csproj \
             -c Release \
             -o publish/auth-migrator-lambda \
-            --self-contained false
+            --self-contained true \
+            -r linux-x64
 
       - name: Create bootstrap script for auth-lambda
         run: |
           cat > publish/auth-lambda/bootstrap << 'EOF'
           #!/bin/sh
           set -euo pipefail
-          exec /var/lang/bin/dotnet FastFood.Auth.Lambda.dll
+          cd "$(dirname "$0")"
+          exec ./FastFood.Auth.Lambda
           EOF
           chmod +x publish/auth-lambda/bootstrap
 
@@ -66,7 +162,8 @@ jobs:
           cat > publish/auth-admin-lambda/bootstrap << 'EOF'
           #!/bin/sh
           set -euo pipefail
-          exec /var/lang/bin/dotnet FastFood.Auth.Lambda.dll
+          cd "$(dirname "$0")"
+          exec ./FastFood.Auth.Lambda
           EOF
           chmod +x publish/auth-admin-lambda/bootstrap
 
@@ -75,7 +172,8 @@ jobs:
           cat > publish/auth-migrator-lambda/bootstrap << 'EOF'
           #!/bin/sh
           set -euo pipefail
-          exec /var/lang/bin/dotnet FastFood.Auth.Migrator.dll
+          cd "$(dirname "$0")"
+          exec ./FastFood.Auth.Migrator
           EOF
           chmod +x publish/auth-migrator-lambda/bootstrap
 
@@ -109,6 +207,7 @@ jobs:
 
   terraform-apply:
     name: Create/Update Lambda Infrastructure
+    needs: [build-and-push-images]
     runs-on: ubuntu-latest
     
     steps:
@@ -189,12 +288,18 @@ jobs:
           TF_VAR_jwt_secret: ${{ secrets.JWT_SECRET }}
           TF_VAR_jwt_issuer: ${{ secrets.JWT_ISSUER }}
           TF_VAR_jwt_audience: ${{ secrets.JWT_AUDIENCE }}
+          TF_VAR_lambda_auth_image_uri: ${{ needs.build-and-push-images.outputs.lambda_auth_image_uri }}
+          TF_VAR_lambda_auth_admin_image_uri: ${{ needs.build-and-push-images.outputs.lambda_auth_admin_image_uri }}
+          TF_VAR_lambda_auth_migrator_image_uri: ${{ needs.build-and-push-images.outputs.lambda_auth_migrator_image_uri }}
         run: |
           echo "🚀 Executando terraform apply..."
           echo "  - AWS Region: ${TF_VAR_aws_region}"
           echo "  - Project Name: ${TF_VAR_project_name}"
           echo "  - Environment: ${TF_VAR_env}"
           echo "  - Lab Role: ${TF_VAR_lab_role}"
+          echo "  - Auth Lambda Image: ${TF_VAR_lambda_auth_image_uri}"
+          echo "  - Auth Admin Lambda Image: ${TF_VAR_lambda_auth_admin_image_uri}"
+          echo "  - Auth Migrator Lambda Image: ${TF_VAR_lambda_auth_migrator_image_uri}"
           terraform apply -auto-approve
 
   deploy-lambdas:
