@@ -1,0 +1,6 @@
+@FastFood.Auth.Lambda.Customer_HostAddress = http://localhost:5163
+
+GET {{FastFood.Auth.Lambda.Customer_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###

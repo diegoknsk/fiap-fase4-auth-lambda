@@ -1,57 +1,36 @@
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-using FastFood.Auth.Infra.Persistence;
 using FastFood.Auth.Application.Ports;
 using FastFood.Auth.Infra.Services;
 using Moq;
-using FastFood.Auth.Lambda.Customer;
+using FastFood.Auth.Lambda.Admin;
 
 namespace FastFood.Auth.Tests.Bdd.Support;
 
 /// <summary>
-/// Fixture para criar uma instância da aplicação Customer para testes BDD.
+/// Fixture para criar uma instância da aplicação Admin para testes BDD.
 /// </summary>
-public class WebApplicationFactoryFixture : WebApplicationFactory<LambdaEntryPoint>
+public class WebApplicationFactoryFixtureAdmin : WebApplicationFactory<LambdaEntryPoint>
 {
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
         // Configurar variável de ambiente para JWT Secret (obrigatório)
-        // Usa dois underscores (__) para corresponder ao formato do Terraform/ASP.NET Core
         Environment.SetEnvironmentVariable("JwtSettings__Secret", "TestSecretKeyForJWTTokenGenerationInBDDTests12345678901234567890");
 
         builder.ConfigureAppConfiguration(config =>
         {
-            // Adicionar configurações necessárias para os testes (Secret não vem mais de config)
             config.AddInMemoryCollection(new Dictionary<string, string?>
             {
                 { "JwtSettings:Issuer", "FastFood.Auth.Tests" },
                 { "JwtSettings:Audience", "FastFood.Auth.Tests" },
-                { "JwtSettings:ExpirationHours", "24" },
-                { "ConnectionStrings:DefaultConnection", "Host=localhost;Port=5432;Database=testdb" }
+                { "JwtSettings:ExpirationHours", "24" }
             });
         });
 
         builder.ConfigureServices(services =>
         {
-            // Remover o DbContext real
-            var descriptor = services.SingleOrDefault(
-                d => d.ServiceType == typeof(DbContextOptions<AuthDbContext>));
-            if (descriptor != null)
-            {
-                services.Remove(descriptor);
-            }
-
-            // Adicionar DbContext em memória para testes
-            // Usar nome fixo para garantir que o mesmo banco seja usado
-            var databaseName = "TestDb_BDD";
-            services.AddDbContext<AuthDbContext>(options =>
-            {
-                options.UseInMemoryDatabase(databaseName);
-            });
-
             // Remover serviços reais e adicionar mocks
             var cognitoServiceDescriptor = services.SingleOrDefault(
                 d => d.ServiceType == typeof(ICognitoService));

@@ -22,15 +22,17 @@
   </ItemGroup>
 
   <ItemGroup>
+    <PackageReference Include="Microsoft.AspNetCore.Mvc.Testing" Version="8.0.0" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.InMemory" Version="8.0.0" />
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\FastFood.Auth.Domain\FastFood.Auth.Domain.csproj" />
-    <ProjectReference Include="..\..\FastFood.Auth.Application\FastFood.Auth.Application.csproj" />
-    <ProjectReference Include="..\..\FastFood.Auth.Infra\FastFood.Auth.Infra.csproj" />
-    <ProjectReference Include="..\..\FastFood.Auth.Infra.Persistence\FastFood.Auth.Infra.Persistence.csproj" />
-    <ProjectReference Include="..\..\FastFood.Auth.Lambda\FastFood.Auth.Lambda.csproj" />
+    <ProjectReference Include="..\..\Core\FastFood.Auth.Domain\FastFood.Auth.Domain.csproj" />
+    <ProjectReference Include="..\..\Core\FastFood.Auth.Application\FastFood.Auth.Application.csproj" />
+    <ProjectReference Include="..\..\Core\FastFood.Auth.Infra\FastFood.Auth.Infra.csproj" />
+    <ProjectReference Include="..\..\Core\FastFood.Auth.Infra.Persistence\FastFood.Auth.Infra.Persistence.csproj" />
+    <ProjectReference Include="..\..\InterfacesExternas\FastFood.Auth.Lambda.Customer\FastFood.Auth.Lambda.Customer.csproj" />
+    <ProjectReference Include="..\..\InterfacesExternas\FastFood.Auth.Lambda.Admin\FastFood.Auth.Lambda.Admin.csproj" />
   </ItemGroup>
 
   <ItemGroup>

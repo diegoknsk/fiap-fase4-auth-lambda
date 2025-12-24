@@ -3,7 +3,7 @@ using FastFood.Auth.Application.UseCases.Customer;
 using FastFood.Auth.Application.InputModels.Customer;
 using FastFood.Auth.Application.OutputModels.Customer;
 
-namespace FastFood.Auth.Lambda.Controllers;
+namespace FastFood.Auth.Lambda.Customer.Controllers;
 
 /// <summary>
 /// Controller para operações relacionadas a Customer.

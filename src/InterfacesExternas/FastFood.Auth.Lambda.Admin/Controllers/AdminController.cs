@@ -3,7 +3,7 @@ using FastFood.Auth.Application.UseCases.Admin;
 using FastFood.Auth.Application.InputModels.Admin;
 using FastFood.Auth.Application.OutputModels.Admin;
 
-namespace FastFood.Auth.Lambda.Controllers;
+namespace FastFood.Auth.Lambda.Admin.Controllers;
 
 /// <summary>
 /// Controller para operações relacionadas a Administradores.

@@ -18,14 +18,14 @@ namespace FastFood.Auth.Tests.Bdd.StepDefinitions;
 [Binding]
 public class AdminAuthenticationSteps
 {
-    private readonly WebApplicationFactoryFixture _factory;
+    private readonly WebApplicationFactoryFixtureAdmin _factory;
     private readonly ScenarioContext _scenarioContext;
     private HttpClient? _httpClient;
     private HttpResponseMessage? _response;
     private string? _username;
     private string? _password;
 
-    public AdminAuthenticationSteps(WebApplicationFactoryFixture factory, ScenarioContext scenarioContext)
+    public AdminAuthenticationSteps(WebApplicationFactoryFixtureAdmin factory, ScenarioContext scenarioContext)
     {
         _factory = factory;
         _scenarioContext = scenarioContext;

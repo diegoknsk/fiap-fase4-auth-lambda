@@ -5,7 +5,7 @@ using FastFood.Auth.Application.InputModels.Admin;
 using FastFood.Auth.Application.OutputModels.Admin;
 using FastFood.Auth.Application.Ports;
 using FastFood.Auth.Application.Presenters.Admin;
-using FastFood.Auth.Lambda.Controllers;
+using FastFood.Auth.Lambda.Admin.Controllers;
 
 namespace FastFood.Auth.Tests.Unit.Controllers;
 

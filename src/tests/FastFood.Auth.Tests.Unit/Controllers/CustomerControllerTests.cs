@@ -5,7 +5,7 @@ using FastFood.Auth.Application.InputModels.Customer;
 using FastFood.Auth.Application.OutputModels.Customer;
 using FastFood.Auth.Application.Ports;
 using FastFood.Auth.Application.Presenters.Customer;
-using FastFood.Auth.Lambda.Controllers;
+using FastFood.Auth.Lambda.Customer.Controllers;
 using FastFood.Auth.Domain.Entities.CustomerIdentification;
 using FastFood.Auth.Domain.Entities.CustomerIdentification.ValueObects;
 using DomainCustomer = FastFood.Auth.Domain.Entities.CustomerIdentification.Customer;
