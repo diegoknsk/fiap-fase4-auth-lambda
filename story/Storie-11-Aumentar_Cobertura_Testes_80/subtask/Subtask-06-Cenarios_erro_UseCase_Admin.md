@@ -258,3 +258,4 @@ public async Task ExecuteAsync_WithNullInputModel_ShouldThrowArgumentNullExcepti
 - Testar mapeamento completo de `AuthenticateAdminResult` para `AuthenticateAdminOutputModel`
 
 
+

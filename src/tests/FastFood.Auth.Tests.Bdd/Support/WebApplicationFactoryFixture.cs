@@ -7,19 +7,22 @@ using FastFood.Auth.Infra.Persistence;
 using FastFood.Auth.Application.Ports;
 using FastFood.Auth.Infra.Services;
 using Moq;
-using FastFood.Auth.Lambda;
+using FastFood.Auth.Lambda.Customer;
 
 namespace FastFood.Auth.Tests.Bdd.Support;
 
 /// <summary>
-/// Fixture para criar uma instância da aplicação para testes BDD.
+/// Fixture para criar uma instância da aplicação Customer para testes BDD.
 /// </summary>
-public class WebApplicationFactoryFixture : WebApplicationFactory<Program>
+public class WebApplicationFactoryFixture : WebApplicationFactory<LambdaEntryPoint>
 {
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
         // Configurar variável de ambiente para JWT Secret (obrigatório)
-        Environment.SetEnvironmentVariable("JwtSettings_Secret", "TestSecretKeyForJWTTokenGenerationInBDDTests12345678901234567890");
+        // Usa dois underscores (__) para corresponder ao formato do Terraform/ASP.NET Core
+        // NOTA: Secret hardcoded é aceitável aqui pois é apenas para testes BDD em ambiente isolado
+        // Em produção, o secret vem de variáveis de ambiente configuradas via Terraform
+        Environment.SetEnvironmentVariable("JwtSettings__Secret", "TestSecretKeyForJWTTokenGenerationInBDDTests12345678901234567890");
 
         builder.ConfigureAppConfiguration(config =>
         {

@@ -49,3 +49,4 @@ Criar documentação completa explicando o processo de deploy do Lambda via Terr
 - Documentação está clara, objetiva e bem formatada
 - Exemplos práticos podem ser copiados e executados diretamente
 
+

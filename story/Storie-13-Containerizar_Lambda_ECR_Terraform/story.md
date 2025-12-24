@@ -70,3 +70,4 @@ Criar o Dockerfile do projeto Lambda compatível com AWS Lambda container image 
 - [ ] Processo é idempotente (pode ser executado múltiplas vezes)
 - [ ] Processo é reexecutável (pode ser executado após mudanças)
 
+

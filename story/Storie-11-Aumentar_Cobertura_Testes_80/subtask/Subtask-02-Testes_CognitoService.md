@@ -129,3 +129,4 @@ public class CognitoServiceTests
 - Focar em testar a lógica de negócio, não a integração com AWS SDK
 
 
+

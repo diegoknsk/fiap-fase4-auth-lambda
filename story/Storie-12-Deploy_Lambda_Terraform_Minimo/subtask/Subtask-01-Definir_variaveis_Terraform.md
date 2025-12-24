@@ -38,3 +38,4 @@ Criar as variáveis Terraform necessárias para o deploy do Lambda via Terraform
 - `terraform fmt` formatado corretamente
 - Variáveis seguem padrão snake_case
 
+

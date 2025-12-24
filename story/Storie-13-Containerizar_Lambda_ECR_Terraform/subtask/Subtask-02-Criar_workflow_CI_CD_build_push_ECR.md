@@ -69,3 +69,4 @@ Criar ou ajustar workflow do GitHub Actions que faz build da imagem Docker, faz 
 - README documenta o fluxo completo: build → push → terraform apply
 - Processo testado end-to-end com sucesso
 
+

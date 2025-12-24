@@ -67,9 +67,9 @@
 ### 6. **Estrutura de Projetos Inconsistente**
 - ❌ `authfastfood-rules.md` menciona: `AuthFastFood.Api`, `AuthFastFood.Application`
 - ❌ `FastFood.Auth.ArchitectureRules.md` menciona: `FastFood.Auth.Lambda`, `FastFood.Auth.Application`
-- ❌ Código atual usa: `FastFood.Auth.Lambda`, `FastFood.Auth.Application`
-- **Impacto**: Confusão sobre nomenclatura de projetos
-- **Solução**: Padronizar para `FastFood.Auth.*` (já está no código)
+- ✅ Código atual usa: `FastFood.Auth.Lambda.Customer`, `FastFood.Auth.Lambda.Admin`, `FastFood.Auth.Application`
+- **Impacto**: Estrutura refatorada para separar Lambdas Customer e Admin
+- **Solução**: Padronizado para `FastFood.Auth.*` com separação de interfaces externas
 
 ### 7. **Fluxo Controller → UseCase**
 - ❌ `authfastfood-rules.md` linha 56: "Controller -> UseCase.Execute(Command)"

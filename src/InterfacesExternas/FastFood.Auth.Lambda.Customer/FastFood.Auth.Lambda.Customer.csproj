@@ -1,0 +1,28 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <LangVersion>12</LangVersion>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Amazon.Lambda.AspNetCoreServer.Hosting" Version="1.9.0" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="8.0.0">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+    <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="8.0.0" />
+    <PackageReference Include="Swashbuckle.AspNetCore" Version="6.6.2" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\Core\FastFood.Auth.CrossCutting\FastFood.Auth.CrossCutting.csproj" />
+    <ProjectReference Include="..\..\Core\FastFood.Auth.Infra.Persistence\FastFood.Auth.Infra.Persistence.csproj" />
+    <ProjectReference Include="..\..\Core\FastFood.Auth.Infra\FastFood.Auth.Infra.csproj" />
+    <ProjectReference Include="..\..\Core\FastFood.Auth.Application\FastFood.Auth.Application.csproj" />
+    <ProjectReference Include="..\..\Core\FastFood.Auth.Domain\FastFood.Auth.Domain.csproj" />
+  </ItemGroup>
+
+</Project>

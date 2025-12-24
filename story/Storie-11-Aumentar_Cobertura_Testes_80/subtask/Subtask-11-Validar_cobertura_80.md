@@ -58,3 +58,4 @@ reportgenerator -reports:./TestResults/coverage/coverage.opencover.xml -targetdi
 - Manter relatório de cobertura atualizado no repositório
 
 
+

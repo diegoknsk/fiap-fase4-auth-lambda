@@ -73,18 +73,30 @@ public class CustomerAuthenticationSteps
         }
         _context = _scenarioContext.Get<AuthDbContext>("DbContext");
 
+        // Normalizar CPF (remover pontuação) para garantir consistência com o Value Object
+        // Usar timeout para evitar ReDoS (Regular Expression Denial of Service)
+        var normalizedCpf = System.Text.RegularExpressions.Regex.Replace(
+            cpf, 
+            "[^0-9]", 
+            "", 
+            System.Text.RegularExpressions.RegexOptions.None, 
+            TimeSpan.FromSeconds(1));
+
         // Criar customer existente no banco
         _existingCustomerId = Guid.NewGuid();
         var customerEntity = new CustomerEntity
         {
             Id = _existingCustomerId.Value,
-            Cpf = cpf,
+            Cpf = normalizedCpf,
             CustomerType = (int)CustomerType.Registered,
             CreatedAt = DateTime.UtcNow
         };
 
         _context.Customers.Add(customerEntity);
         await _context.SaveChangesAsync();
+        
+        // Garantir que as mudanças foram persistidas e o contexto está sincronizado
+        _context.ChangeTracker.Clear();
     }
 
     [Given(@"que existe um customer registrado com CPF ""(.*)""")]
@@ -102,18 +114,30 @@ public class CustomerAuthenticationSteps
         }
         _context = _scenarioContext.Get<AuthDbContext>("DbContext");
 
+        // Normalizar CPF (remover pontuação) para garantir consistência com o Value Object
+        // Usar timeout para evitar ReDoS (Regular Expression Denial of Service)
+        var normalizedCpf = System.Text.RegularExpressions.Regex.Replace(
+            cpf, 
+            "[^0-9]", 
+            "", 
+            System.Text.RegularExpressions.RegexOptions.None, 
+            TimeSpan.FromSeconds(1));
+
         // Criar customer existente no banco
         _existingCustomerId = Guid.NewGuid();
         var customerEntity = new CustomerEntity
         {
             Id = _existingCustomerId.Value,
-            Cpf = cpf,
+            Cpf = normalizedCpf,
             CustomerType = (int)CustomerType.Registered,
             CreatedAt = DateTime.UtcNow
         };
 
         _context.Customers.Add(customerEntity);
         await _context.SaveChangesAsync();
+        
+        // Garantir que as mudanças foram persistidas e o contexto está sincronizado
+        _context.ChangeTracker.Clear();
     }
 
     [Given(@"que não existe nenhum customer com CPF ""(.*)""")]

@@ -22,13 +22,6 @@ Funcionalidade: Customer Authentication
     E a resposta deve conter o customerId do customer existente
     E nenhum customer duplicado deve ser criado
 
-  Cenário: Identificar customer existente por CPF
-    Dado que existe um customer registrado com CPF "11144477735"
-    Quando eu faço uma requisição POST para "/api/customer/identify" com o CPF
-    Então a resposta deve ter status 200
-    E a resposta deve conter um token JWT válido
-    E a resposta deve conter o customerId do customer existente
-
   Cenário: Tentar identificar customer inexistente
     Dado que não existe nenhum customer com CPF "12345678909"
     Quando eu faço uma requisição POST para "/api/customer/identify" com o CPF

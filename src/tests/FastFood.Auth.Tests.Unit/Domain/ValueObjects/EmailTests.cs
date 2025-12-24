@@ -167,6 +167,48 @@ public class EmailTests
         Assert.NotNull(email);
         Assert.Equal(validEmail, email.Value);
     }
+
+    [Fact]
+    public void Constructor_WithEmailWithMultipleDots_ShouldCreateInstance()
+    {
+        // Arrange
+        var validEmail = "test.name@sub.domain.example.com";
+
+        // Act
+        var email = new Email(validEmail);
+
+        // Assert
+        Assert.NotNull(email);
+        Assert.Equal(validEmail, email.Value);
+    }
+
+    [Fact]
+    public void Constructor_WithEmailWithHyphen_ShouldCreateInstance()
+    {
+        // Arrange
+        var validEmail = "test-name@example-domain.com";
+
+        // Act
+        var email = new Email(validEmail);
+
+        // Assert
+        Assert.NotNull(email);
+        Assert.Equal(validEmail, email.Value);
+    }
+
+    [Fact]
+    public void Constructor_WithEmailWithUnderscore_ShouldCreateInstance()
+    {
+        // Arrange
+        var validEmail = "test_name@example_domain.com";
+
+        // Act
+        var email = new Email(validEmail);
+
+        // Assert
+        Assert.NotNull(email);
+        Assert.Equal(validEmail, email.Value);
+    }
 }
 
 

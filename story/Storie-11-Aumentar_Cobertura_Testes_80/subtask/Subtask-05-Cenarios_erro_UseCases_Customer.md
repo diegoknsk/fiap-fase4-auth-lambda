@@ -253,3 +253,4 @@ public async Task ExecuteAsync_WithInvalidCpf_ShouldThrowDomainException()
 - Verificar que métodos não são chamados quando validação falha antes
 
 
+

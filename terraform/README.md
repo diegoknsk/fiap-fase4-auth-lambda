@@ -1,150 +1,95 @@
-# Terraform - Deploy Lambda
+# Terraform - Deploy Lambda Functions
 
-Este diretório contém a configuração Terraform para deploy do Lambda via imagem ECR.
+Este diretório contém a configuração Terraform para criar e gerenciar 3 funções Lambda de autenticação usando deploy via ZIP.
 
 ## Estrutura
 
 - `providers.tf`: Configuração do provider AWS
-- `backend.tf`: Configuração do backend S3 (state remoto)
+- `backend.tf`: Configuração do backend S3 (state remoto) - opcional
 - `variables.tf`: Variáveis de entrada
-- `lambda.tf`: Recurso AWS Lambda Function
+- `data.tf`: Data sources (VPC, subnets)
+- `sg-lambda.tf`: Security Group para Lambdas em VPC
+- `lambda.tf`: Definição das 3 funções Lambda
 - `outputs.tf`: Outputs do Terraform
+- `modules/lambda/`: Módulo reutilizável para criação de funções Lambda
+
+## Funções Lambda Criadas
+
+1. **auth-lambda**: Lambda principal de autenticação
+   - Com VPC e Security Group
+   - Com Function URL (acesso público)
+   - Timeout: 900s (15 minutos)
+   - Runtime: .NET 8 custom runtime (provided.al2)
+
+2. **auth-admin-lambda**: Lambda para administração do Cognito
+   - Sem VPC (fora da VPC para melhor integração com Cognito)
+   - Timeout: 30s
+   - Runtime: .NET 8 custom runtime (provided.al2)
+
+3. **auth-migrator-lambda**: Lambda para migração de dados
+   - Com VPC e Security Group
+   - Timeout: 900s (15 minutos)
+   - Runtime: .NET 8 custom runtime (provided.al2)
 
 ## Separação de Responsabilidades
 
 O processo de deploy é dividido em duas etapas distintas:
 
-1. **Build e Push de Imagem (CI/CD - GitHub Actions)**: 
-   - Build da imagem Docker
-   - Push da imagem para o repositório ECR
-   - Exportação de `ECR_IMAGE_URI` para uso no Terraform
-   - Responsabilidade: Pipeline de CI/CD (`.github/workflows/deploy-lambda.yml`)
-
-2. **Deploy de Infraestrutura (Terraform)**:
-   - Atualização do Lambda com nova `image_uri`
+1. **Criação de Infraestrutura (Terraform)**:
+   - Criação das 3 funções Lambda
+   - Criação do Security Group `lambda_auth_sg`
+   - Criação da Function URL para auth-lambda
    - Gerenciamento do estado da infraestrutura
    - Responsabilidade: Terraform (este diretório)
 
-**Importante**: O Terraform **não faz build nem push de imagens**. Ele apenas atualiza o Lambda para apontar para uma imagem que já existe no ECR.
+2. **Atualização de Código (GitHub Actions)**:
+   - Build e empacotamento do código .NET em ZIP
+   - Deploy do código via AWS CLI (`aws lambda update-function-code`)
+   - Responsabilidade: Pipeline de CI/CD (`.github/workflows/deploy-lambda.yml`)
+
+**Importante**: O Terraform cria as funções Lambda com um arquivo `placeholder.zip` inicial. O código real é atualizado via GitHub Actions usando deploy direto via ZIP.
 
 ## Fluxo Completo de Deploy
 
-O processo completo segue a ordem obrigatória:
-
-1. **Build da Imagem Docker** (GitHub Actions - job `build-and-push`)
-   - O workflow faz checkout do código
-   - Executa `docker build` para criar a imagem
-   - Tag da imagem: `sha-<commit-sha>` (primeiros 7 caracteres)
-   - Exemplo: `sha-abcdef1`
-
-2. **Push para ECR** (GitHub Actions - job `build-and-push`)
-   - Login no ECR usando credenciais AWS
-   - Push da imagem com tag SHA: `docker push <ecr-uri>:sha-<commit-sha>`
-   - Push da imagem com tag `latest`: `docker push <ecr-uri>:latest`
-   - Exportação de `ECR_IMAGE_URI` como output do job
-
-3. **Deploy via Terraform** (GitHub Actions - job `terraform-apply`)
-   - Executa `terraform init` no diretório `terraform/`
-   - Executa `terraform plan` com variáveis (incluindo `ECR_IMAGE_URI` do job anterior)
-   - Executa `terraform apply` para atualizar o Lambda
-
-4. **Atualização do Lambda**
-   - Terraform atualiza o recurso `aws_lambda_function` com nova `image_uri`
-   - Lambda automaticamente faz pull da nova imagem do ECR
-   - Lambda fica disponível com a nova versão
-
-## Parâmetros e Variáveis
-
-### Parâmetros do CI/CD (GitHub Secrets)
-
-Os seguintes secrets devem estar configurados no GitHub (Settings → Secrets and variables → Actions):
-
-- `AWS_ACCESS_KEY_ID`: Credencial de acesso AWS
-- `AWS_SECRET_ACCESS_KEY`: Credencial secreta AWS
-- `AWS_SESSION_TOKEN`: Token de sessão AWS (obrigatório para AWS Academy - credenciais temporárias)
-- `AWS_REGION`: Região AWS onde o Lambda será deployado (ex: `us-east-1`)
-- `AWS_ACCOUNT_ID`: ID da conta AWS (ex: `118233104061`)
-- `ECR_REPOSITORY_NAME`: Nome do repositório ECR (ex: `auth-cpf-lambda`)
-- `LAMBDA_FUNCTION_NAME`: Nome da função Lambda (ex: `auth-cpf-lambda`)
-- `LAMBDA_ROLE_ARN`: ARN da role IAM para a função Lambda (ex: `arn:aws:iam::118233104061:role/lambda-execution-role`)
-
-### Variáveis Derivadas (calculadas no CI/CD)
-
-Durante a execução do workflow, as seguintes variáveis são calculadas:
-
-- `ECR_REPOSITORY_URL`: URL do repositório ECR sem tag
-  - Formato: `<AWS_ACCOUNT_ID>.dkr.ecr.<AWS_REGION>.amazonaws.com/<ECR_REPOSITORY_NAME>`
-  - Exemplo: `118233104061.dkr.ecr.us-east-1.amazonaws.com/auth-cpf-lambda`
-
-- `IMAGE_TAG`: Tag da imagem baseada em SHA do commit
-  - Formato: `sha-<7-primeiros-caracteres-do-SHA>`
-  - Exemplo: `sha-abcdef1`
-
-- `ECR_IMAGE_URI`: URI completa da imagem ECR com tag (exportada como output)
-  - Formato: `<ECR_REPOSITORY_URL>:<IMAGE_TAG>`
-  - Exemplo: `118233104061.dkr.ecr.us-east-1.amazonaws.com/auth-cpf-lambda:sha-abcdef1`
-
-### Variáveis Terraform (obrigatórias)
-
-As seguintes variáveis são passadas para o Terraform via linha de comando:
-
-- `aws_region` (string): Região AWS (ex: `us-east-1`)
-- `lambda_function_name` (string): Nome da função Lambda (ex: `auth-cpf-lambda`)
-- `ecr_image_uri` (string): URI completa da imagem ECR com tag
-  - Exemplo: `118233104061.dkr.ecr.us-east-1.amazonaws.com/auth-cpf-lambda:sha-abcdef1`
-- `lambda_role_arn` (string): ARN da role IAM para a função Lambda
-  - Exemplo: `arn:aws:iam::118233104061:role/lambda-execution-role`
-
-**Nota sobre `lambda_role_arn`**: Se o Lambda já existe e está sendo importado via `terraform import`, você pode obter o ARN da role do Lambda existente no console AWS ou via AWS CLI:
-```bash
-aws lambda get-function --function-name auth-cpf-lambda --query 'Configuration.Role' --output text
-```
-
-## Uso Rápido
-
-### 1. Inicializar Terraform
+### 1. Criação Inicial (Terraform)
 
 ```bash
+cd terraform
 terraform init
+terraform plan
+terraform apply
 ```
 
-Se usar backend S3, configure via `-backend-config`:
+Isso cria:
+- 3 funções Lambda (com placeholder.zip)
+- Security Group `lambda_auth_sg`
+- Function URL para auth-lambda
 
-```bash
-terraform init \
-  -backend-config="bucket=seu-bucket-terraform-state" \
-  -backend-config="key=lambda-auth/terraform.tfstate" \
-  -backend-config="region=us-east-1"
-```
+### 2. Atualização de Código (GitHub Actions)
 
-### 2. Planejar Mudanças
+Quando há push para `main` ou `dev`, o workflow GitHub Actions:
+1. Faz build do código .NET
+2. Cria arquivos ZIP para cada Lambda
+3. Atualiza o código das funções Lambda via AWS CLI
 
-```bash
-terraform plan \
-  -var="aws_region=us-east-1" \
-  -var="lambda_function_name=auth-cpf-lambda" \
-  -var="ecr_image_uri=118233104061.dkr.ecr.us-east-1.amazonaws.com/auth-cpf-lambda:sha-abcdef1" \
-  -var="lambda_role_arn=arn:aws:iam::118233104061:role/lambda-execution-role"
-```
+## Variáveis Terraform
 
-### 3. Aplicar Mudanças
+### Variáveis Obrigatórias
+
+- `aws_region` (string): Região AWS onde os recursos serão criados (ex: `us-east-1`)
+- `lab_role` (string): ARN da role IAM LabRole para as funções Lambda
+- `project_name` (string, opcional): Nome do projeto (padrão: `"autenticacao"`)
+- `env` (string): Ambiente (ex: `dev`, `staging`, `prod`)
+- `common_tags` (map, opcional): Tags comuns para aplicar a todos os recursos
+
+### Exemplo de Uso
 
 ```bash
 terraform apply \
   -var="aws_region=us-east-1" \
-  -var="lambda_function_name=auth-cpf-lambda" \
-  -var="ecr_image_uri=118233104061.dkr.ecr.us-east-1.amazonaws.com/auth-cpf-lambda:sha-abcdef1" \
-  -var="lambda_role_arn=arn:aws:iam::118233104061:role/lambda-execution-role"
-```
-
-Ou usando `-auto-approve` para aprovação automática:
-
-```bash
-terraform apply -auto-approve \
-  -var="aws_region=us-east-1" \
-  -var="lambda_function_name=auth-cpf-lambda" \
-  -var="ecr_image_uri=118233104061.dkr.ecr.us-east-1.amazonaws.com/auth-cpf-lambda:sha-abcdef1" \
-  -var="lambda_role_arn=arn:aws:iam::118233104061:role/lambda-execution-role"
+  -var="lab_role=arn:aws:iam::123456789012:role/LabRole" \
+  -var="env=dev" \
+  -var="project_name=autenticacao"
 ```
 
 ### Usando arquivo de variáveis (terraform.tfvars)
@@ -152,10 +97,10 @@ terraform apply -auto-approve \
 Criar arquivo `terraform/terraform.tfvars`:
 
 ```hcl
-aws_region          = "us-east-1"
-lambda_function_name = "auth-cpf-lambda"
-ecr_image_uri        = "118233104061.dkr.ecr.us-east-1.amazonaws.com/auth-cpf-lambda:sha-abcdef1"
-lambda_role_arn      = "arn:aws:iam::118233104061:role/lambda-execution-role"
+aws_region  = "us-east-1"
+lab_role    = "arn:aws:iam::123456789012:role/LabRole"
+env         = "dev"
+project_name = "autenticacao"
 ```
 
 Então executar:
@@ -167,42 +112,35 @@ terraform apply
 
 **Nota**: Não commitar `terraform.tfvars` com valores reais no repositório. Use `.gitignore` ou `terraform.tfvars.example`.
 
-## Processo Idempotente e Reexecutável
+## Security Group
 
-O processo de deploy é **idempotente**, o que significa que:
+O Security Group `lambda_auth_sg` é criado com:
+- **Nome fixo**: `lambda_auth_sg` (independente do project_name)
+- **Ingress**: HTTP (80) e HTTPS (443) de qualquer origem (para Function URL)
+- **Egress**: Todo tráfego de saída permitido
 
-- `terraform apply` pode ser executado múltiplas vezes sem causar problemas
-- Se a `image_uri` não mudou, o Terraform não fará alterações
-- Se a `image_uri` mudou, o Terraform atualizará apenas o Lambda com a nova imagem
-- O processo pode ser reexecutado após mudanças sem problemas
+Este Security Group é usado pelas Lambdas `auth-lambda` e `auth-migrator-lambda` (que estão em VPC).
 
-### Exemplo de Reexecução
+## Function URL
 
-1. Fazer alterações no código
-2. Commit e push para `main`
-3. GitHub Actions executa automaticamente:
-   - Build da nova imagem
-   - Push para ECR com novo SHA
-   - Terraform atualiza Lambda com nova imagem
+A Function URL é criada apenas para `auth-lambda`:
+- **Authorization**: NONE (acesso público)
+- **CORS**: Configurado para permitir qualquer origem
+- A URL é exposta como output do Terraform
 
-## Workflow GitHub Actions
+## Outputs
 
-O workflow `.github/workflows/deploy-lambda.yml` é executado:
+O Terraform expõe os seguintes outputs:
 
-- **Automaticamente**: Após push na branch `main`
-- **Manualmente**: Via GitHub Actions UI (workflow_dispatch)
-
-### Jobs do Workflow
-
-1. **build-and-push**:
-   - Build da imagem Docker
-   - Push para ECR com tag SHA e `latest`
-   - Exporta `ECR_IMAGE_URI` como output
-
-2. **terraform-apply**:
-   - Executa Terraform para atualizar o Lambda
-   - Depende do job `build-and-push` (só executa após push bem-sucedido)
-   - Recebe `ECR_IMAGE_URI` do job anterior
+- `lambda_auth_customer_arn`: ARN da função Lambda auth-customer-lambda
+- `lambda_auth_customer_name`: Nome da função Lambda auth-customer-lambda
+- `lambda_auth_customer_function_url`: URL pública da Function URL
+- `lambda_auth_admin_arn`: ARN da função Lambda auth-admin-lambda
+- `lambda_auth_admin_name`: Nome da função Lambda auth-admin-lambda
+- `lambda_auth_migrator_arn`: ARN da função Lambda auth-migrator-lambda
+- `lambda_auth_migrator_name`: Nome da função Lambda auth-migrator-lambda
+- `lambda_security_group_id`: ID do Security Group
+- `lambda_security_group_name`: Nome do Security Group (fixo: `lambda_auth_sg`)
 
 ## Validação e Testes
 
@@ -213,25 +151,6 @@ cd terraform
 terraform fmt -recursive
 terraform validate
 ```
-
-### Testar deploy localmente
-
-1. Build e push manual da imagem:
-```bash
-docker build -t auth-lambda:test .
-aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin <account-id>.dkr.ecr.us-east-1.amazonaws.com
-docker tag auth-lambda:test <account-id>.dkr.ecr.us-east-1.amazonaws.com/auth-cpf-lambda:test
-docker push <account-id>.dkr.ecr.us-east-1.amazonaws.com/auth-cpf-lambda:test
-```
-
-2. Deploy via Terraform:
-```bash
-cd terraform
-terraform plan -var="ecr_image_uri=<account-id>.dkr.ecr.us-east-1.amazonaws.com/auth-cpf-lambda:test" ...
-terraform apply ...
-```
-
-3. Verificar no console AWS que o Lambda foi atualizado
 
 ### Verificar outputs do Terraform
 
@@ -255,35 +174,19 @@ terraform init \
 
 ### Erro: "Variable not set"
 
-**Solução**: Certifique-se de passar todas as variáveis obrigatórias:
+**Solução**: Certifique-se de passar todas as variáveis obrigatórias ou criar um arquivo `terraform.tfvars`.
 
-```bash
-terraform plan \
-  -var="aws_region=..." \
-  -var="lambda_function_name=..." \
-  -var="ecr_image_uri=..." \
-  -var="lambda_role_arn=..."
-```
-
-### Erro: "Image not found in ECR"
-
-**Solução**: Verifique se:
-1. A imagem foi pushada com sucesso para o ECR
-2. A URI está correta (account-id, região, repositório, tag)
-3. As credenciais AWS têm permissão para acessar o ECR
-
-### Erro: "Lambda function not found"
+### Erro: "Lambda function not found" (no GitHub Actions)
 
 **Solução**: Certifique-se de que:
-1. A função Lambda existe na AWS
-2. O nome da função está correto (`lambda_function_name`)
+1. As funções Lambda foram criadas via Terraform primeiro
+2. O nome da função está correto (deve ser `{project_name}-{function_name}`)
 3. As credenciais AWS têm permissão para atualizar o Lambda
 
-### Terraform não detecta mudanças
+### Terraform não detecta mudanças no código
 
-**Solução**: Verifique se a `image_uri` realmente mudou. O Terraform só atualiza se a URI for diferente da atual.
+**Solução**: Isso é esperado! O Terraform usa `lifecycle { ignore_changes = [filename, source_code_hash] }` para permitir atualizações de código via GitHub Actions sem conflitos. O código é atualizado via `aws lambda update-function-code` no workflow.
 
 ## Documentação Completa
 
 Para documentação completa do processo de deploy, consulte: [../docs/DEPLOY_LAMBDA.md](../docs/DEPLOY_LAMBDA.md)
-

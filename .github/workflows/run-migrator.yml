@@ -1,0 +1,90 @@
+name: Run Migrator Lambda
+
+on:
+  workflow_dispatch: # Permite execução manual
+
+env:
+  AWS_REGION: ${{ secrets.AWS_REGION }}
+
+jobs:
+  run-migrator:
+    name: Execute Database Migrations
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@ff717079ee2060e4bcee96c4779b553acc87447c # v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-session-token: ${{ secrets.AWS_SESSION_TOKEN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Set project name
+        id: project-name
+        env:
+          PROJECT_NAME_SECRET: ${{ secrets.PROJECT_NAME }}
+        run: |
+          PROJECT_NAME="${PROJECT_NAME_SECRET}"
+          if [ -z "${PROJECT_NAME}" ]; then
+            PROJECT_NAME="autenticacao"
+          fi
+          echo "project_name=${PROJECT_NAME}" >> $GITHUB_OUTPUT
+          echo "Using project name: ${PROJECT_NAME}"
+
+      - name: Invoke Migrator Lambda
+        id: invoke
+        env:
+          LAMBDA_FUNCTION_NAME: ${{ steps.project-name.outputs.project_name }}-auth-migrator-lambda
+        run: |
+          echo "🚀 Invocando Lambda Migrator..."
+          echo "  - Function Name: ${LAMBDA_FUNCTION_NAME}"
+          echo "  - Region: ${AWS_REGION}"
+          echo ""
+          
+          # Invocar o Lambda
+          aws lambda invoke \
+            --function-name "${LAMBDA_FUNCTION_NAME}" \
+            --region "${AWS_REGION}" \
+            --payload '{}' \
+            --log-type Tail \
+            migrator-response.json
+          
+          echo ""
+          echo "✅ Lambda invocado com sucesso!"
+          echo ""
+          
+          # Mostrar resposta
+          echo "📋 Resposta do Lambda:"
+          cat migrator-response.json | jq '.' || cat migrator-response.json
+          echo ""
+          
+          # Verificar se houve erro
+          if jq -e '.FunctionError' migrator-response.json > /dev/null 2>&1; then
+            echo "❌ Lambda retornou erro!"
+            ERROR=$(jq -r '.FunctionError' migrator-response.json)
+            echo "  - Error Type: ${ERROR}"
+            
+            # Decodificar logs se disponível
+            if jq -e '.LogResult' migrator-response.json > /dev/null 2>&1; then
+              echo ""
+              echo "📋 Logs do Lambda (decodificados):"
+              jq -r '.LogResult' migrator-response.json | base64 -d || echo "Não foi possível decodificar logs"
+            fi
+            
+            exit 1
+          else
+            echo "✅ Migrations executadas com sucesso!"
+          fi
+
+      - name: Upload response artifact
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        if: always()
+        with:
+          name: migrator-response
+          path: migrator-response.json
+          retention-days: 1
+

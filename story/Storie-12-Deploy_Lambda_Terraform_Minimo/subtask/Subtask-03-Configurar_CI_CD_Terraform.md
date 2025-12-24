@@ -47,3 +47,4 @@ Configurar o pipeline CI/CD (GitHub Actions) para passar a URI da imagem ECR par
 - Lambda é atualizado com nova imagem após execução do workflow
 - Processo é idempotente (pode ser reexecutado)
 
+

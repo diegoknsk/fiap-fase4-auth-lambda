@@ -1,89 +1,97 @@
-# Variáveis para deploy do Lambda via Terraform mínimo
-# Todas as variáveis são obrigatórias (sem valores default) para garantir que valores sejam passados explicitamente
+# ============================================================================
+# Variáveis do Terraform para deploy das Lambdas
+# ============================================================================
 
 variable "aws_region" {
   type        = string
-  description = "Região AWS onde o Lambda será deployado (ex: us-east-1)"
-  # Não definir valor default - variável obrigatória
+  description = "Região AWS onde os recursos serão criados (ex: us-east-1)"
+  default     = "us-east-1"
 }
 
-variable "lambda_function_name" {
+variable "project_name" {
   type        = string
-  description = "Nome da função Lambda que será atualizada (ex: auth-cpf-lambda)"
-  # Não definir valor default - variável obrigatória
+  description = "Nome do projeto (usado como prefixo nos recursos)"
+  default     = "autenticacao"
 }
 
-variable "ecr_image_uri" {
+variable "env" {
   type        = string
-  description = "URI completa da imagem ECR com tag (ex: 118233104061.dkr.ecr.us-east-1.amazonaws.com/auth-cpf-lambda:sha-abcdef)"
-  # Não definir valor default - variável obrigatória
+  description = "Ambiente (ex: dev, staging, prod)"
+  default     = "dev"
 }
 
-variable "lambda_role_arn" {
+variable "lab_role" {
   type        = string
-  description = "ARN da role IAM para a função Lambda (ex: arn:aws:iam::123456789012:role/lambda-execution-role)"
-  # Nota: Se o Lambda já existe e está sendo importado via terraform import,
-  # você pode obter o ARN da role do Lambda existente no console AWS ou via AWS CLI
+  description = "ARN da role IAM LabRole para as funções Lambda"
 }
 
-# Security Group para Lambda (VPC)
-variable "lambda_security_group_name" {
-  type        = string
-  description = "Nome do Security Group para o Lambda. Se não fornecido, usa 'fiap-fase4-auth-sg'"
-  default     = "fiap-fase4-auth-sg"
+variable "common_tags" {
+  type        = map(string)
+  description = "Tags comuns para aplicar a todos os recursos"
+  default     = {}
 }
 
-variable "lambda_security_group_id" {
+# Variáveis para Cognito
+variable "cognito_region" {
   type        = string
-  description = "ID do Security Group para o Lambda. Se fornecido, tem prioridade sobre o nome"
+  description = "Região do Cognito User Pool (ex: us-east-1)"
   default     = ""
 }
 
-# Cognito
 variable "cognito_user_pool_id" {
   type        = string
-  description = "ID do User Pool do Cognito (ex: us-east-1_XXXXXXXXX)"
-  sensitive   = false
-}
-
-variable "cognito_region" {
-  type        = string
-  description = "Região do Cognito (ex: us-east-1)"
+  description = "ID do Cognito User Pool (ex: us-east-1_XXXXXXXXX)"
+  default     = ""
 }
 
 variable "cognito_client_id" {
   type        = string
-  description = "Client ID do aplicativo Cognito"
-  sensitive   = false
+  description = "Client ID do Cognito App Client"
+  default     = ""
 }
 
-# RDS / Banco de Dados
+# Variáveis para RDS
 variable "rds_connection_string" {
   type        = string
-  description = "Connection string completa do PostgreSQL no formato 'Host=...;Port=...;Database=...;Username=...;Password=...'"
+  description = "Connection string completa do RDS PostgreSQL"
+  default     = ""
   sensitive   = true
 }
 
-# JWT Settings
+# Variáveis para JWT
 variable "jwt_secret" {
   type        = string
-  description = "Chave secreta para assinar tokens JWT (mínimo 32 caracteres)"
+  description = "Chave secreta para assinatura JWT (mínimo 32 caracteres)"
+  default     = ""
   sensitive   = true
 }
 
 variable "jwt_issuer" {
   type        = string
-  description = "Emissor do token JWT (ex: FastFood.Auth)"
+  description = "Emissor do token JWT"
+  default     = ""
 }
 
 variable "jwt_audience" {
   type        = string
-  description = "Audiência do token JWT (ex: FastFood.API)"
+  description = "Audience do token JWT"
+  default     = ""
 }
 
-variable "jwt_expiration_hours" {
-  type        = number
-  description = "Tempo de expiração do token JWT em horas"
-  default     = 24
+variable "lambda_auth_customer_image_uri" {
+  type        = string
+  description = "URI da imagem ECR para auth-customer-lambda (ex: 123456789012.dkr.ecr.us-east-1.amazonaws.com/project-auth-customer-lambda:latest)"
+  default     = ""
 }
 
+variable "lambda_auth_admin_image_uri" {
+  type        = string
+  description = "URI da imagem ECR para auth-admin-lambda"
+  default     = ""
+}
+
+variable "lambda_auth_migrator_image_uri" {
+  type        = string
+  description = "URI da imagem ECR para auth-migrator-lambda"
+  default     = ""
+}

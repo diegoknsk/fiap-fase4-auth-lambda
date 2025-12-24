@@ -49,3 +49,4 @@ Definir e implementar o processo de deploy do Lambda via Terraform mínimo, onde
 - [ ] `terraform fmt` formatado corretamente
 - [ ] Processo testado end-to-end: build → push → terraform apply → Lambda atualizado
 
+
