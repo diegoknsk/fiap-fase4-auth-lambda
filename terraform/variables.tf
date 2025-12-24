@@ -78,9 +78,9 @@ variable "jwt_audience" {
   default     = ""
 }
 
-variable "lambda_auth_image_uri" {
+variable "lambda_auth_customer_image_uri" {
   type        = string
-  description = "URI da imagem ECR para auth-lambda (ex: 123456789012.dkr.ecr.us-east-1.amazonaws.com/project-auth-lambda:latest)"
+  description = "URI da imagem ECR para auth-customer-lambda (ex: 123456789012.dkr.ecr.us-east-1.amazonaws.com/project-auth-customer-lambda:latest)"
   default     = ""
 }
 

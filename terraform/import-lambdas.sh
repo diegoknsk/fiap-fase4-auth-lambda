@@ -15,9 +15,9 @@ if [ ! -d ".terraform" ]; then
     exit 1
 fi
 
-FUNCTION_NAME_1="${PROJECT_NAME}-auth-lambda"
+FUNCTION_NAME_1="${PROJECT_NAME}-auth-customer-lambda"
 echo "📦 Importando: $FUNCTION_NAME_1"
-if terraform import "module.auth_lambda.aws_lambda_function.function" "$FUNCTION_NAME_1" 2>&1; then
+if terraform import "module.auth_customer_lambda.aws_lambda_function.function" "$FUNCTION_NAME_1" 2>&1; then
     echo "✅ $FUNCTION_NAME_1 importada com sucesso!"
 else
     echo "⚠️  Erro ao importar $FUNCTION_NAME_1. Verifique se a função existe."

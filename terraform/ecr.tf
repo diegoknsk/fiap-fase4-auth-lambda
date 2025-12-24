@@ -3,7 +3,7 @@
 # ============================================================================
 
 # Repositório ECR único para todas as Lambdas
-# As imagens serão diferenciadas por tags: auth-lambda, auth-admin-lambda, auth-migrator-lambda
+# As imagens serão diferenciadas por tags: auth-customer-lambda, auth-admin-lambda, auth-migrator-lambda
 resource "aws_ecr_repository" "lambda_images" {
   name                 = "fiap-fase4-auth-lambda"
   image_tag_mutability = "MUTABLE"

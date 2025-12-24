@@ -7,22 +7,22 @@ WORKDIR /src
 
 # Copiar arquivos de projeto (.csproj) para restaurar dependências
 # Migrator depende de Infra.Persistence, que depende de Domain e Application
-COPY ["src/FastFood.Auth.Migrator/FastFood.Auth.Migrator.csproj", "src/FastFood.Auth.Migrator/"]
-COPY ["src/FastFood.Auth.Infra.Persistence/FastFood.Auth.Infra.Persistence.csproj", "src/FastFood.Auth.Infra.Persistence/"]
-COPY ["src/FastFood.Auth.Domain/FastFood.Auth.Domain.csproj", "src/FastFood.Auth.Domain/"]
-COPY ["src/FastFood.Auth.Application/FastFood.Auth.Application.csproj", "src/FastFood.Auth.Application/"]
+COPY ["src/InterfacesExternas/FastFood.Auth.Migrator/FastFood.Auth.Migrator.csproj", "src/InterfacesExternas/FastFood.Auth.Migrator/"]
+COPY ["src/Core/FastFood.Auth.Infra.Persistence/FastFood.Auth.Infra.Persistence.csproj", "src/Core/FastFood.Auth.Infra.Persistence/"]
+COPY ["src/Core/FastFood.Auth.Domain/FastFood.Auth.Domain.csproj", "src/Core/FastFood.Auth.Domain/"]
+COPY ["src/Core/FastFood.Auth.Application/FastFood.Auth.Application.csproj", "src/Core/FastFood.Auth.Application/"]
 
 # Restaurar dependências NuGet
-RUN dotnet restore "src/FastFood.Auth.Migrator/FastFood.Auth.Migrator.csproj"
+RUN dotnet restore "src/InterfacesExternas/FastFood.Auth.Migrator/FastFood.Auth.Migrator.csproj"
 
 # Copiar código fonte explicitamente - apenas arquivos necessários para build
-COPY ["src/FastFood.Auth.Domain/", "src/FastFood.Auth.Domain/"]
-COPY ["src/FastFood.Auth.Application/", "src/FastFood.Auth.Application/"]
-COPY ["src/FastFood.Auth.Infra.Persistence/", "src/FastFood.Auth.Infra.Persistence/"]
-COPY ["src/FastFood.Auth.Migrator/", "src/FastFood.Auth.Migrator/"]
+COPY ["src/Core/FastFood.Auth.Domain/", "src/Core/FastFood.Auth.Domain/"]
+COPY ["src/Core/FastFood.Auth.Application/", "src/Core/FastFood.Auth.Application/"]
+COPY ["src/Core/FastFood.Auth.Infra.Persistence/", "src/Core/FastFood.Auth.Infra.Persistence/"]
+COPY ["src/InterfacesExternas/FastFood.Auth.Migrator/", "src/InterfacesExternas/FastFood.Auth.Migrator/"]
 
 # Publicar aplicação em modo Release
-WORKDIR "/src/src/FastFood.Auth.Migrator"
+WORKDIR "/src/src/InterfacesExternas/FastFood.Auth.Migrator"
 RUN dotnet publish "FastFood.Auth.Migrator.csproj" \
     -c Release \
     -o /app/publish \
@@ -47,4 +47,3 @@ ENV DOTNET_ENVIRONMENT=Production
 # O Migrator precisa ser chamado como uma função Lambda, então vamos criar um wrapper
 # Por enquanto, vamos usar o mesmo padrão do LambdaEntryPoint
 CMD ["FastFood.Auth.Migrator::FastFood.Auth.Migrator.Program::Main"]
-

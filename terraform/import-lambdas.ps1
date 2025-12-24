@@ -13,9 +13,9 @@ if (-not (Test-Path ".terraform")) {
     exit 1
 }
 
-$FUNCTION_NAME_1 = "$PROJECT_NAME-auth-lambda"
+$FUNCTION_NAME_1 = "$PROJECT_NAME-auth-customer-lambda"
 Write-Host "📦 Importando: $FUNCTION_NAME_1" -ForegroundColor Yellow
-$result1 = terraform import "module.auth_lambda.aws_lambda_function.function" $FUNCTION_NAME_1 2>&1
+$result1 = terraform import "module.auth_customer_lambda.aws_lambda_function.function" $FUNCTION_NAME_1 2>&1
 if ($LASTEXITCODE -eq 0) {
     Write-Host "✅ $FUNCTION_NAME_1 importada com sucesso!" -ForegroundColor Green
 } else {

@@ -1,4 +1,4 @@
-# Dockerfile para auth-admin-lambda - AWS Lambda Container Image - .NET 8
+# Dockerfile para auth-customer-lambda - AWS Lambda Container Image - .NET 8
 # Multi-stage build para otimizar tamanho da imagem final
 
 # Stage 1: Build
@@ -6,24 +6,25 @@ FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
 WORKDIR /src
 
 # Copiar arquivos de projeto (.csproj) para restaurar dependências
-# Admin não precisa de Infra.Persistence nem EntityFrameworkCore
-COPY ["src/InterfacesExternas/FastFood.Auth.Lambda.Admin/FastFood.Auth.Lambda.Admin.csproj", "src/InterfacesExternas/FastFood.Auth.Lambda.Admin/"]
+COPY ["src/InterfacesExternas/FastFood.Auth.Lambda.Customer/FastFood.Auth.Lambda.Customer.csproj", "src/InterfacesExternas/FastFood.Auth.Lambda.Customer/"]
 COPY ["src/Core/FastFood.Auth.Application/FastFood.Auth.Application.csproj", "src/Core/FastFood.Auth.Application/"]
 COPY ["src/Core/FastFood.Auth.Domain/FastFood.Auth.Domain.csproj", "src/Core/FastFood.Auth.Domain/"]
 COPY ["src/Core/FastFood.Auth.Infra/FastFood.Auth.Infra.csproj", "src/Core/FastFood.Auth.Infra/"]
+COPY ["src/Core/FastFood.Auth.Infra.Persistence/FastFood.Auth.Infra.Persistence.csproj", "src/Core/FastFood.Auth.Infra.Persistence/"]
 
 # Restaurar dependências NuGet
-RUN dotnet restore "src/InterfacesExternas/FastFood.Auth.Lambda.Admin/FastFood.Auth.Lambda.Admin.csproj"
+RUN dotnet restore "src/InterfacesExternas/FastFood.Auth.Lambda.Customer/FastFood.Auth.Lambda.Customer.csproj"
 
 # Copiar código fonte explicitamente - apenas arquivos necessários para build
 COPY ["src/Core/FastFood.Auth.Domain/", "src/Core/FastFood.Auth.Domain/"]
 COPY ["src/Core/FastFood.Auth.Application/", "src/Core/FastFood.Auth.Application/"]
 COPY ["src/Core/FastFood.Auth.Infra/", "src/Core/FastFood.Auth.Infra/"]
-COPY ["src/InterfacesExternas/FastFood.Auth.Lambda.Admin/", "src/InterfacesExternas/FastFood.Auth.Lambda.Admin/"]
+COPY ["src/Core/FastFood.Auth.Infra.Persistence/", "src/Core/FastFood.Auth.Infra.Persistence/"]
+COPY ["src/InterfacesExternas/FastFood.Auth.Lambda.Customer/", "src/InterfacesExternas/FastFood.Auth.Lambda.Customer/"]
 
 # Publicar aplicação em modo Release
-WORKDIR "/src/src/InterfacesExternas/FastFood.Auth.Lambda.Admin"
-RUN dotnet publish "FastFood.Auth.Lambda.Admin.csproj" \
+WORKDIR "/src/src/InterfacesExternas/FastFood.Auth.Lambda.Customer"
+RUN dotnet publish "FastFood.Auth.Lambda.Customer.csproj" \
     -c Release \
     -o /app/publish \
     --no-restore
@@ -48,4 +49,5 @@ ENV DOTNET_ENVIRONMENT=Production
 # Assembly::Namespace.Class::Method
 # Criamos uma classe LambdaEntryPoint que herda de APIGatewayHttpApiV2ProxyFunction
 # O handler é: Assembly::Namespace.Class::FunctionHandlerAsync
-CMD ["FastFood.Auth.Lambda.Admin::FastFood.Auth.Lambda.Admin.LambdaEntryPoint::FunctionHandlerAsync"]
+CMD ["FastFood.Auth.Lambda.Customer::FastFood.Auth.Lambda.Customer.LambdaEntryPoint::FunctionHandlerAsync"]
+

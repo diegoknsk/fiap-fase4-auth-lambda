@@ -2,20 +2,20 @@
 # Outputs do Terraform para referência externa
 # ============================================================================
 
-# Outputs da Lambda auth-lambda
-output "lambda_auth_arn" {
-  description = "ARN da função Lambda auth-lambda"
-  value       = module.auth_lambda.function_arn
+# Outputs da Lambda auth-customer-lambda
+output "lambda_auth_customer_arn" {
+  description = "ARN da função Lambda auth-customer-lambda"
+  value       = module.auth_customer_lambda.function_arn
 }
 
-output "lambda_auth_name" {
-  description = "Nome da função Lambda auth-lambda"
-  value       = module.auth_lambda.function_name
+output "lambda_auth_customer_name" {
+  description = "Nome da função Lambda auth-customer-lambda"
+  value       = module.auth_customer_lambda.function_name
 }
 
-output "lambda_auth_function_url" {
-  description = "URL pública da função Lambda auth-lambda (Function URL)"
-  value       = aws_lambda_function_url.lambda_url.function_url
+output "lambda_auth_customer_function_url" {
+  description = "URL pública da função Lambda auth-customer-lambda (Function URL)"
+  value       = aws_lambda_function_url.lambda_customer_url.function_url
 }
 
 # Outputs da Lambda auth-admin-lambda

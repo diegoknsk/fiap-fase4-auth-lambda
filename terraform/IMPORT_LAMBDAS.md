@@ -41,8 +41,8 @@ Execute os comandos de import um por um:
 ```bash
 cd terraform
 
-# Importar auth-lambda
-terraform import module.auth_lambda.aws_lambda_function.function autenticacao-auth-lambda
+# Importar auth-customer-lambda
+terraform import module.auth_customer_lambda.aws_lambda_function.function autenticacao-auth-customer-lambda
 
 # Importar auth-admin-lambda
 terraform import module.auth_admin_lambda.aws_lambda_function.function autenticacao-auth-admin-lambda

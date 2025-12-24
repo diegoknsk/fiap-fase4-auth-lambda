@@ -3,9 +3,8 @@
 # ============================================================================
 
 locals {
-  # Variáveis de ambiente para auth-lambda (RDS + Cognito + JWT)
-  auth_lambda_env = merge(
-    { LAMBDA_MODE = "Customer" },
+  # Variáveis de ambiente para auth-customer-lambda (RDS + Cognito + JWT)
+  auth_customer_lambda_env = merge(
     var.rds_connection_string != "" ? { ConnectionStrings__DefaultConnection = var.rds_connection_string } : {},
     var.cognito_region != "" ? { COGNITO__REGION = var.cognito_region } : {},
     var.cognito_user_pool_id != "" ? { COGNITO__USERPOOLID = var.cognito_user_pool_id } : {},
@@ -15,11 +14,9 @@ locals {
     var.jwt_audience != "" ? { JwtSettings__Audience = var.jwt_audience } : {}
   )
 
-  # Variáveis de ambiente para auth-admin-lambda (Cognito + RDS)
-  # Nota: RDS connection string é necessária mesmo que não use, para manter compatibilidade com código original
+  # Variáveis de ambiente para auth-admin-lambda (Cognito)
+  # Admin não precisa de RDS connection string
   auth_admin_lambda_env = merge(
-    { LAMBDA_MODE = "Admin" },
-    var.rds_connection_string != "" ? { ConnectionStrings__DefaultConnection = var.rds_connection_string } : {},
     var.cognito_region != "" ? { COGNITO__REGION = var.cognito_region } : {},
     var.cognito_user_pool_id != "" ? { COGNITO__USERPOOLID = var.cognito_user_pool_id } : {},
     var.cognito_client_id != "" ? { COGNITO__CLIENTID = var.cognito_client_id } : {}
@@ -27,26 +24,25 @@ locals {
 
   # Variáveis de ambiente para auth-migrator-lambda (RDS)
   auth_migrator_lambda_env = merge(
-    { LAMBDA_MODE = "Migrator" },
     var.rds_connection_string != "" ? { ConnectionStrings__DefaultConnection = var.rds_connection_string } : {}
   )
 }
 
 # ============================================================================
-# LAMBDA 1: auth-lambda
-# Lambda principal de autenticação (com VPC e Function URL)
+# LAMBDA 1: auth-customer-lambda
+# Lambda para autenticação de clientes (com VPC e Function URL)
 # ============================================================================
 
-module "auth_lambda" {
+module "auth_customer_lambda" {
   source = "./modules/lambda"
 
-  function_name = "auth-lambda"
+  function_name = "auth-customer-lambda"
   project_name  = var.project_name
   env           = var.env
 
   # Configurações para .NET 8 container image
-  handler = var.lambda_auth_image_uri != "" ? null : "bootstrap"
-  runtime = var.lambda_auth_image_uri != "" ? null : "provided.al2"
+  handler = var.lambda_auth_customer_image_uri != "" ? null : "bootstrap"
+  runtime = var.lambda_auth_customer_image_uri != "" ? null : "provided.al2"
 
   # IAM role usando LabRole (ou variável equivalente)
   role_arn = var.lab_role
@@ -56,14 +52,14 @@ module "auth_lambda" {
   memory_size = 512
 
   # Tipo de pacote - Image (container) ou Zip (fallback)
-  package_type = var.lambda_auth_image_uri != "" ? "Image" : "Zip"
+  package_type = var.lambda_auth_customer_image_uri != "" ? "Image" : "Zip"
   # O arquivo ZIP será atualizado via deploy (usar placeholder.zip inicial)
-  source_code_hash = var.lambda_auth_image_uri != "" ? null : "placeholder"
+  source_code_hash = var.lambda_auth_customer_image_uri != "" ? null : "placeholder"
   # URI da imagem ECR (quando usando container image)
-  image_uri = var.lambda_auth_image_uri != "" ? var.lambda_auth_image_uri : null
+  image_uri = var.lambda_auth_customer_image_uri != "" ? var.lambda_auth_customer_image_uri : null
 
   # Variáveis de ambiente (RDS + Cognito + JWT)
-  environment_variables = local.auth_lambda_env
+  environment_variables = local.auth_customer_lambda_env
 
   # Sem limite de execuções concorrentes
   reserved_concurrent_executions = null
@@ -75,17 +71,17 @@ module "auth_lambda" {
   }
 
   # Deploy via Image (ECR) ou ZIP (fallback)
-  depends_on_resources = var.lambda_auth_image_uri != "" ? [aws_ecr_repository.lambda_images] : []
+  depends_on_resources = var.lambda_auth_customer_image_uri != "" ? [aws_ecr_repository.lambda_images] : []
 
   common_tags = {
-    Service = "auth-lambda"
-    Type    = "Authentication"
+    Service = "auth-customer-lambda"
+    Type    = "Customer-Authentication"
   }
 }
 
-# Lambda Function URL para auth-lambda
-resource "aws_lambda_function_url" "lambda_url" {
-  function_name      = module.auth_lambda.function_name
+# Lambda Function URL para auth-customer-lambda
+resource "aws_lambda_function_url" "lambda_customer_url" {
+  function_name      = module.auth_customer_lambda.function_name
   authorization_type = "NONE"
   invoke_mode        = "BUFFERED"
 

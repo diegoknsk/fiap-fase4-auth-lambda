@@ -17,7 +17,7 @@ jobs:
     runs-on: ubuntu-latest
     
     outputs:
-      lambda_auth_image_uri: ${{ steps.meta-auth.outputs.image }}
+      lambda_auth_customer_image_uri: ${{ steps.meta-customer.outputs.image }}
       lambda_auth_admin_image_uri: ${{ steps.meta-admin.outputs.image }}
       lambda_auth_migrator_image_uri: ${{ steps.meta-migrator.outputs.image }}
     
@@ -40,23 +40,23 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      - name: Build and push auth-lambda image
-        id: build-auth
+      - name: Build and push auth-customer-lambda image
+        id: build-customer
         uses: docker/build-push-action@v5
         with:
           context: .
-          file: ./Dockerfile.auth-lambda
+          file: ./Dockerfile.auth-customer-lambda
           push: true
           tags: |
-            ${{ env.AWS_ACCOUNT_ID }}.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com/fiap-fase4-auth-lambda:auth-lambda-${{ github.sha }}
-            ${{ env.AWS_ACCOUNT_ID }}.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com/fiap-fase4-auth-lambda:auth-lambda-latest
-          cache-from: type=registry,ref=${{ env.AWS_ACCOUNT_ID }}.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com/fiap-fase4-auth-lambda:auth-lambda-buildcache
-          cache-to: type=registry,ref=${{ env.AWS_ACCOUNT_ID }}.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com/fiap-fase4-auth-lambda:auth-lambda-buildcache,mode=max
+            ${{ env.AWS_ACCOUNT_ID }}.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com/fiap-fase4-auth-lambda:auth-customer-lambda-${{ github.sha }}
+            ${{ env.AWS_ACCOUNT_ID }}.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com/fiap-fase4-auth-lambda:auth-customer-lambda-latest
+          cache-from: type=registry,ref=${{ env.AWS_ACCOUNT_ID }}.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com/fiap-fase4-auth-lambda:auth-customer-lambda-buildcache
+          cache-to: type=registry,ref=${{ env.AWS_ACCOUNT_ID }}.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com/fiap-fase4-auth-lambda:auth-customer-lambda-buildcache,mode=max
 
-      - name: Set auth-lambda image URI
-        id: meta-auth
+      - name: Set auth-customer-lambda image URI
+        id: meta-customer
         run: |
-          echo "image=${{ env.AWS_ACCOUNT_ID }}.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com/fiap-fase4-auth-lambda:auth-lambda-${{ github.sha }}" >> $GITHUB_OUTPUT
+          echo "image=${{ env.AWS_ACCOUNT_ID }}.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com/fiap-fase4-auth-lambda:auth-customer-lambda-${{ github.sha }}" >> $GITHUB_OUTPUT
 
       - name: Build and push auth-admin-lambda image
         id: build-admin
@@ -99,7 +99,7 @@ jobs:
     runs-on: ubuntu-latest
     
     outputs:
-      lambda_auth_zip: ${{ steps.package.outputs.lambda_auth_zip }}
+      lambda_auth_customer_zip: ${{ steps.package.outputs.lambda_auth_customer_zip }}
       lambda_auth_admin_zip: ${{ steps.package.outputs.lambda_auth_admin_zip }}
       lambda_auth_migrator_zip: ${{ steps.package.outputs.lambda_auth_migrator_zip }}
     
@@ -115,17 +115,17 @@ jobs:
       - name: Restore dependencies
         run: dotnet restore
 
-      - name: Build Lambda (auth-lambda)
+      - name: Build Lambda (auth-customer-lambda)
         run: |
-          dotnet publish src/FastFood.Auth.Lambda/FastFood.Auth.Lambda.csproj \
+          dotnet publish src/InterfacesExternas/FastFood.Auth.Lambda.Customer/FastFood.Auth.Lambda.Customer.csproj \
             -c Release \
-            -o publish/auth-lambda \
+            -o publish/auth-customer-lambda \
             --self-contained true \
             -r linux-x64
 
       - name: Build Lambda (auth-admin-lambda)
         run: |
-          dotnet publish src/FastFood.Auth.Lambda/FastFood.Auth.Lambda.csproj \
+          dotnet publish src/InterfacesExternas/FastFood.Auth.Lambda.Admin/FastFood.Auth.Lambda.Admin.csproj \
             -c Release \
             -o publish/auth-admin-lambda \
             --self-contained true \
@@ -133,21 +133,21 @@ jobs:
 
       - name: Build Migrator Lambda (auth-migrator-lambda)
         run: |
-          dotnet publish src/FastFood.Auth.Migrator/FastFood.Auth.Migrator.csproj \
+          dotnet publish src/InterfacesExternas/FastFood.Auth.Migrator/FastFood.Auth.Migrator.csproj \
             -c Release \
             -o publish/auth-migrator-lambda \
             --self-contained true \
             -r linux-x64
 
-      - name: Create bootstrap script for auth-lambda
+      - name: Create bootstrap script for auth-customer-lambda
         run: |
-          cat > publish/auth-lambda/bootstrap << 'EOF'
+          cat > publish/auth-customer-lambda/bootstrap << 'EOF'
           #!/bin/sh
           set -euo pipefail
           cd "$(dirname "$0")"
-          exec ./FastFood.Auth.Lambda
+          exec ./FastFood.Auth.Lambda.Customer
           EOF
-          chmod +x publish/auth-lambda/bootstrap
+          chmod +x publish/auth-customer-lambda/bootstrap
 
       - name: Create bootstrap script for auth-admin-lambda
         run: |
@@ -155,7 +155,7 @@ jobs:
           #!/bin/sh
           set -euo pipefail
           cd "$(dirname "$0")"
-          exec ./FastFood.Auth.Lambda
+          exec ./FastFood.Auth.Lambda.Admin
           EOF
           chmod +x publish/auth-admin-lambda/bootstrap
 
@@ -172,9 +172,9 @@ jobs:
       - name: Package Lambda functions
         id: package
         run: |
-          cd publish/auth-lambda
-          zip -r ../../lambda-auth.zip . -q
-          echo "lambda_auth_zip=lambda-auth.zip" >> $GITHUB_OUTPUT
+          cd publish/auth-customer-lambda
+          zip -r ../../lambda-auth-customer.zip . -q
+          echo "lambda_auth_customer_zip=lambda-auth-customer.zip" >> $GITHUB_OUTPUT
           
           cd ../auth-admin-lambda
           zip -r ../../lambda-auth-admin.zip . -q
@@ -192,7 +192,7 @@ jobs:
         with:
           name: lambda-zips
           path: |
-            lambda-auth.zip
+            lambda-auth-customer.zip
             lambda-auth-admin.zip
             lambda-auth-migrator.zip
           retention-days: 1
@@ -337,7 +337,7 @@ jobs:
           TF_VAR_jwt_secret: ${{ secrets.JWT_SECRET }}
           TF_VAR_jwt_issuer: ${{ secrets.JWT_ISSUER }}
           TF_VAR_jwt_audience: ${{ secrets.JWT_AUDIENCE }}
-          TF_VAR_lambda_auth_image_uri: ${{ needs.build-and-push-images.outputs.lambda_auth_image_uri }}
+          TF_VAR_lambda_auth_customer_image_uri: ${{ needs.build-and-push-images.outputs.lambda_auth_customer_image_uri }}
           TF_VAR_lambda_auth_admin_image_uri: ${{ needs.build-and-push-images.outputs.lambda_auth_admin_image_uri }}
           TF_VAR_lambda_auth_migrator_image_uri: ${{ needs.build-and-push-images.outputs.lambda_auth_migrator_image_uri }}
         run: |
@@ -346,7 +346,7 @@ jobs:
           echo "  - Project Name: ${TF_VAR_project_name}"
           echo "  - Environment: ${TF_VAR_env}"
           echo "  - Lab Role: ${TF_VAR_lab_role}"
-          echo "  - Auth Lambda Image: ${TF_VAR_lambda_auth_image_uri}"
+          echo "  - Auth Customer Lambda Image: ${TF_VAR_lambda_auth_customer_image_uri}"
           echo "  - Auth Admin Lambda Image: ${TF_VAR_lambda_auth_admin_image_uri}"
           echo "  - Auth Migrator Lambda Image: ${TF_VAR_lambda_auth_migrator_image_uri}"
           terraform apply -auto-approve
@@ -358,9 +358,9 @@ jobs:
     strategy:
       matrix:
         lambda:
-          - name: auth-lambda
-            zip_file: lambda-auth.zip
-            function_suffix: auth-lambda
+          - name: auth-customer-lambda
+            zip_file: lambda-auth-customer.zip
+            function_suffix: auth-customer-lambda
           - name: auth-admin-lambda
             zip_file: lambda-auth-admin.zip
             function_suffix: auth-admin-lambda
