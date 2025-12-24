@@ -6,13 +6,18 @@ FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
 WORKDIR /src
 
 # Copiar arquivos de projeto (.csproj) para restaurar dependências
+# Migrator depende de Infra.Persistence, que depende de Domain e Application
 COPY ["src/FastFood.Auth.Migrator/FastFood.Auth.Migrator.csproj", "src/FastFood.Auth.Migrator/"]
 COPY ["src/FastFood.Auth.Infra.Persistence/FastFood.Auth.Infra.Persistence.csproj", "src/FastFood.Auth.Infra.Persistence/"]
+COPY ["src/FastFood.Auth.Domain/FastFood.Auth.Domain.csproj", "src/FastFood.Auth.Domain/"]
+COPY ["src/FastFood.Auth.Application/FastFood.Auth.Application.csproj", "src/FastFood.Auth.Application/"]
 
 # Restaurar dependências NuGet
 RUN dotnet restore "src/FastFood.Auth.Migrator/FastFood.Auth.Migrator.csproj"
 
 # Copiar código fonte explicitamente - apenas arquivos necessários para build
+COPY ["src/FastFood.Auth.Domain/", "src/FastFood.Auth.Domain/"]
+COPY ["src/FastFood.Auth.Application/", "src/FastFood.Auth.Application/"]
 COPY ["src/FastFood.Auth.Infra.Persistence/", "src/FastFood.Auth.Infra.Persistence/"]
 COPY ["src/FastFood.Auth.Migrator/", "src/FastFood.Auth.Migrator/"]
 
