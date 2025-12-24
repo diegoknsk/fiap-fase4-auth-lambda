@@ -169,6 +169,21 @@ public class CpfTests
         // Act & Assert
         Assert.Throws<DomainException>(() => new Cpf(invalidCpf));
     }
+
+    [Fact]
+    public void ToString_WithCpfStartingWithZero_ShouldFormatCorrectly()
+    {
+        // Arrange
+        // CPF válido que começa com zero para testar formatação
+        // Usando um CPF válido que começa com zero
+        var cpf = new Cpf("01234567890");
+
+        // Act
+        var formatted = cpf.ToString();
+
+        // Assert
+        Assert.Equal("012.345.678-90", formatted);
+    }
 }
 
 
