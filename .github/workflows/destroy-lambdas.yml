@@ -1,0 +1,190 @@
+name: Destroy Lambda Infrastructure
+
+on:
+  workflow_dispatch: # Apenas execução manual
+    inputs:
+      confirm_destroy:
+        description: 'Digite "DESTROY" para confirmar a destruição'
+        required: true
+        type: string
+
+env:
+  AWS_REGION: ${{ secrets.AWS_REGION }}
+  AWS_ACCOUNT_ID: ${{ secrets.AWS_ACCOUNT_ID || '058264347413' }}
+
+jobs:
+  destroy-infrastructure:
+    name: Destroy Lambda Infrastructure
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Validate confirmation
+        run: |
+          if [ "${{ github.event.inputs.confirm_destroy }}" != "DESTROY" ]; then
+            echo "❌ Confirmação inválida!"
+            echo "   Você deve digitar 'DESTROY' para confirmar a destruição."
+            exit 1
+          fi
+          echo "✅ Confirmação válida. Prosseguindo com a destruição..."
+
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set project name
+        id: project-name
+        run: |
+          PROJECT_NAME="${{ secrets.PROJECT_NAME }}"
+          if [ -z "${PROJECT_NAME}" ]; then
+            PROJECT_NAME="autenticacao"
+          fi
+          echo "project_name=${PROJECT_NAME}" >> $GITHUB_OUTPUT
+          echo "Using project name: ${PROJECT_NAME}"
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-session-token: ${{ secrets.AWS_SESSION_TOKEN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: "1.5.0"
+
+      - name: Terraform Init
+        working-directory: terraform
+        run: terraform init
+
+      - name: List resources to be destroyed
+        working-directory: terraform
+        env:
+          TF_VAR_aws_region: ${{ env.AWS_REGION }}
+          TF_VAR_project_name: ${{ steps.project-name.outputs.project_name }}
+          TF_VAR_env: ${{ secrets.ENV || 'dev' }}
+          TF_VAR_lab_role: ${{ secrets.LAB_ROLE }}
+          TF_VAR_cognito_region: ${{ secrets.COGNITO_REGION }}
+          TF_VAR_cognito_user_pool_id: ${{ secrets.COGNITO_USER_POOL_ID }}
+          TF_VAR_cognito_client_id: ${{ secrets.COGNITO_CLIENT_ID }}
+          TF_VAR_rds_connection_string: ${{ secrets.RDS_CONNECTION_STRING }}
+          TF_VAR_jwt_secret: ${{ secrets.JWT_SECRET }}
+          TF_VAR_jwt_issuer: ${{ secrets.JWT_ISSUER }}
+          TF_VAR_jwt_audience: ${{ secrets.JWT_AUDIENCE }}
+        run: |
+          echo "🔍 Listando recursos que serão destruídos..."
+          terraform plan -destroy -out=tfplan
+          echo ""
+          echo "⚠️  ATENÇÃO: Os seguintes recursos serão DESTRUÍDOS:"
+          echo "   - Lambda Functions (auth-customer-lambda, auth-admin-lambda, auth-migrator-lambda)"
+          echo "   - Function URLs"
+          echo "   - Security Groups"
+          echo "   - ECR Repository (opcional, se configurado)"
+
+      - name: Terraform Destroy
+        working-directory: terraform
+        env:
+          TF_VAR_aws_region: ${{ env.AWS_REGION }}
+          TF_VAR_project_name: ${{ steps.project-name.outputs.project_name }}
+          TF_VAR_env: ${{ secrets.ENV || 'dev' }}
+          TF_VAR_lab_role: ${{ secrets.LAB_ROLE }}
+          TF_VAR_cognito_region: ${{ secrets.COGNITO_REGION }}
+          TF_VAR_cognito_user_pool_id: ${{ secrets.COGNITO_USER_POOL_ID }}
+          TF_VAR_cognito_client_id: ${{ secrets.COGNITO_CLIENT_ID }}
+          TF_VAR_rds_connection_string: ${{ secrets.RDS_CONNECTION_STRING }}
+          TF_VAR_jwt_secret: ${{ secrets.JWT_SECRET }}
+          TF_VAR_jwt_issuer: ${{ secrets.JWT_ISSUER }}
+          TF_VAR_jwt_audience: ${{ secrets.JWT_AUDIENCE }}
+        run: |
+          echo "🗑️  Executando terraform destroy..."
+          terraform destroy -auto-approve
+          echo ""
+          echo "✅ Infraestrutura destruída com sucesso!"
+
+      - name: Delete ECR Images (Optional)
+        continue-on-error: true
+        run: |
+          echo "🗑️  Removendo imagens do ECR (se existirem)..."
+          
+          REPO_NAME="fiap-fase4-auth-lambda"
+          
+          # Verificar se o repositório existe
+          if aws ecr describe-repositories --repository-names "${REPO_NAME}" --region "${AWS_REGION}" > /dev/null 2>&1; then
+            echo "   Repositório encontrado: ${REPO_NAME}"
+            
+            # Listar todas as imagens
+            IMAGES=$(aws ecr list-images \
+              --repository-name "${REPO_NAME}" \
+              --region "${AWS_REGION}" \
+              --query 'imageIds[*]' \
+              --output json)
+            
+            if [ "$(echo ${IMAGES} | jq 'length')" -gt 0 ]; then
+              echo "   Removendo ${IMAGES} imagens..."
+              
+              # Deletar todas as imagens
+              echo "${IMAGES}" | jq -c '.[]' | while read image; do
+                aws ecr batch-delete-image \
+                  --repository-name "${REPO_NAME}" \
+                  --region "${AWS_REGION}" \
+                  --image-ids "${image}" || true
+              done
+              
+              echo "   ✅ Imagens removidas do ECR"
+            else
+              echo "   ℹ️  Nenhuma imagem encontrada no repositório"
+            fi
+          else
+            echo "   ℹ️  Repositório ECR não existe ou já foi removido"
+          fi
+
+      - name: Verify destruction
+        run: |
+          echo ""
+          echo "🔍 Verificando se os Lambdas foram removidos..."
+          
+          LAMBDA_NAMES=(
+            "${{ steps.project-name.outputs.project_name }}-auth-customer-lambda"
+            "${{ steps.project-name.outputs.project_name }}-auth-admin-lambda"
+            "${{ steps.project-name.outputs.project_name }}-auth-migrator-lambda"
+          )
+          
+          ALL_REMOVED=true
+          for LAMBDA_NAME in "${LAMBDA_NAMES[@]}"; do
+            if aws lambda get-function \
+              --function-name "${LAMBDA_NAME}" \
+              --region "${AWS_REGION}" > /dev/null 2>&1; then
+              echo "   ⚠️  Lambda ainda existe: ${LAMBDA_NAME}"
+              ALL_REMOVED=false
+            else
+              echo "   ✅ Lambda removido: ${LAMBDA_NAME}"
+            fi
+          done
+          
+          if [ "${ALL_REMOVED}" = true ]; then
+            echo ""
+            echo "✅ Todos os Lambdas foram removidos com sucesso!"
+          else
+            echo ""
+            echo "⚠️  Alguns Lambdas ainda existem. Verifique manualmente."
+          fi
+
+      - name: Summary
+        run: |
+          echo ""
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          echo "📋 RESUMO DA DESTRUIÇÃO"
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          echo ""
+          echo "✅ Infraestrutura destruída:"
+          echo "   - Lambda Functions"
+          echo "   - Function URLs"
+          echo "   - Security Groups"
+          echo "   - ECR Images (se existiam)"
+          echo ""
+          echo "⚠️  ATENÇÃO:"
+          echo "   - Os dados do banco de dados NÃO foram removidos"
+          echo "   - O repositório ECR pode ainda existir (depende da configuração)"
+          echo "   - Para recriar, execute a action 'Deploy Lambda Functions to AWS'"
+          echo ""
+
