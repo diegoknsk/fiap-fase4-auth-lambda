@@ -6,51 +6,67 @@ using Microsoft.Extensions.Logging;
 
 var builder = WebApplication.CreateBuilder(args);
 
-builder.Logging.ClearProviders();
-builder.Logging.AddConsole();
-builder.Logging.SetMinimumLevel(LogLevel.Information);
-
-builder.Services.AddAWSLambdaHosting(LambdaEventSource.HttpApi);
-
-builder.Services.AddControllers();
-builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen();
-
-builder.Services.AddScoped<ICognitoService, CognitoService>();
-builder.Services.AddScoped<AuthenticateAdminUseCase>();
+ConfigureLogging(builder.Logging);
+ConfigureServices(builder.Services);
 
 var app = builder.Build();
 
-app.UseExceptionHandler(appBuilder =>
-{
-  appBuilder.Run(async context =>
-  {
-    context.Response.StatusCode = 500;
-    context.Response.ContentType = "application/json";
-    
-    var logger = context.RequestServices.GetRequiredService<ILogger<Program>>();
-    var exception = context.Features.Get<Microsoft.AspNetCore.Diagnostics.IExceptionHandlerFeature>()?.Error;
-    
-    if (exception != null)
-    {
-      logger.LogError(exception, "Erro não tratado na aplicação");
-      await context.Response.WriteAsJsonAsync(new
-      {
-        message = "Erro interno do servidor",
-        error = app.Environment.IsDevelopment() ? exception.Message : null
-      });
-    }
-  });
-});
+ConfigureMiddleware(app);
 
-if (app.Environment.IsDevelopment())
+await app.RunAsync();
+
+static void ConfigureLogging(ILoggingBuilder logging)
 {
-  app.UseSwagger();
-  app.UseSwaggerUI();
+    logging.ClearProviders();
+    logging.AddConsole();
+    logging.SetMinimumLevel(LogLevel.Information);
 }
 
-app.UseAuthorization();
-app.MapControllers();
-await app.RunAsync();
+static void ConfigureServices(IServiceCollection services)
+{
+    services.AddAWSLambdaHosting(LambdaEventSource.HttpApi);
+    services.AddControllers();
+    services.AddEndpointsApiExplorer();
+    services.AddSwaggerGen();
+    services.AddScoped<ICognitoService, CognitoService>();
+    services.AddScoped<AuthenticateAdminUseCase>();
+}
+
+static void ConfigureMiddleware(WebApplication app)
+{
+    app.UseExceptionHandler(appBuilder =>
+    {
+        appBuilder.Run(async context =>
+        {
+            context.Response.StatusCode = 500;
+            context.Response.ContentType = "application/json";
+            
+            var logger = context.RequestServices.GetRequiredService<ILogger<Program>>();
+            var exceptionFeature = context.Features.Get<Microsoft.AspNetCore.Diagnostics.IExceptionHandlerFeature>();
+            var exception = exceptionFeature?.Error;
+            
+            if (exception != null)
+            {
+                logger.LogError(exception, "Erro não tratado na aplicação");
+                var isDev = app.Environment.IsDevelopment();
+                var response = new
+                {
+                    message = "Erro interno do servidor",
+                    error = isDev ? exception.Message : null
+                };
+                await context.Response.WriteAsJsonAsync(response);
+            }
+        });
+    });
+
+    if (app.Environment.IsDevelopment())
+    {
+        app.UseSwagger();
+        app.UseSwaggerUI();
+    }
+
+    app.UseAuthorization();
+    app.MapControllers();
+}
 
 public partial class Program { }

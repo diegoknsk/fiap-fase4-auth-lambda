@@ -36,18 +36,31 @@ public class Startup
 
     public void ConfigureServices(IServiceCollection services)
     {
+        RegisterCommonServices(services);
+        RegisterDatabaseContext(services);
+        RegisterCustomerSpecificServices(services);
+    }
+
+    private static void RegisterCommonServices(IServiceCollection services)
+    {
         services.AddAWSLambdaHosting(LambdaEventSource.HttpApi);
         services.AddControllers();
         services.AddEndpointsApiExplorer();
         services.AddSwaggerGen();
+    }
 
+    private void RegisterDatabaseContext(IServiceCollection services)
+    {
         var connectionString = _configuration.GetConnectionString("DefaultConnection");
         if (!string.IsNullOrEmpty(connectionString))
         {
             services.AddDbContext<AuthDbContext>(options =>
                 options.UseNpgsql(connectionString));
         }
+    }
 
+    private static void RegisterCustomerSpecificServices(IServiceCollection services)
+    {
         services.AddScoped<ICustomerRepository, CustomerRepository>();
         services.AddScoped<ITokenService, TokenService>();
         services.AddScoped<CreateAnonymousCustomerUseCase>();
@@ -57,12 +70,22 @@ public class Startup
 
     public void Configure(IApplicationBuilder app, IWebHostEnvironment env)
     {
+        SetupSwagger(app, env);
+        SetupExceptionHandling(app, env);
+        SetupRouting(app);
+    }
+
+    private static void SetupSwagger(IApplicationBuilder app, IWebHostEnvironment env)
+    {
         if (env.IsDevelopment())
         {
             app.UseSwagger();
             app.UseSwaggerUI();
         }
+    }
 
+    private static void SetupExceptionHandling(IApplicationBuilder app, IWebHostEnvironment env)
+    {
         app.UseExceptionHandler(appBuilder =>
         {
             appBuilder.Run(async context =>
@@ -70,15 +93,21 @@ public class Startup
                 context.Response.StatusCode = 500;
                 context.Response.ContentType = "application/json";
                 var logger = context.RequestServices.GetRequiredService<ILogger<Startup>>();
-                var exception = context.Features.Get<Microsoft.AspNetCore.Diagnostics.IExceptionHandlerFeature>()?.Error;
+                var exceptionHandlerFeature = context.Features.Get<Microsoft.AspNetCore.Diagnostics.IExceptionHandlerFeature>();
+                var exception = exceptionHandlerFeature?.Error;
                 if (exception != null)
                 {
                     logger.LogError(exception, "Erro não tratado na aplicação");
-                    await context.Response.WriteAsJsonAsync(new { message = "Erro interno do servidor", error = env.IsDevelopment() ? exception.Message : null });
+                    var isDevelopment = env.IsDevelopment();
+                    var errorDetails = new { message = "Erro interno do servidor", error = isDevelopment ? exception.Message : null };
+                    await context.Response.WriteAsJsonAsync(errorDetails);
                 }
             });
         });
+    }
 
+    private static void SetupRouting(IApplicationBuilder app)
+    {
         app.UseRouting();
         app.UseAuthorization();
         app.UseEndpoints(endpoints =>

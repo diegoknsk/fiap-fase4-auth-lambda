@@ -10,61 +10,78 @@ using Microsoft.Extensions.Logging;
 
 var builder = WebApplication.CreateBuilder(args);
 
-builder.Logging.ClearProviders();
-builder.Logging.AddConsole();
-builder.Logging.SetMinimumLevel(LogLevel.Information);
-
-builder.Services.AddAWSLambdaHosting(LambdaEventSource.HttpApi);
-
-builder.Services.AddControllers();
-builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen();
-
-var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
-if (!string.IsNullOrEmpty(connectionString))
-{
-    builder.Services.AddDbContext<AuthDbContext>(options =>
-        options.UseNpgsql(connectionString));
-}
-
-builder.Services.AddScoped<ICustomerRepository, CustomerRepository>();
-builder.Services.AddScoped<ITokenService, TokenService>();
-builder.Services.AddScoped<CreateAnonymousCustomerUseCase>();
-builder.Services.AddScoped<RegisterCustomerUseCase>();
-builder.Services.AddScoped<IdentifyCustomerUseCase>();
+SetupLogging(builder.Logging);
+SetupApplicationServices(builder.Services, builder.Configuration);
 
 var app = builder.Build();
 
-app.UseExceptionHandler(appBuilder =>
-{
-  appBuilder.Run(async context =>
-  {
-    context.Response.StatusCode = 500;
-    context.Response.ContentType = "application/json";
-    
-    var logger = context.RequestServices.GetRequiredService<ILogger<Program>>();
-    var exception = context.Features.Get<Microsoft.AspNetCore.Diagnostics.IExceptionHandlerFeature>()?.Error;
-    
-    if (exception != null)
-    {
-      logger.LogError(exception, "Erro não tratado na aplicação");
-      await context.Response.WriteAsJsonAsync(new
-      {
-        message = "Erro interno do servidor",
-        error = app.Environment.IsDevelopment() ? exception.Message : null
-      });
-    }
-  });
-});
+SetupApplicationMiddleware(app);
 
-if (app.Environment.IsDevelopment())
+await app.RunAsync();
+
+static void SetupLogging(ILoggingBuilder logging)
 {
-  app.UseSwagger();
-  app.UseSwaggerUI();
+    logging.ClearProviders();
+    logging.AddConsole();
+    logging.SetMinimumLevel(LogLevel.Information);
 }
 
-app.UseAuthorization();
-app.MapControllers();
-app.Run();
+static void SetupApplicationServices(IServiceCollection services, IConfiguration configuration)
+{
+    services.AddAWSLambdaHosting(LambdaEventSource.HttpApi);
+    services.AddControllers();
+    services.AddEndpointsApiExplorer();
+    services.AddSwaggerGen();
+    
+    var dbConnectionString = configuration.GetConnectionString("DefaultConnection");
+    if (!string.IsNullOrEmpty(dbConnectionString))
+    {
+        services.AddDbContext<AuthDbContext>(options =>
+            options.UseNpgsql(dbConnectionString));
+    }
+
+    services.AddScoped<ICustomerRepository, CustomerRepository>();
+    services.AddScoped<ITokenService, TokenService>();
+    services.AddScoped<CreateAnonymousCustomerUseCase>();
+    services.AddScoped<RegisterCustomerUseCase>();
+    services.AddScoped<IdentifyCustomerUseCase>();
+}
+
+static void SetupApplicationMiddleware(WebApplication app)
+{
+    app.UseExceptionHandler(appBuilder =>
+    {
+        appBuilder.Run(async context =>
+        {
+            context.Response.StatusCode = 500;
+            context.Response.ContentType = "application/json";
+            
+            var logger = context.RequestServices.GetRequiredService<ILogger<Program>>();
+            var exceptionHandler = context.Features.Get<Microsoft.AspNetCore.Diagnostics.IExceptionHandlerFeature>();
+            var error = exceptionHandler?.Error;
+            
+            if (error != null)
+            {
+                logger.LogError(error, "Erro não tratado na aplicação");
+                var developmentMode = app.Environment.IsDevelopment();
+                var errorResponse = new
+                {
+                    message = "Erro interno do servidor",
+                    error = developmentMode ? error.Message : null
+                };
+                await context.Response.WriteAsJsonAsync(errorResponse);
+            }
+        });
+    });
+
+    if (app.Environment.IsDevelopment())
+    {
+        app.UseSwagger();
+        app.UseSwaggerUI();
+    }
+
+    app.UseAuthorization();
+    app.MapControllers();
+}
 
 public partial class Program { }

@@ -204,6 +204,123 @@ public class CognitoServiceTests
         Environment.SetEnvironmentVariable("AWS_SESSION_TOKEN", null);
     }
 
+    [Fact]
+    public void Constructor_WithRegionFromEnvironmentVariable_ShouldUseEnvironmentVariable()
+    {
+        // Arrange
+        _configurationMock.Setup(x => x["Cognito:Region"]).Returns((string?)null);
+        Environment.SetEnvironmentVariable("COGNITO__REGION", "sa-east-1");
+        _configurationMock.Setup(x => x["AWS:AccessKeyId"]).Returns((string?)null);
+        _configurationMock.Setup(x => x["AWS:SecretAccessKey"]).Returns((string?)null);
+        Environment.SetEnvironmentVariable("AWS_ACCESS_KEY_ID", null);
+        Environment.SetEnvironmentVariable("AWS_SECRET_ACCESS_KEY", null);
+
+        // Act
+        var service = new CognitoService(_configurationMock.Object);
+
+        // Assert
+        Assert.NotNull(service);
+
+        // Cleanup
+        Environment.SetEnvironmentVariable("COGNITO__REGION", null);
+    }
+
+    [Fact]
+    public async Task AuthenticateAsync_WithEnvironmentVariableUserPoolId_ShouldUseEnvironmentVariable()
+    {
+        // Arrange
+        _configurationMock.Setup(x => x["Cognito:Region"]).Returns("us-east-1");
+        _configurationMock.Setup(x => x["AWS:AccessKeyId"]).Returns((string?)null);
+        _configurationMock.Setup(x => x["AWS:SecretAccessKey"]).Returns((string?)null);
+        Environment.SetEnvironmentVariable("AWS_ACCESS_KEY_ID", null);
+        Environment.SetEnvironmentVariable("AWS_SECRET_ACCESS_KEY", null);
+        Environment.SetEnvironmentVariable("COGNITO__USERPOOLID", "us-east-1_testpool");
+        Environment.SetEnvironmentVariable("COGNITO__CLIENTID", null);
+        
+        var service = new CognitoService(_configurationMock.Object);
+        _configurationMock.Setup(x => x["Cognito:UserPoolId"]).Returns((string?)null);
+        _configurationMock.Setup(x => x["Cognito:ClientId"]).Returns((string?)null);
+
+        // Act & Assert
+        await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            service.AuthenticateAsync("test@example.com", "password123"));
+
+        // Cleanup
+        Environment.SetEnvironmentVariable("COGNITO__USERPOOLID", null);
+        Environment.SetEnvironmentVariable("COGNITO__CLIENTID", null);
+    }
+
+    [Fact]
+    public async Task AuthenticateAsync_WithEnvironmentVariableClientId_ShouldUseEnvironmentVariable()
+    {
+        // Arrange
+        _configurationMock.Setup(x => x["Cognito:Region"]).Returns("us-east-1");
+        _configurationMock.Setup(x => x["AWS:AccessKeyId"]).Returns((string?)null);
+        _configurationMock.Setup(x => x["AWS:SecretAccessKey"]).Returns((string?)null);
+        Environment.SetEnvironmentVariable("AWS_ACCESS_KEY_ID", null);
+        Environment.SetEnvironmentVariable("AWS_SECRET_ACCESS_KEY", null);
+        Environment.SetEnvironmentVariable("COGNITO__USERPOOLID", "us-east-1_testpool");
+        Environment.SetEnvironmentVariable("COGNITO__CLIENTID", "test-client-id");
+        
+        var service = new CognitoService(_configurationMock.Object);
+        _configurationMock.Setup(x => x["Cognito:UserPoolId"]).Returns((string?)null);
+        _configurationMock.Setup(x => x["Cognito:ClientId"]).Returns((string?)null);
+
+        // Act & Assert
+        // Deve lançar exceção ao tentar autenticar (sem mock do cliente Cognito)
+        // Mas não deve lançar InvalidOperationException por falta de configuração
+        var exception = await Record.ExceptionAsync(() =>
+            service.AuthenticateAsync("test@example.com", "password123"));
+
+        // Assert - pode lançar exceção de conexão, mas não de configuração
+        Assert.NotNull(exception);
+        Assert.IsNotType<InvalidOperationException>(exception);
+
+        // Cleanup
+        Environment.SetEnvironmentVariable("COGNITO__USERPOOLID", null);
+        Environment.SetEnvironmentVariable("COGNITO__CLIENTID", null);
+    }
+
+    [Fact]
+    public void Constructor_WithConfigurationCredentialsAndSessionToken_ShouldCreateService()
+    {
+        // Arrange
+        _configurationMock.Setup(x => x["Cognito:Region"]).Returns("us-east-1");
+        _configurationMock.Setup(x => x["AWS:AccessKeyId"]).Returns("config-access-key");
+        _configurationMock.Setup(x => x["AWS:SecretAccessKey"]).Returns("config-secret-key");
+        _configurationMock.Setup(x => x["AWS:SessionToken"]).Returns("config-session-token");
+
+        // Act
+        var service = new CognitoService(_configurationMock.Object);
+
+        // Assert
+        Assert.NotNull(service);
+    }
+
+    [Fact]
+    public void Constructor_WithEnvironmentVariableCredentialsAndSessionToken_ShouldCreateService()
+    {
+        // Arrange
+        _configurationMock.Setup(x => x["Cognito:Region"]).Returns("us-east-1");
+        _configurationMock.Setup(x => x["AWS:AccessKeyId"]).Returns((string?)null);
+        _configurationMock.Setup(x => x["AWS:SecretAccessKey"]).Returns((string?)null);
+        _configurationMock.Setup(x => x["AWS:SessionToken"]).Returns((string?)null);
+        Environment.SetEnvironmentVariable("AWS_ACCESS_KEY_ID", "env-access-key");
+        Environment.SetEnvironmentVariable("AWS_SECRET_ACCESS_KEY", "env-secret-key");
+        Environment.SetEnvironmentVariable("AWS_SESSION_TOKEN", "env-session-token");
+
+        // Act
+        var service = new CognitoService(_configurationMock.Object);
+
+        // Assert
+        Assert.NotNull(service);
+
+        // Cleanup
+        Environment.SetEnvironmentVariable("AWS_ACCESS_KEY_ID", null);
+        Environment.SetEnvironmentVariable("AWS_SECRET_ACCESS_KEY", null);
+        Environment.SetEnvironmentVariable("AWS_SESSION_TOKEN", null);
+    }
+
     // Nota: Testes de AuthenticateAsync com sucesso e exceções do Cognito
     // requerem mock do AmazonCognitoIdentityProviderClient, que não tem interface.
     // Esses testes seriam melhor implementados como testes de integração ou
