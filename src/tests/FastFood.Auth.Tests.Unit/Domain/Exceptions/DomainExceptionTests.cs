@@ -233,5 +233,33 @@ public class DomainExceptionTests
         Assert.Equal("Test message", originalException.Message);
         Assert.NotNull(originalException.InnerException);
     }
+
+    [Fact]
+    public void Constructor_WithEmptyStringMessage_ShouldCreateException()
+    {
+        // Arrange
+        var emptyMessage = string.Empty;
+
+        // Act
+        var exception = new DomainException(emptyMessage);
+
+        // Assert
+        Assert.NotNull(exception);
+        Assert.Equal(emptyMessage, exception.Message);
+    }
+
+    [Fact]
+    public void Constructor_WithWhitespaceMessage_ShouldCreateException()
+    {
+        // Arrange
+        var whitespaceMessage = "   ";
+
+        // Act
+        var exception = new DomainException(whitespaceMessage);
+
+        // Assert
+        Assert.NotNull(exception);
+        Assert.Equal(whitespaceMessage, exception.Message);
+    }
 }
 

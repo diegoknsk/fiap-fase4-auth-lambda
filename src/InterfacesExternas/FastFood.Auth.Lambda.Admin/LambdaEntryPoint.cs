@@ -4,10 +4,10 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
 using FastFood.Auth.Application.Ports;
 using FastFood.Auth.Infra.Services;
 using FastFood.Auth.Application.UseCases.Admin;
+using FastFood.Auth.CrossCutting.Extensions;
 
 namespace FastFood.Auth.Lambda.Admin;
 
@@ -30,16 +30,8 @@ public class Startup
 
     public void ConfigureServices(IServiceCollection services)
     {
-        ConfigureCommonServices(services);
+        services.AddLambdaCommonServices();
         ConfigureAdminSpecificServices(services);
-    }
-
-    private static void ConfigureCommonServices(IServiceCollection services)
-    {
-        services.AddAWSLambdaHosting(LambdaEventSource.HttpApi);
-        services.AddControllers();
-        services.AddEndpointsApiExplorer();
-        services.AddSwaggerGen();
     }
 
     private static void ConfigureAdminSpecificServices(IServiceCollection services)
@@ -50,48 +42,9 @@ public class Startup
 
     public void Configure(IApplicationBuilder app, IWebHostEnvironment env)
     {
-        ConfigureSwagger(app, env);
-        ConfigureExceptionHandling(app, env);
-        ConfigureRouting(app);
-    }
-
-    private static void ConfigureSwagger(IApplicationBuilder app, IWebHostEnvironment env)
-    {
-        if (env.IsDevelopment())
-        {
-            app.UseSwagger();
-            app.UseSwaggerUI();
-        }
-    }
-
-    private static void ConfigureExceptionHandling(IApplicationBuilder app, IWebHostEnvironment env)
-    {
-        app.UseExceptionHandler(appBuilder =>
-        {
-            appBuilder.Run(async context =>
-            {
-                context.Response.StatusCode = 500;
-                context.Response.ContentType = "application/json";
-                var logger = context.RequestServices.GetRequiredService<ILogger<Startup>>();
-                var exception = context.Features.Get<Microsoft.AspNetCore.Diagnostics.IExceptionHandlerFeature>()?.Error;
-                if (exception != null)
-                {
-                    logger.LogError(exception, "Erro não tratado na aplicação");
-                    var errorResponse = new { message = "Erro interno do servidor", error = env.IsDevelopment() ? exception.Message : null };
-                    await context.Response.WriteAsJsonAsync(errorResponse);
-                }
-            });
-        });
-    }
-
-    private static void ConfigureRouting(IApplicationBuilder app)
-    {
-        app.UseRouting();
-        app.UseAuthorization();
-        app.UseEndpoints(endpoints =>
-        {
-            endpoints.MapControllers();
-        });
+        app.UseSwaggerInDevelopment(env);
+        app.UseGlobalExceptionHandler(env);
+        app.UseDefaultRouting();
     }
 }
 

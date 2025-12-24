@@ -18,6 +18,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\..\Core\FastFood.Auth.CrossCutting\FastFood.Auth.CrossCutting.csproj" />
     <ProjectReference Include="..\..\Core\FastFood.Auth.Infra.Persistence\FastFood.Auth.Infra.Persistence.csproj" />
     <ProjectReference Include="..\..\Core\FastFood.Auth.Infra\FastFood.Auth.Infra.csproj" />
     <ProjectReference Include="..\..\Core\FastFood.Auth.Application\FastFood.Auth.Application.csproj" />

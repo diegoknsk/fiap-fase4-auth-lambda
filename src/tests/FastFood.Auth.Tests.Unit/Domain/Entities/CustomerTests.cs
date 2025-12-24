@@ -217,5 +217,61 @@ public class CustomerTests
         Assert.Null(customer.Cpf);
         Assert.Equal(CustomerType.Anonymous, customer.CustomerType);
     }
+
+    [Fact]
+    public void AddCustomer_WithEmailOnly_ShouldSetEmail()
+    {
+        // Arrange
+        var id = Guid.NewGuid();
+        var customer = new Customer(id, null, null, null, CustomerType.Anonymous);
+        var email = new Email("test@example.com");
+
+        // Act
+        customer.AddCustomer(null, email, null, CustomerType.Registered);
+
+        // Assert
+        Assert.Null(customer.Name);
+        Assert.NotNull(customer.Email);
+        Assert.Equal(email.Value, customer.Email.Value);
+        Assert.Null(customer.Cpf);
+        Assert.Equal(CustomerType.Registered, customer.CustomerType);
+    }
+
+    [Fact]
+    public void AddCustomer_WithCpfOnly_ShouldSetCpf()
+    {
+        // Arrange
+        var id = Guid.NewGuid();
+        var customer = new Customer(id, null, null, null, CustomerType.Anonymous);
+        var cpf = new Cpf("11144477735");
+
+        // Act
+        customer.AddCustomer(null, null, cpf, CustomerType.Registered);
+
+        // Assert
+        Assert.Null(customer.Name);
+        Assert.Null(customer.Email);
+        Assert.NotNull(customer.Cpf);
+        Assert.Equal(cpf.Value, customer.Cpf.Value);
+        Assert.Equal(CustomerType.Registered, customer.CustomerType);
+    }
+
+    [Fact]
+    public void AddCustomer_WithNameOnly_ShouldSetName()
+    {
+        // Arrange
+        var id = Guid.NewGuid();
+        var customer = new Customer(id, null, null, null, CustomerType.Anonymous);
+        var name = "Test Customer";
+
+        // Act
+        customer.AddCustomer(name, null, null, CustomerType.Registered);
+
+        // Assert
+        Assert.Equal(name, customer.Name);
+        Assert.Null(customer.Email);
+        Assert.Null(customer.Cpf);
+        Assert.Equal(CustomerType.Registered, customer.CustomerType);
+    }
 }
 

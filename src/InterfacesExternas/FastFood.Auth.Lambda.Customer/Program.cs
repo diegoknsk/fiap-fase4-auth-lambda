@@ -5,83 +5,32 @@ using FastFood.Auth.Infra.Persistence.Repositories;
 using FastFood.Auth.Infra.Persistence.Services;
 using FastFood.Auth.Infra.Services;
 using FastFood.Auth.Application.UseCases.Customer;
-using Amazon.Lambda.AspNetCoreServer.Hosting;
-using Microsoft.Extensions.Logging;
+using FastFood.Auth.CrossCutting.Extensions;
 
 var builder = WebApplication.CreateBuilder(args);
 
-SetupLogging(builder.Logging);
-SetupApplicationServices(builder.Services, builder.Configuration);
+builder.Logging.AddLambdaLogging();
+builder.Services.AddLambdaCommonServices();
+
+var dbConnectionString = builder.Configuration.GetConnectionString("DefaultConnection");
+if (!string.IsNullOrEmpty(dbConnectionString))
+{
+    builder.Services.AddDbContext<AuthDbContext>(options =>
+        options.UseNpgsql(dbConnectionString));
+}
+
+builder.Services.AddScoped<ICustomerRepository, CustomerRepository>();
+builder.Services.AddScoped<ITokenService, TokenService>();
+builder.Services.AddScoped<CreateAnonymousCustomerUseCase>();
+builder.Services.AddScoped<RegisterCustomerUseCase>();
+builder.Services.AddScoped<IdentifyCustomerUseCase>();
 
 var app = builder.Build();
 
-SetupApplicationMiddleware(app);
+app.UseSwaggerInDevelopment(app.Environment);
+app.UseGlobalExceptionHandler(app.Environment);
+app.UseDefaultRouting();
 
 await app.RunAsync();
-
-static void SetupLogging(ILoggingBuilder logging)
-{
-    logging.ClearProviders();
-    logging.AddConsole();
-    logging.SetMinimumLevel(LogLevel.Information);
-}
-
-static void SetupApplicationServices(IServiceCollection services, IConfiguration configuration)
-{
-    services.AddAWSLambdaHosting(LambdaEventSource.HttpApi);
-    services.AddControllers();
-    services.AddEndpointsApiExplorer();
-    services.AddSwaggerGen();
-    
-    var dbConnectionString = configuration.GetConnectionString("DefaultConnection");
-    if (!string.IsNullOrEmpty(dbConnectionString))
-    {
-        services.AddDbContext<AuthDbContext>(options =>
-            options.UseNpgsql(dbConnectionString));
-    }
-
-    services.AddScoped<ICustomerRepository, CustomerRepository>();
-    services.AddScoped<ITokenService, TokenService>();
-    services.AddScoped<CreateAnonymousCustomerUseCase>();
-    services.AddScoped<RegisterCustomerUseCase>();
-    services.AddScoped<IdentifyCustomerUseCase>();
-}
-
-static void SetupApplicationMiddleware(WebApplication app)
-{
-    app.UseExceptionHandler(appBuilder =>
-    {
-        appBuilder.Run(async context =>
-        {
-            context.Response.StatusCode = 500;
-            context.Response.ContentType = "application/json";
-            
-            var logger = context.RequestServices.GetRequiredService<ILogger<Program>>();
-            var exceptionHandler = context.Features.Get<Microsoft.AspNetCore.Diagnostics.IExceptionHandlerFeature>();
-            var error = exceptionHandler?.Error;
-            
-            if (error != null)
-            {
-                logger.LogError(error, "Erro não tratado na aplicação");
-                var developmentMode = app.Environment.IsDevelopment();
-                var errorResponse = new
-                {
-                    message = "Erro interno do servidor",
-                    error = developmentMode ? error.Message : null
-                };
-                await context.Response.WriteAsJsonAsync(errorResponse);
-            }
-        });
-    });
-
-    if (app.Environment.IsDevelopment())
-    {
-        app.UseSwagger();
-        app.UseSwaggerUI();
-    }
-
-    app.UseAuthorization();
-    app.MapControllers();
-}
 
 public partial class Program { }
