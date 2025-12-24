@@ -32,8 +32,10 @@ jobs:
 
       - name: Set project name
         id: project-name
+        env:
+          PROJECT_NAME_SECRET: ${{ secrets.PROJECT_NAME }}
         run: |
-          PROJECT_NAME="${{ secrets.PROJECT_NAME }}"
+          PROJECT_NAME="${PROJECT_NAME_SECRET}"
           if [ -z "${PROJECT_NAME}" ]; then
             PROJECT_NAME="autenticacao"
           fi

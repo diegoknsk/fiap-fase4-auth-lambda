@@ -185,10 +185,10 @@ jobs:
           echo "lambda_auth_migrator_zip=lambda-auth-migrator.zip" >> $GITHUB_OUTPUT
           
           cd ../..
-          ls -lh *.zip
+          ls -lh ./*.zip
 
       - name: Upload ZIP artifacts
-        uses: actions/upload-artifact@5d5d22e31266ced268874388b669e75be5dd2f4b # v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: lambda-zips
           path: |
@@ -207,8 +207,10 @@ jobs:
 
       - name: Set project name
         id: project-name
+        env:
+          PROJECT_NAME_SECRET: ${{ secrets.PROJECT_NAME }}
         run: |
-          PROJECT_NAME="${{ secrets.PROJECT_NAME }}"
+          PROJECT_NAME="${PROJECT_NAME_SECRET}"
           if [ -z "${PROJECT_NAME}" ]; then
             PROJECT_NAME="autenticacao"
           fi
@@ -265,8 +267,10 @@ jobs:
 
       - name: Set project name
         id: project-name
+        env:
+          PROJECT_NAME_SECRET: ${{ secrets.PROJECT_NAME }}
         run: |
-          PROJECT_NAME="${{ secrets.PROJECT_NAME }}"
+          PROJECT_NAME="${PROJECT_NAME_SECRET}"
           if [ -z "${PROJECT_NAME}" ]; then
             PROJECT_NAME="autenticacao"
           fi
@@ -274,15 +278,17 @@ jobs:
           echo "Using project name: ${PROJECT_NAME}"
 
       - name: Validate required secrets
+        env:
+          LAB_ROLE_SECRET: ${{ secrets.LAB_ROLE }}
         run: |
-          if [ -z "${{ secrets.LAB_ROLE }}" ]; then
+          if [ -z "${LAB_ROLE_SECRET}" ]; then
             echo "❌ ERRO: Secret LAB_ROLE não está configurado!"
             echo "   Configure o secret LAB_ROLE no GitHub (Settings → Secrets and variables → Actions)"
             echo "   O valor deve ser o ARN completo da role IAM LabRole"
             echo "   Exemplo: arn:aws:iam::123456789012:role/LabRole"
             exit 1
           fi
-          echo "✅ LAB_ROLE configurado: ${{ secrets.LAB_ROLE }}"
+          echo "✅ LAB_ROLE configurado"
 
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@ff717079ee2060e4bcee96c4779b553acc87447c # v4
@@ -375,8 +381,10 @@ jobs:
 
       - name: Set project name
         id: project-name
+        env:
+          PROJECT_NAME_SECRET: ${{ secrets.PROJECT_NAME }}
         run: |
-          PROJECT_NAME="${{ secrets.PROJECT_NAME }}"
+          PROJECT_NAME="${PROJECT_NAME_SECRET}"
           if [ -z "${PROJECT_NAME}" ]; then
             PROJECT_NAME="autenticacao"
           fi
@@ -392,7 +400,7 @@ jobs:
           aws-region: ${{ env.AWS_REGION }}
 
       - name: Download ZIP artifacts
-        uses: actions/download-artifact@c850b930e6ba138125429b7e5c93fc707a7f8427 # v4
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
         with:
           name: lambda-zips
           path: .

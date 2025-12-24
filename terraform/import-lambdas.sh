@@ -10,7 +10,7 @@ echo "Project Name: $PROJECT_NAME"
 echo "AWS Region: $AWS_REGION"
 echo ""
 
-if [ ! -d ".terraform" ]; then
+if [[ ! -d ".terraform" ]]; then
     echo "⚠️  Terraform não inicializado. Execute 'terraform init' primeiro."
     exit 1
 fi

@@ -23,11 +23,9 @@ public class LambdaEntryPoint : APIGatewayHttpApiV2ProxyFunction
 
 public class Startup
 {
-    private readonly IConfiguration _configuration;
-
     public Startup(IConfiguration configuration)
     {
-        _configuration = configuration;
+        // Configuration is available via dependency injection when needed
     }
 
     public void ConfigureServices(IServiceCollection services)

@@ -36,7 +36,7 @@ COPY --from=build /app/publish ${LAMBDA_TASK_ROOT}
 
 # Rodar como não-root sem depender de groupadd/useradd.
 # 1001:1001 é um UID/GID arbitrário não-root (não precisa existir no /etc/passwd).
-RUN chown -R 1001:1001 ${LAMBDA_TASK_ROOT}
+RUN chown -R 1001:1001 "${LAMBDA_TASK_ROOT}"
 
 USER 1001:1001
 

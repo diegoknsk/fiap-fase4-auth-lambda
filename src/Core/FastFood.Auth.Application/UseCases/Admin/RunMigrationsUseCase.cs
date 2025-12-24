@@ -23,7 +23,7 @@ public class RunMigrationsUseCase(
         var pendingMigrations = await migrationService.GetPendingMigrationsAsync();
         var pendingList = pendingMigrations.ToList();
 
-        if (pendingList.Any())
+        if (pendingList.Count > 0)
         {
             logger.LogInformation("Encontradas {Count} migration(s) pendente(s): {Migrations}",
                 pendingList.Count, string.Join(", ", pendingList));
@@ -49,7 +49,7 @@ public class RunMigrationsUseCase(
             PendingMigrations = pendingList,
             AppliedMigrationsCount = appliedList.Count,
             AppliedMigrations = appliedList,
-            Message = pendingList.Any()
+            Message = pendingList.Count > 0
                 ? $"✓ {pendingList.Count} migration(s) aplicada(s) com sucesso!"
                 : "✓ Nenhuma migration pendente. Banco de dados está atualizado."
         };
