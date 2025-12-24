@@ -145,38 +145,54 @@ jobs:
         id: lambda-config
         env:
           LAMBDA_MODE: ${{ matrix.lambda_mode }}
-          # Acessar secrets dinamicamente baseado no modo
+          # Permitir override via secrets se necessário
           LAMBDA_FUNCTION_NAME_CUSTOMER: ${{ secrets.LAMBDA_FUNCTION_NAME_CUSTOMER }}
           LAMBDA_FUNCTION_NAME_ADMIN: ${{ secrets.LAMBDA_FUNCTION_NAME_ADMIN }}
           LAMBDA_FUNCTION_NAME_MIGRATOR: ${{ secrets.LAMBDA_FUNCTION_NAME_MIGRATOR }}
-          LAMBDA_ROLE_ARN_CUSTOMER: ${{ secrets.LAMBDA_ROLE_ARN_CUSTOMER }}
-          LAMBDA_ROLE_ARN_ADMIN: ${{ secrets.LAMBDA_ROLE_ARN_ADMIN }}
-          LAMBDA_ROLE_ARN_MIGRATOR: ${{ secrets.LAMBDA_ROLE_ARN_MIGRATOR }}
+          # Usar uma única role ARN para todos os lambdas
+          LAMBDA_ROLE_ARN: ${{ secrets.LAMBDA_ROLE_ARN }}
         run: |
           LAMBDA_MODE_UPPER=$(echo "${{ matrix.lambda_mode }}" | tr '[:lower:]' '[:upper:]')
           LAMBDA_MODE_LOWER=$(echo "${{ matrix.lambda_mode }}" | tr '[:upper:]' '[:lower:]')
           
-          # Construir nomes das variáveis baseado no modo
+          # Valores padrão baseados no modo
+          case "${LAMBDA_MODE_UPPER}" in
+            CUSTOMER)
+              DEFAULT_FUNCTION_NAME="fiap-fase4-infra-auth-lambda"
+              ;;
+            ADMIN)
+              DEFAULT_FUNCTION_NAME="fiap-fase4-infra-auth-admin-lambda"
+              ;;
+            MIGRATOR)
+              DEFAULT_FUNCTION_NAME="fiap-fase4-infra-auth-migrator-lambda"
+              ;;
+            *)
+              echo "❌ Erro: Modo Lambda inválido: ${LAMBDA_MODE_UPPER}"
+              exit 1
+              ;;
+          esac
+          
+          # Construir nome da variável de override baseado no modo
           FUNCTION_NAME_VAR="LAMBDA_FUNCTION_NAME_${LAMBDA_MODE_UPPER}"
-          ROLE_ARN_VAR="LAMBDA_ROLE_ARN_${LAMBDA_MODE_UPPER}"
           
-          # Obter valores das variáveis de ambiente
+          # Obter valor da variável de ambiente (override) ou usar padrão
           LAMBDA_FUNCTION_NAME=$(eval echo \$${FUNCTION_NAME_VAR})
-          LAMBDA_ROLE_ARN=$(eval echo \$${ROLE_ARN_VAR})
-          
           if [ -z "${LAMBDA_FUNCTION_NAME}" ]; then
-            echo "❌ Erro: Secret LAMBDA_FUNCTION_NAME_${LAMBDA_MODE_UPPER} não está configurado!"
-            exit 1
+            LAMBDA_FUNCTION_NAME="${DEFAULT_FUNCTION_NAME}"
+            echo "ℹ️ Usando nome padrão para ${LAMBDA_MODE_UPPER}: ${LAMBDA_FUNCTION_NAME}"
+          else
+            echo "ℹ️ Usando nome customizado para ${LAMBDA_MODE_UPPER}: ${LAMBDA_FUNCTION_NAME}"
           fi
           
+          # Usar a mesma role ARN para todos (pode ser definida via secret ou será validada depois)
           if [ -z "${LAMBDA_ROLE_ARN}" ]; then
-            echo "❌ Erro: Secret LAMBDA_ROLE_ARN_${LAMBDA_MODE_UPPER} não está configurado!"
-            exit 1
+            echo "⚠️ Aviso: LAMBDA_ROLE_ARN não está configurado via secret"
+            echo "   O Terraform pode usar um valor padrão ou falhar se for obrigatório"
           fi
           
           echo "🔍 Modo Lambda: ${{ matrix.lambda_mode }}"
           echo "🔍 Lambda Function Name: ${LAMBDA_FUNCTION_NAME}"
-          echo "🔍 Lambda Role ARN: ${LAMBDA_ROLE_ARN}"
+          echo "🔍 Lambda Role ARN: ${LAMBDA_ROLE_ARN:-não configurado}"
           
           echo "lambda_mode=${LAMBDA_MODE_LOWER}" >> "$GITHUB_OUTPUT"
           echo "lambda_function_name=${LAMBDA_FUNCTION_NAME}" >> "$GITHUB_OUTPUT"
