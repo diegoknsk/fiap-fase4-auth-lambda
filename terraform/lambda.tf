@@ -75,7 +75,7 @@ module "auth_lambda" {
   }
 
   # Deploy via Image (ECR) ou ZIP (fallback)
-  depends_on_resources = var.lambda_auth_image_uri != "" ? [aws_ecr_repository.auth_lambda] : []
+  depends_on_resources = var.lambda_auth_image_uri != "" ? [aws_ecr_repository.lambda_images] : []
 
   common_tags = {
     Service = "auth-lambda"
@@ -140,7 +140,7 @@ module "auth_admin_lambda" {
   reserved_concurrent_executions = null
 
   # Deploy via Image (ECR) ou ZIP (fallback)
-  depends_on_resources = var.lambda_auth_admin_image_uri != "" ? [aws_ecr_repository.auth_admin_lambda] : []
+  depends_on_resources = var.lambda_auth_admin_image_uri != "" ? [aws_ecr_repository.lambda_images] : []
 
   common_tags = {
     Service = "auth-admin-lambda"
@@ -222,7 +222,7 @@ module "auth_migrator_lambda" {
   }
 
   # Deploy via Image (ECR) ou ZIP (fallback)
-  depends_on_resources = var.lambda_auth_migrator_image_uri != "" ? [aws_ecr_repository.auth_migrator_lambda] : []
+  depends_on_resources = var.lambda_auth_migrator_image_uri != "" ? [aws_ecr_repository.lambda_images] : []
 
   common_tags = {
     Service = "auth-migrator-lambda"

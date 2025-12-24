@@ -61,18 +61,8 @@ output "lambda_security_group_name" {
   value       = "lambda_auth_sg"
 }
 
-# Outputs dos repositórios ECR
-output "ecr_auth_lambda_repository_url" {
-  description = "URL do repositório ECR para auth-lambda"
-  value       = aws_ecr_repository.auth_lambda.repository_url
-}
-
-output "ecr_auth_admin_lambda_repository_url" {
-  description = "URL do repositório ECR para auth-admin-lambda"
-  value       = aws_ecr_repository.auth_admin_lambda.repository_url
-}
-
-output "ecr_auth_migrator_lambda_repository_url" {
-  description = "URL do repositório ECR para auth-migrator-lambda"
-  value       = aws_ecr_repository.auth_migrator_lambda.repository_url
+# Output do repositório ECR único
+output "ecr_lambda_images_repository_url" {
+  description = "URL do repositório ECR único para todas as imagens Lambda"
+  value       = aws_ecr_repository.lambda_images.repository_url
 }
