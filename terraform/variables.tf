@@ -5,6 +5,7 @@
 variable "aws_region" {
   type        = string
   description = "Região AWS onde os recursos serão criados (ex: us-east-1)"
+  default     = "us-east-1"
 }
 
 variable "project_name" {
@@ -16,6 +17,7 @@ variable "project_name" {
 variable "env" {
   type        = string
   description = "Ambiente (ex: dev, staging, prod)"
+  default     = "dev"
 }
 
 variable "lab_role" {
