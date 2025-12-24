@@ -4,10 +4,8 @@ resource "aws_lambda_function" "function" {
   runtime       = var.runtime
   role          = var.role_arn
 
-  depends_on = var.depends_on_resources
-
-  timeout     = var.timeout
-  memory_size = var.memory_size
+  timeout      = var.timeout
+  memory_size  = var.memory_size
   package_type = var.package_type
 
   # Para ZIP: usar filename e source_code_hash

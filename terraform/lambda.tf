@@ -12,19 +12,19 @@ module "auth_lambda" {
 
   # Configurações para .NET 8 custom runtime
   handler = "bootstrap"
-  runtime = "provided.al2"  # .NET 8 custom runtime
+  runtime = "provided.al2" # .NET 8 custom runtime
 
   # IAM role usando LabRole (ou variável equivalente)
   role_arn = var.lab_role
 
   # Configurações de performance
-  timeout     = 900  # Máximo: 900 segundos (15 minutos)
+  timeout     = 900 # Máximo: 900 segundos (15 minutos)
   memory_size = 512
 
   # Tipo de pacote - ZIP (deploy direto via arquivo ZIP)
   package_type = "Zip"
   # O arquivo ZIP será atualizado via deploy (usar placeholder.zip inicial)
-  source_code_hash = "placeholder"  # Será atualizado no deploy
+  source_code_hash = "placeholder" # Será atualizado no deploy
 
   # Variáveis de ambiente (placeholder - serão configuradas no deploy)
   environment_variables = {
@@ -53,15 +53,15 @@ module "auth_lambda" {
 # Lambda Function URL (apenas para auth-lambda)
 resource "aws_lambda_function_url" "lambda_url" {
   function_name      = module.auth_lambda.function_name
-  authorization_type = "NONE"  # NONE = acesso público, AWS_IAM = requer autenticação IAM
+  authorization_type = "NONE" # NONE = acesso público, AWS_IAM = requer autenticação IAM
 
   cors {
     allow_credentials = false
-    allow_origins     = ["*"]  # Permite qualquer origem (ajuste conforme necessário)
-    allow_methods     = ["*"]  # Permite todos os métodos HTTP
-    allow_headers     = ["*"]  # Permite todos os headers
-    expose_headers    = ["*"]  # Expõe todos os headers na resposta
-    max_age           = 86400  # Cache de preflight por 24 horas
+    allow_origins     = ["*"] # Permite qualquer origem (ajuste conforme necessário)
+    allow_methods     = ["*"] # Permite todos os métodos HTTP
+    allow_headers     = ["*"] # Permite todos os headers
+    expose_headers    = ["*"] # Expõe todos os headers na resposta
+    max_age           = 86400 # Cache de preflight por 24 horas
   }
 }
 
@@ -91,7 +91,7 @@ module "auth_admin_lambda" {
   # Tipo de pacote - ZIP (deploy direto via arquivo ZIP)
   package_type = "Zip"
   # O arquivo ZIP será atualizado via deploy (usar placeholder.zip inicial)
-  source_code_hash = "placeholder"  # Será atualizado no deploy
+  source_code_hash = "placeholder" # Será atualizado no deploy
 
   # Variáveis de ambiente
   environment_variables = {
@@ -135,13 +135,13 @@ module "auth_migrator_lambda" {
   role_arn = var.lab_role
 
   # Configurações de performance
-  timeout     = 900  # Máximo: 900 segundos (15 minutos)
+  timeout     = 900 # Máximo: 900 segundos (15 minutos)
   memory_size = 512
 
   # Tipo de pacote - ZIP (deploy direto via arquivo ZIP)
   package_type = "Zip"
   # O arquivo ZIP será atualizado via deploy (usar placeholder.zip inicial)
-  source_code_hash = "placeholder"  # Será atualizado no deploy
+  source_code_hash = "placeholder" # Será atualizado no deploy
 
   # Variáveis de ambiente
   environment_variables = {
