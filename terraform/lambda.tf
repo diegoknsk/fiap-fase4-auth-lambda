@@ -21,6 +21,7 @@ resource "aws_lambda_function" "lambda" {
 
   # VPC e Security Group são gerenciados em outro lugar
   # O Terraform apenas atualiza a imagem do Lambda
+  # CRÍTICO: Lambda deve ser criado apenas no projeto principal, não aqui
   lifecycle {
     ignore_changes = [
       vpc_config,
@@ -28,11 +29,13 @@ resource "aws_lambda_function" "lambda" {
       timeout,        # Timeout pode ser diferente
       memory_size,    # Memory pode ser diferente
       tags,           # Tags podem ser diferentes
+      function_name,  # Nome não deve mudar
+      package_type,   # Tipo não deve mudar
     ]
+    # CRÍTICO: Previne destruição do Lambda - nunca deve ser apagado
+    prevent_destroy = true
     # Evita recriar o Lambda - apenas atualiza a imagem
     create_before_destroy = false
-    # Previne recriação desnecessária
-    prevent_destroy = false
   }
 
   # Variáveis de ambiente para configuração do Lambda

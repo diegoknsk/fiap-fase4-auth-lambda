@@ -206,6 +206,7 @@ jobs:
           TF_BACKEND_BUCKET: ${{ secrets.TF_BACKEND_BUCKET }}
           TF_BACKEND_KEY: ${{ secrets.TF_BACKEND_KEY }}
           TF_BACKEND_REGION: ${{ secrets.AWS_REGION }}
+          LAMBDA_MODE: ${{ steps.lambda-config.outputs.lambda_mode }}
         run: |
           if [ -z "$TF_BACKEND_BUCKET" ] || [ -z "$TF_BACKEND_KEY" ]; then
             echo "❌ Erro: Secrets TF_BACKEND_BUCKET e TF_BACKEND_KEY devem estar configurados"
@@ -214,15 +215,22 @@ jobs:
             echo "TF_BACKEND_KEY está vazio: $([ -z "$TF_BACKEND_KEY" ] && echo 'SIM' || echo 'NÃO')"
             exit 1
           fi
+          
+          # Usa uma chave de estado diferente para cada Lambda (Customer, Admin, Migrator)
+          # Isso evita conflitos quando os 3 jobs executam em paralelo
+          LAMBDA_MODE_LOWER=$(echo "${LAMBDA_MODE}" | tr '[:upper:]' '[:lower:]')
+          BACKEND_KEY="${TF_BACKEND_KEY}-${LAMBDA_MODE_LOWER}"
+          
           echo "🔧 Configurando backend S3..."
           echo "Bucket: ${TF_BACKEND_BUCKET}"
-          echo "Key: ${TF_BACKEND_KEY}"
+          echo "Key base: ${TF_BACKEND_KEY}"
+          echo "Key final: ${BACKEND_KEY} (modo: ${LAMBDA_MODE})"
           echo "Region: ${TF_BACKEND_REGION}"
           terraform init \
             -input=false \
             -reconfigure \
             -backend-config="bucket=${TF_BACKEND_BUCKET}" \
-            -backend-config="key=${TF_BACKEND_KEY}" \
+            -backend-config="key=${BACKEND_KEY}" \
             -backend-config="region=${TF_BACKEND_REGION}"
 
       - name: Debug - Verificar e configurar ECR_IMAGE_URI
@@ -406,10 +414,35 @@ jobs:
           echo ""
           echo "🔍 Estado atual do Terraform:"
           terraform state list 2>/dev/null | head -20 || echo "Estado vazio ou não inicializado"
+
+      - name: Verificar Lambda existe antes do Plan
+        working-directory: ./terraform
+        env:
+          LAMBDA_FUNCTION_NAME: ${{ steps.lambda-config.outputs.lambda_function_name }}
+        run: |
+          echo "🔍 Verificação crítica: Lambda deve existir antes do Terraform Plan"
+          echo "  - Lambda Function Name: ${LAMBDA_FUNCTION_NAME}"
           
-          echo ""
-          echo "🔍 Estado atual do Terraform:"
-          terraform state list 2>/dev/null | head -20 || echo "Estado vazio ou não inicializado"
+          # Verifica se o Lambda existe na AWS
+          if ! aws lambda get-function \
+            --function-name "${LAMBDA_FUNCTION_NAME}" \
+            --region "${AWS_REGION}" > /dev/null 2>&1; then
+            echo "❌ ERRO CRÍTICO: Lambda '${LAMBDA_FUNCTION_NAME}' NÃO existe na AWS!"
+            echo "   O Lambda deve ser criado no projeto principal antes de atualizar a imagem"
+            echo "   Falhando o workflow para evitar tentativa de criação"
+            exit 1
+          fi
+          
+          # Verifica se o Lambda está no estado do Terraform
+          if ! terraform state show aws_lambda_function.lambda > /dev/null 2>&1; then
+            echo "❌ ERRO CRÍTICO: Lambda NÃO está no estado do Terraform!"
+            echo "   O import deve ter funcionado antes de chegar aqui"
+            echo "   Falhando o workflow para evitar tentativa de criação"
+            exit 1
+          fi
+          
+          echo "✅ Lambda existe na AWS e está no estado do Terraform"
+          echo "✅ Seguro para executar Terraform Plan (apenas atualizará image_uri)"
 
       - name: Terraform Plan
         working-directory: ./terraform
@@ -551,6 +584,35 @@ jobs:
               --output table || true
             exit 1
           fi
+
+      - name: Verificar Lambda existe antes do Apply
+        working-directory: ./terraform
+        env:
+          LAMBDA_FUNCTION_NAME: ${{ steps.lambda-config.outputs.lambda_function_name }}
+        run: |
+          echo "🔍 Verificação crítica: Lambda deve existir antes do Terraform Apply"
+          echo "  - Lambda Function Name: ${LAMBDA_FUNCTION_NAME}"
+          
+          # Verifica se o Lambda existe na AWS
+          if ! aws lambda get-function \
+            --function-name "${LAMBDA_FUNCTION_NAME}" \
+            --region "${AWS_REGION}" > /dev/null 2>&1; then
+            echo "❌ ERRO CRÍTICO: Lambda '${LAMBDA_FUNCTION_NAME}' NÃO existe na AWS!"
+            echo "   O Lambda deve ser criado no projeto principal antes de atualizar a imagem"
+            echo "   Falhando o workflow para evitar tentativa de criação"
+            exit 1
+          fi
+          
+          # Verifica se o Lambda está no estado do Terraform
+          if ! terraform state show aws_lambda_function.lambda > /dev/null 2>&1; then
+            echo "❌ ERRO CRÍTICO: Lambda NÃO está no estado do Terraform!"
+            echo "   O import deve ter funcionado antes de chegar aqui"
+            echo "   Falhando o workflow para evitar tentativa de criação"
+            exit 1
+          fi
+          
+          echo "✅ Lambda existe na AWS e está no estado do Terraform"
+          echo "✅ Seguro para executar Terraform Apply (apenas atualizará image_uri)"
 
       - name: Terraform Apply
         working-directory: ./terraform
