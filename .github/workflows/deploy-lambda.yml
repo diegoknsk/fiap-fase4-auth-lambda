@@ -361,6 +361,13 @@ jobs:
           
           # Importa o Lambda para o estado do Terraform
           # Se já estiver no estado, o import vai atualizar
+          echo "🔍 Executando terraform import..."
+          echo "  - Function Name: ${LAMBDA_FUNCTION_NAME}"
+          echo "  - Region: ${AWS_REGION}"
+          echo "  - Mode: ${LAMBDA_MODE}"
+          echo "  - Image URI (para import): ${IMPORT_IMAGE_URI}"
+          echo "  - Role ARN (para import): ${IMPORT_ROLE}"
+          
           IMPORT_OUTPUT=$(terraform import \
             -var="aws_region=${AWS_REGION}" \
             -var="lambda_function_name=${LAMBDA_FUNCTION_NAME}" \
@@ -376,6 +383,8 @@ jobs:
             -var="jwt_audience=dummy" \
             aws_lambda_function.lambda "${LAMBDA_FUNCTION_NAME}" 2>&1)
           IMPORT_EXIT_CODE=$?
+          
+          echo "🔍 Exit code do import: ${IMPORT_EXIT_CODE}"
           
           if [ ${IMPORT_EXIT_CODE} -eq 0 ]; then
             echo "✅ Lambda importado/atualizado com sucesso no estado do Terraform"
@@ -394,18 +403,40 @@ jobs:
               fi
             else
               echo "❌ Erro: Falha ao importar Lambda existente"
-              echo "Output do import:"
+              echo "Output completo do import:"
               echo "${IMPORT_OUTPUT}"
               echo ""
-              echo "💡 O Lambda existe na AWS mas não pôde ser importado para o Terraform"
-              echo "   Isso pode causar problemas se o Terraform tentar criar o Lambda"
+              echo "💡 Tentando abordagem alternativa: atualizar imagem diretamente via AWS CLI"
               echo ""
-              echo "📋 Possíveis soluções:"
-              echo "   1. Verificar se o Lambda realmente existe: aws lambda get-function --function-name ${LAMBDA_FUNCTION_NAME}"
-              echo "   2. Verificar permissões IAM do workflow"
-              echo "   3. Importar manualmente: terraform import aws_lambda_function.lambda ${LAMBDA_FUNCTION_NAME}"
-              echo "lambda_imported=false" >> "$GITHUB_OUTPUT"
-              # Não falha aqui, mas avisa que pode haver problemas
+              
+              # Tenta atualizar a imagem diretamente via AWS CLI como fallback
+              echo "🔄 Atualizando imagem do Lambda via AWS CLI..."
+              UPDATE_OUTPUT=$(aws lambda update-function-code \
+                --function-name "${LAMBDA_FUNCTION_NAME}" \
+                --image-uri "${ECR_IMAGE_URI}" \
+                --region "${AWS_REGION}" \
+                2>&1)
+              UPDATE_EXIT_CODE=$?
+              
+              if [ ${UPDATE_EXIT_CODE} -eq 0 ]; then
+                echo "✅ Imagem atualizada com sucesso via AWS CLI"
+                echo "⚠️ Lambda não foi importado para o Terraform, mas a imagem foi atualizada"
+                echo "   Para próximos deploys, será necessário importar manualmente ou corrigir o import"
+                echo "lambda_imported=false" >> "$GITHUB_OUTPUT"
+                echo "image_updated_via_cli=true" >> "$GITHUB_OUTPUT"
+              else
+                echo "❌ Falha ao atualizar imagem via AWS CLI também"
+                echo "Output do update:"
+                echo "${UPDATE_OUTPUT}"
+                echo ""
+                echo "📋 Possíveis causas:"
+                echo "   1. Permissões IAM insuficientes"
+                echo "   2. Imagem não existe no ECR"
+                echo "   3. Lambda não existe ou está em estado inválido"
+                echo ""
+                echo "❌ Falhando o workflow - não foi possível atualizar o Lambda"
+                exit 1
+              fi
             fi
           fi
           echo "lambda_exists=true" >> "$GITHUB_OUTPUT"
@@ -426,6 +457,7 @@ jobs:
           terraform state list 2>/dev/null | head -20 || echo "Estado vazio ou não inicializado"
 
       - name: Terraform Plan
+        if: steps.import-lambda.outputs.image_updated_via_cli != 'true'
         working-directory: ./terraform
         env:
           LAMBDA_FUNCTION_NAME: ${{ steps.lambda-config.outputs.lambda_function_name }}
@@ -540,6 +572,7 @@ jobs:
           terraform show -json tfplan | jq -r '.resource_changes[] | select(.type == "aws_lambda_function") | "  - \(.type).\(.name): \(.change.actions[])"' 2>/dev/null || echo "  (jq não disponível, pulando resumo)"
 
       - name: Verificar se imagem existe no ECR
+        if: steps.import-lambda.outputs.image_updated_via_cli != 'true'
         env:
           AWS_ACCOUNT_ID: ${{ secrets.AWS_ACCOUNT_ID }}
           ECR_REPOSITORY_NAME: ${{ secrets.ECR_REPOSITORY_NAME }}
@@ -567,6 +600,7 @@ jobs:
           fi
 
       - name: Terraform Apply
+        if: steps.import-lambda.outputs.image_updated_via_cli != 'true'
         working-directory: ./terraform
         env:
           LAMBDA_FUNCTION_NAME: ${{ steps.lambda-config.outputs.lambda_function_name }}
