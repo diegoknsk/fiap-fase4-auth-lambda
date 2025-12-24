@@ -7,6 +7,7 @@ WORKDIR /src
 
 # Copiar arquivos de projeto (.csproj) para restaurar dependências
 COPY ["src/InterfacesExternas/FastFood.Auth.Lambda.Customer/FastFood.Auth.Lambda.Customer.csproj", "src/InterfacesExternas/FastFood.Auth.Lambda.Customer/"]
+COPY ["src/Core/FastFood.Auth.CrossCutting/FastFood.Auth.CrossCutting.csproj", "src/Core/FastFood.Auth.CrossCutting/"]
 COPY ["src/Core/FastFood.Auth.Application/FastFood.Auth.Application.csproj", "src/Core/FastFood.Auth.Application/"]
 COPY ["src/Core/FastFood.Auth.Domain/FastFood.Auth.Domain.csproj", "src/Core/FastFood.Auth.Domain/"]
 COPY ["src/Core/FastFood.Auth.Infra/FastFood.Auth.Infra.csproj", "src/Core/FastFood.Auth.Infra/"]
@@ -16,6 +17,7 @@ COPY ["src/Core/FastFood.Auth.Infra.Persistence/FastFood.Auth.Infra.Persistence.
 RUN dotnet restore "src/InterfacesExternas/FastFood.Auth.Lambda.Customer/FastFood.Auth.Lambda.Customer.csproj"
 
 # Copiar código fonte explicitamente - apenas arquivos necessários para build
+COPY ["src/Core/FastFood.Auth.CrossCutting/", "src/Core/FastFood.Auth.CrossCutting/"]
 COPY ["src/Core/FastFood.Auth.Domain/", "src/Core/FastFood.Auth.Domain/"]
 COPY ["src/Core/FastFood.Auth.Application/", "src/Core/FastFood.Auth.Application/"]
 COPY ["src/Core/FastFood.Auth.Infra/", "src/Core/FastFood.Auth.Infra/"]
