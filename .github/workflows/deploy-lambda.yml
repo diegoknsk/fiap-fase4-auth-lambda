@@ -387,8 +387,17 @@ jobs:
                 echo "ℹ️ Lambda já está no estado (isso é esperado)"
                 echo "lambda_imported=true" >> "$GITHUB_OUTPUT"
               else
-                echo "💡 O Terraform tentará atualizar apenas a image_uri no próximo apply"
-                echo "lambda_imported=false" >> "$GITHUB_OUTPUT"
+                echo "❌ Erro: Não foi possível importar o Lambda existente"
+                echo "   O Terraform tentaria criar um novo Lambda, o que causaria erro"
+                echo "   ou recriaria o Lambda existente, o que não é desejado"
+                echo ""
+                echo "📋 Solução:"
+                echo "   1. Verifique se o Lambda realmente existe: aws lambda get-function --function-name ${LAMBDA_FUNCTION_NAME}"
+                echo "   2. Verifique as permissões IAM do workflow"
+                echo "   3. Importe manualmente antes do próximo deploy"
+                echo ""
+                echo "❌ Falhando o workflow para evitar recriação do Lambda"
+                exit 1
               fi
             fi
             echo "lambda_exists=true" >> "$GITHUB_OUTPUT"

@@ -29,6 +29,10 @@ resource "aws_lambda_function" "lambda" {
       memory_size,    # Memory pode ser diferente
       tags,           # Tags podem ser diferentes
     ]
+    # Evita recriar o Lambda - apenas atualiza a imagem
+    create_before_destroy = false
+    # Previne recriação desnecessária
+    prevent_destroy = false
   }
 
   # Variáveis de ambiente para configuração do Lambda
