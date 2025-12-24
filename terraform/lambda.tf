@@ -5,6 +5,7 @@
 locals {
   # Variáveis de ambiente para auth-lambda (RDS + Cognito + JWT)
   auth_lambda_env = merge(
+    { LAMBDA_MODE = "Customer" },
     var.rds_connection_string != "" ? { ConnectionStrings__DefaultConnection = var.rds_connection_string } : {},
     var.cognito_region != "" ? { COGNITO__REGION = var.cognito_region } : {},
     var.cognito_user_pool_id != "" ? { COGNITO__USERPOOLID = var.cognito_user_pool_id } : {},
@@ -16,6 +17,7 @@ locals {
 
   # Variáveis de ambiente para auth-admin-lambda (Cognito)
   auth_admin_lambda_env = merge(
+    { LAMBDA_MODE = "Admin" },
     var.cognito_region != "" ? { COGNITO__REGION = var.cognito_region } : {},
     var.cognito_user_pool_id != "" ? { COGNITO__USERPOOLID = var.cognito_user_pool_id } : {},
     var.cognito_client_id != "" ? { COGNITO__CLIENTID = var.cognito_client_id } : {}
@@ -23,6 +25,7 @@ locals {
 
   # Variáveis de ambiente para auth-migrator-lambda (RDS)
   auth_migrator_lambda_env = merge(
+    { LAMBDA_MODE = "Migrator" },
     var.rds_connection_string != "" ? { ConnectionStrings__DefaultConnection = var.rds_connection_string } : {}
   )
 }
