@@ -119,6 +119,10 @@ jobs:
     name: Deploy Lambda via Terraform
     needs: build-and-push
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        lambda_mode: [Customer, Admin, Migrator]
+      fail-fast: false
     
     steps:
       - name: Checkout code
@@ -136,6 +140,47 @@ jobs:
         uses: hashicorp/setup-terraform@b9cd54a3c349d3f38e8881555d616ced269862dd # v3
         with:
           terraform_version: 1.6.0
+
+      - name: Configurar variáveis por modo Lambda
+        id: lambda-config
+        env:
+          LAMBDA_MODE: ${{ matrix.lambda_mode }}
+          # Acessar secrets dinamicamente baseado no modo
+          LAMBDA_FUNCTION_NAME_CUSTOMER: ${{ secrets.LAMBDA_FUNCTION_NAME_CUSTOMER }}
+          LAMBDA_FUNCTION_NAME_ADMIN: ${{ secrets.LAMBDA_FUNCTION_NAME_ADMIN }}
+          LAMBDA_FUNCTION_NAME_MIGRATOR: ${{ secrets.LAMBDA_FUNCTION_NAME_MIGRATOR }}
+          LAMBDA_ROLE_ARN_CUSTOMER: ${{ secrets.LAMBDA_ROLE_ARN_CUSTOMER }}
+          LAMBDA_ROLE_ARN_ADMIN: ${{ secrets.LAMBDA_ROLE_ARN_ADMIN }}
+          LAMBDA_ROLE_ARN_MIGRATOR: ${{ secrets.LAMBDA_ROLE_ARN_MIGRATOR }}
+        run: |
+          LAMBDA_MODE_UPPER=$(echo "${{ matrix.lambda_mode }}" | tr '[:lower:]' '[:upper:]')
+          LAMBDA_MODE_LOWER=$(echo "${{ matrix.lambda_mode }}" | tr '[:upper:]' '[:lower:]')
+          
+          # Construir nomes das variáveis baseado no modo
+          FUNCTION_NAME_VAR="LAMBDA_FUNCTION_NAME_${LAMBDA_MODE_UPPER}"
+          ROLE_ARN_VAR="LAMBDA_ROLE_ARN_${LAMBDA_MODE_UPPER}"
+          
+          # Obter valores das variáveis de ambiente
+          LAMBDA_FUNCTION_NAME=$(eval echo \$${FUNCTION_NAME_VAR})
+          LAMBDA_ROLE_ARN=$(eval echo \$${ROLE_ARN_VAR})
+          
+          if [ -z "${LAMBDA_FUNCTION_NAME}" ]; then
+            echo "❌ Erro: Secret LAMBDA_FUNCTION_NAME_${LAMBDA_MODE_UPPER} não está configurado!"
+            exit 1
+          fi
+          
+          if [ -z "${LAMBDA_ROLE_ARN}" ]; then
+            echo "❌ Erro: Secret LAMBDA_ROLE_ARN_${LAMBDA_MODE_UPPER} não está configurado!"
+            exit 1
+          fi
+          
+          echo "🔍 Modo Lambda: ${{ matrix.lambda_mode }}"
+          echo "🔍 Lambda Function Name: ${LAMBDA_FUNCTION_NAME}"
+          echo "🔍 Lambda Role ARN: ${LAMBDA_ROLE_ARN}"
+          
+          echo "lambda_mode=${LAMBDA_MODE_LOWER}" >> "$GITHUB_OUTPUT"
+          echo "lambda_function_name=${LAMBDA_FUNCTION_NAME}" >> "$GITHUB_OUTPUT"
+          echo "lambda_role_arn=${LAMBDA_ROLE_ARN}" >> "$GITHUB_OUTPUT"
 
       - name: Terraform Init
         working-directory: ./terraform
@@ -214,11 +259,12 @@ jobs:
         working-directory: ./terraform
         id: import-lambda
         env:
-          LAMBDA_FUNCTION_NAME: ${{ secrets.LAMBDA_FUNCTION_NAME }}
-          LAMBDA_ROLE_ARN: ${{ secrets.LAMBDA_ROLE_ARN }}
+          LAMBDA_FUNCTION_NAME: ${{ steps.lambda-config.outputs.lambda_function_name }}
+          LAMBDA_ROLE_ARN: ${{ steps.lambda-config.outputs.lambda_role_arn }}
+          LAMBDA_MODE: ${{ steps.lambda-config.outputs.lambda_mode }}
           ECR_IMAGE_URI: ${{ env.ECR_IMAGE_URI }}
         run: |
-          echo "🔍 Verificando se Lambda '${LAMBDA_FUNCTION_NAME}' existe na AWS..."
+          echo "🔍 Verificando se Lambda '${LAMBDA_FUNCTION_NAME}' (modo: ${LAMBDA_MODE}) existe na AWS..."
           
           # Verifica se o Lambda existe na AWS
           LAMBDA_EXISTS=false
@@ -296,6 +342,7 @@ jobs:
             IMPORT_OUTPUT=$(terraform import \
               -var="aws_region=${AWS_REGION}" \
               -var="lambda_function_name=${LAMBDA_FUNCTION_NAME}" \
+              -var="lambda_mode=${LAMBDA_MODE}" \
               -var="ecr_image_uri=${IMPORT_IMAGE_URI}" \
               -var="lambda_role_arn=${IMPORT_ROLE}" \
               -var="cognito_user_pool_id=dummy" \
@@ -351,8 +398,9 @@ jobs:
       - name: Terraform Plan
         working-directory: ./terraform
         env:
-          LAMBDA_FUNCTION_NAME: ${{ secrets.LAMBDA_FUNCTION_NAME }}
-          LAMBDA_ROLE_ARN: ${{ secrets.LAMBDA_ROLE_ARN }}
+          LAMBDA_FUNCTION_NAME: ${{ steps.lambda-config.outputs.lambda_function_name }}
+          LAMBDA_ROLE_ARN: ${{ steps.lambda-config.outputs.lambda_role_arn }}
+          LAMBDA_MODE: ${{ steps.lambda-config.outputs.lambda_mode }}
           ECR_IMAGE_URI: ${{ env.ECR_IMAGE_URI }}
           LAMBDA_SECURITY_GROUP_NAME: ${{ secrets.LAMBDA_SECURITY_GROUP_NAME }}
           LAMBDA_SECURITY_GROUP_ID: ${{ secrets.LAMBDA_SECURITY_GROUP_ID }}
@@ -442,6 +490,7 @@ jobs:
           TF_PLAN_ARGS=(
             -var="aws_region=${AWS_REGION}"
             -var="lambda_function_name=${LAMBDA_FUNCTION_NAME}"
+            -var="lambda_mode=${LAMBDA_MODE}"
             -var="ecr_image_uri=${ECR_IMAGE_URI}"
             -var="lambda_role_arn=${LAMBDA_ROLE_ARN}"
             -var="cognito_user_pool_id=${COGNITO_USER_POOL_ID}"
@@ -502,8 +551,9 @@ jobs:
       - name: Terraform Apply
         working-directory: ./terraform
         env:
-          LAMBDA_FUNCTION_NAME: ${{ secrets.LAMBDA_FUNCTION_NAME }}
-          LAMBDA_ROLE_ARN: ${{ secrets.LAMBDA_ROLE_ARN }}
+          LAMBDA_FUNCTION_NAME: ${{ steps.lambda-config.outputs.lambda_function_name }}
+          LAMBDA_ROLE_ARN: ${{ steps.lambda-config.outputs.lambda_role_arn }}
+          LAMBDA_MODE: ${{ steps.lambda-config.outputs.lambda_mode }}
           ECR_IMAGE_URI: ${{ env.ECR_IMAGE_URI }}
           AWS_ACCOUNT_ID: ${{ secrets.AWS_ACCOUNT_ID }}
           ECR_REPOSITORY_NAME: ${{ secrets.ECR_REPOSITORY_NAME }}
@@ -563,6 +613,7 @@ jobs:
           TF_APPLY_ARGS=(
             -var="aws_region=${AWS_REGION}"
             -var="lambda_function_name=${LAMBDA_FUNCTION_NAME}"
+            -var="lambda_mode=${LAMBDA_MODE}"
             -var="ecr_image_uri=${ECR_IMAGE_URI}"
             -var="lambda_role_arn=${LAMBDA_ROLE_ARN}"
             -var="cognito_user_pool_id=${COGNITO_USER_POOL_ID}"
@@ -603,7 +654,7 @@ jobs:
       - name: Debug - Informações finais do Lambda
         working-directory: ./terraform
         env:
-          LAMBDA_FUNCTION_NAME: ${{ secrets.LAMBDA_FUNCTION_NAME }}
+          LAMBDA_FUNCTION_NAME: ${{ steps.lambda-config.outputs.lambda_function_name }}
         run: |
           echo "🔍 Informações finais do Lambda após deploy:"
           echo ""

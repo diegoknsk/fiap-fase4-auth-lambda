@@ -2,6 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using FastFood.Auth.Infra.Persistence;
 using FastFood.Auth.Application.Ports;
 using FastFood.Auth.Infra.Persistence.Repositories;
+using FastFood.Auth.Infra.Persistence.Services;
 using FastFood.Auth.Infra.Services;
 using FastFood.Auth.Application.UseCases.Customer;
 using FastFood.Auth.Application.UseCases.Admin;
@@ -34,12 +35,14 @@ builder.Services.AddDbContext<AuthDbContext>(options =>
 builder.Services.AddScoped<ICustomerRepository, CustomerRepository>();
 builder.Services.AddScoped<ITokenService, TokenService>();
 builder.Services.AddScoped<ICognitoService, CognitoService>();
+builder.Services.AddScoped<IMigrationService, MigrationService>();
 
 // Registrar UseCases
 builder.Services.AddScoped<CreateAnonymousCustomerUseCase>();
 builder.Services.AddScoped<RegisterCustomerUseCase>();
 builder.Services.AddScoped<IdentifyCustomerUseCase>();
 builder.Services.AddScoped<AuthenticateAdminUseCase>();
+builder.Services.AddScoped<RunMigrationsUseCase>();
 
 // Presenters são classes static, não precisam ser registradas no DI
 

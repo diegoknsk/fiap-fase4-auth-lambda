@@ -39,6 +39,17 @@ variable "lambda_security_group_id" {
   default     = ""
 }
 
+# Modo da Lambda
+variable "lambda_mode" {
+  type        = string
+  description = "Modo da Lambda: 'Customer', 'Admin' ou 'Migrator'. Define qual controller será ativado (default: 'Customer')"
+  default     = "Customer"
+  validation {
+    condition     = contains(["Customer", "Admin", "Migrator"], var.lambda_mode)
+    error_message = "lambda_mode deve ser 'Customer', 'Admin' ou 'Migrator'."
+  }
+}
+
 # Cognito
 variable "cognito_user_pool_id" {
   type        = string

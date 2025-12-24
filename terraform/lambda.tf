@@ -30,6 +30,10 @@ resource "aws_lambda_function" "lambda" {
   # Variáveis de ambiente para configuração do Lambda
   environment {
     variables = {
+      # Modo da Lambda: "Customer", "Admin" ou "Migrator" (default: "Customer")
+      # Define qual controller será ativado na mesma imagem
+      LAMBDA_MODE = var.lambda_mode
+
       # Cognito - Autenticação de administradores
       COGNITO__REGION     = var.cognito_region
       COGNITO__USERPOOLID = var.cognito_user_pool_id
