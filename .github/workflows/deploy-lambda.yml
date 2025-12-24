@@ -230,7 +230,7 @@ jobs:
           fi
           echo "✅ Validação final: ECR_IMAGE_URI=${FINAL_URI}"
 
-      - name: Verificar Lambda existe e é do tipo Image
+      - name: Verificar Lambda existe
         env:
           LAMBDA_FUNCTION_NAME: ${{ steps.lambda-config.outputs.lambda_function_name }}
         run: |
@@ -247,31 +247,27 @@ jobs:
             exit 1
           fi
           
-          # Verifica se o Lambda é do tipo Image (não Zip)
-          PACKAGE_TYPE=$(aws lambda get-function \
+          # Obtém informações do Lambda
+          LAMBDA_INFO=$(aws lambda get-function \
             --function-name "${LAMBDA_FUNCTION_NAME}" \
             --region "${AWS_REGION}" \
-            --query 'Configuration.PackageType' \
-            --output text 2>/dev/null)
+            --output json 2>/dev/null)
           
+          PACKAGE_TYPE=$(echo "${LAMBDA_INFO}" | jq -r '.Configuration.PackageType // "unknown"')
+          CURRENT_IMAGE_URI=$(echo "${LAMBDA_INFO}" | jq -r '.Configuration.ImageUri // "N/A"')
+          
+          echo "✅ Lambda encontrado na AWS"
+          echo "  - PackageType atual: ${PACKAGE_TYPE}"
+            echo "  - Image URI atual: ${CURRENT_IMAGE_URI}"
+          
+          # Aviso se não for Image, mas não bloqueia (o AWS CLI vai falhar se necessário)
           if [ "${PACKAGE_TYPE}" != "Image" ]; then
-            echo "❌ ERRO CRÍTICO: Lambda '${LAMBDA_FUNCTION_NAME}' não é do tipo Image!"
-            echo "   PackageType atual: ${PACKAGE_TYPE}"
-            echo "   Este workflow só funciona com Lambdas do tipo Image (container)"
-            echo "   Falhando o workflow"
-            exit 1
+            echo "⚠️ AVISO: Lambda não é do tipo Image (atual: ${PACKAGE_TYPE})"
+            echo "   O comando de atualização vai tentar converter para Image ou falhar com erro claro"
+            echo "   Se o Lambda for Zip, será necessário convertê-lo para Image primeiro no projeto principal"
+          else
+            echo "✅ Lambda é do tipo Image (container) - pronto para atualização"
           fi
-          
-          # Mostra informações do Lambda
-          CURRENT_IMAGE_URI=$(aws lambda get-function \
-            --function-name "${LAMBDA_FUNCTION_NAME}" \
-            --region "${AWS_REGION}" \
-            --query 'Configuration.ImageUri' \
-            --output text 2>/dev/null)
-          
-          echo "✅ Lambda existe e é do tipo Image (container)"
-          echo "  - Image URI atual: ${CURRENT_IMAGE_URI}"
-          echo "  - PackageType: ${PACKAGE_TYPE}"
 
       - name: Verificar se imagem existe no ECR
         env:
@@ -317,8 +313,12 @@ jobs:
           
           # Atualiza apenas a imagem do Lambda usando AWS CLI
           # Isso NÃO mexe no estado do Terraform do projeto principal
+          # IMPORTANTE: O Lambda DEVE ser do tipo Image (não Zip)
+          # Se for Zip, este comando vai falhar com erro claro do AWS
           echo ""
-          echo "📋 Executando: aws lambda update-function-code"
+          echo "📋 Executando: aws lambda update-function-code --image-uri"
+          echo "   Este comando atualiza APENAS a imagem (PackageType deve ser Image)"
+          
           UPDATE_OUTPUT=$(aws lambda update-function-code \
             --function-name "${LAMBDA_FUNCTION_NAME}" \
             --image-uri "${ECR_IMAGE_URI}" \
@@ -342,7 +342,13 @@ jobs:
             echo "✅ Lambda atualizado e pronto para uso"
           else
             echo "❌ Erro ao atualizar imagem do Lambda"
-            echo "Output:"
+            echo ""
+            echo "📋 Possíveis causas:"
+            echo "   1. Lambda não é do tipo Image (é Zip) - precisa ser convertido no projeto principal"
+            echo "   2. Imagem ECR não existe ou não está acessível"
+            echo "   3. Permissões IAM insuficientes"
+            echo ""
+            echo "Output do erro:"
             echo "${UPDATE_OUTPUT}"
             exit 1
           fi
