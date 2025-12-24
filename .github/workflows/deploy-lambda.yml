@@ -1,9 +1,10 @@
-name: Deploy Lambda to AWS (ZIP)
+name: Deploy Lambda Functions to AWS
 
 on:
   push:
     branches:
       - main
+      - dev
   workflow_dispatch: # Permite execução manual
 
 env:
