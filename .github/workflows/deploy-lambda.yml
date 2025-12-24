@@ -8,7 +8,6 @@ on:
 
 env:
   AWS_REGION: ${{ secrets.AWS_REGION }}
-  PROJECT_NAME: ${{ secrets.PROJECT_NAME || 'autenticacao' }}
 
 jobs:
   build-and-package:
@@ -117,18 +116,28 @@ jobs:
         lambda:
           - name: auth-lambda
             zip_file: lambda-auth.zip
-            function_name: ${{ env.PROJECT_NAME }}-auth-lambda
+            function_suffix: auth-lambda
           - name: auth-admin-lambda
             zip_file: lambda-auth-admin.zip
-            function_name: ${{ env.PROJECT_NAME }}-auth-admin-lambda
+            function_suffix: auth-admin-lambda
           - name: auth-migrator-lambda
             zip_file: lambda-auth-migrator.zip
-            function_name: ${{ env.PROJECT_NAME }}-auth-migrator-lambda
+            function_suffix: auth-migrator-lambda
       fail-fast: false
     
     steps:
       - name: Checkout code
         uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+
+      - name: Set project name
+        id: project-name
+        run: |
+          PROJECT_NAME="${{ secrets.PROJECT_NAME }}"
+          if [ -z "${PROJECT_NAME}" ]; then
+            PROJECT_NAME="autenticacao"
+          fi
+          echo "project_name=${PROJECT_NAME}" >> $GITHUB_OUTPUT
+          echo "Using project name: ${PROJECT_NAME}"
 
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@ff717079ee2060e4bcee96c4779b553acc87447c # v4
@@ -146,7 +155,7 @@ jobs:
 
       - name: Verify Lambda exists
         env:
-          LAMBDA_FUNCTION_NAME: ${{ matrix.lambda.function_name }}
+          LAMBDA_FUNCTION_NAME: ${{ steps.project-name.outputs.project_name }}-${{ matrix.lambda.function_suffix }}
         run: |
           echo "🔍 Verificando Lambda antes de atualizar código..."
           echo "  - Lambda Function Name: ${LAMBDA_FUNCTION_NAME}"
@@ -181,7 +190,7 @@ jobs:
 
       - name: Update Lambda function code
         env:
-          LAMBDA_FUNCTION_NAME: ${{ matrix.lambda.function_name }}
+          LAMBDA_FUNCTION_NAME: ${{ steps.project-name.outputs.project_name }}-${{ matrix.lambda.function_suffix }}
           ZIP_FILE: ${{ matrix.lambda.zip_file }}
         run: |
           echo "🔄 Atualizando código do Lambda..."
@@ -230,7 +239,7 @@ jobs:
 
       - name: Verify Lambda update
         env:
-          LAMBDA_FUNCTION_NAME: ${{ matrix.lambda.function_name }}
+          LAMBDA_FUNCTION_NAME: ${{ steps.project-name.outputs.project_name }}-${{ matrix.lambda.function_suffix }}
         run: |
           echo "🔍 Verificando informações finais do Lambda após atualização..."
           echo ""
