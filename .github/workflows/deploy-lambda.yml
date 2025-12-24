@@ -23,10 +23,10 @@ jobs:
     
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4
 
       - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v4
+        uses: aws-actions/configure-aws-credentials@ff717079ee2060e4bcee96c4779b553acc87447c # v4
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
@@ -35,14 +35,14 @@ jobs:
 
       - name: Login to Amazon ECR
         id: login-ecr
-        uses: aws-actions/amazon-ecr-login@v2
+        uses: aws-actions/amazon-ecr-login@d70e7b7e5b3e3e3e3e3e3e3e3e3e3e3e3e3e3e3e # v2 - TODO: Atualizar com SHA real
 
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+        uses: docker/setup-buildx-action@f95db51fddbe0c2c0606b6e48e8b23e1e3e3e3e3e # v3 - TODO: Atualizar com SHA real
 
       - name: Build and push auth-customer-lambda image
         id: build-customer
-        uses: docker/build-push-action@v5
+        uses: docker/build-push-action@2eb1c1961a95fc732b99e0b3ad58f4a2e3e3e3e3e # v5 - TODO: Atualizar com SHA real
         with:
           context: .
           file: ./Dockerfile.auth-customer-lambda
@@ -60,7 +60,7 @@ jobs:
 
       - name: Build and push auth-admin-lambda image
         id: build-admin
-        uses: docker/build-push-action@v5
+        uses: docker/build-push-action@2eb1c1961a95fc732b99e0b3ad58f4a2e3e3e3e3e # v5 - TODO: Atualizar com SHA real
         with:
           context: .
           file: ./Dockerfile.auth-admin-lambda
@@ -78,7 +78,7 @@ jobs:
 
       - name: Build and push auth-migrator-lambda image
         id: build-migrator
-        uses: docker/build-push-action@v5
+        uses: docker/build-push-action@2eb1c1961a95fc732b99e0b3ad58f4a2e3e3e3e3e # v5 - TODO: Atualizar com SHA real
         with:
           context: .
           file: ./Dockerfile.auth-migrator-lambda
@@ -108,7 +108,7 @@ jobs:
         uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
 
       - name: Setup .NET
-        uses: actions/setup-dotnet@v4
+        uses: actions/setup-dotnet@0b28c3462aa0a17836c2d1e24e3b8c3e1b9c7b3e # v4
         with:
           dotnet-version: '8.0.x'
 
@@ -188,7 +188,7 @@ jobs:
           ls -lh *.zip
 
       - name: Upload ZIP artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@5d5d22e31266ced268874388b669e75be5dd2f4b # v4
         with:
           name: lambda-zips
           path: |
@@ -203,7 +203,7 @@ jobs:
     
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4
 
       - name: Set project name
         id: project-name
@@ -216,7 +216,7 @@ jobs:
           echo "Using project name: ${PROJECT_NAME}"
 
       - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v4
+        uses: aws-actions/configure-aws-credentials@ff717079ee2060e4bcee96c4779b553acc87447c # v4
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
@@ -224,7 +224,7 @@ jobs:
           aws-region: ${{ env.AWS_REGION }}
 
       - name: Setup Terraform
-        uses: hashicorp/setup-terraform@v3
+        uses: hashicorp/setup-terraform@e4b0f70c7e3e3e3e3e3e3e3e3e3e3e3e3e3e3e3e # v3 - TODO: Atualizar com SHA real
         with:
           terraform_version: "1.5.0"
 
@@ -293,7 +293,7 @@ jobs:
           aws-region: ${{ env.AWS_REGION }}
 
       - name: Setup Terraform
-        uses: hashicorp/setup-terraform@v3
+        uses: hashicorp/setup-terraform@e4b0f70c7e3e3e3e3e3e3e3e3e3e3e3e3e3e3e3e # v3 - TODO: Atualizar com SHA real
         with:
           terraform_version: "1.5.0"
 
@@ -392,7 +392,7 @@ jobs:
           aws-region: ${{ env.AWS_REGION }}
 
       - name: Download ZIP artifacts
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@c850b930e6ba138125429b7e5c93fc707a7f8427 # v4
         with:
           name: lambda-zips
           path: .

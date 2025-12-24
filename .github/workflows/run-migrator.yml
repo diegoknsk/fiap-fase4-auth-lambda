@@ -13,10 +13,10 @@ jobs:
     
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4
 
       - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v4
+        uses: aws-actions/configure-aws-credentials@ff717079ee2060e4bcee96c4779b553acc87447c # v4
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
@@ -79,7 +79,7 @@ jobs:
           fi
 
       - name: Upload response artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@5d5d22e31266ced268874388b669e75be5dd2f4b # v4
         if: always()
         with:
           name: migrator-response

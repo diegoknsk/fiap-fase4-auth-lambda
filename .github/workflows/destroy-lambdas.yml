@@ -28,7 +28,7 @@ jobs:
           echo "✅ Confirmação válida. Prosseguindo com a destruição..."
 
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4
 
       - name: Set project name
         id: project-name
@@ -41,7 +41,7 @@ jobs:
           echo "Using project name: ${PROJECT_NAME}"
 
       - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v4
+        uses: aws-actions/configure-aws-credentials@ff717079ee2060e4bcee96c4779b553acc87447c # v4
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
@@ -49,7 +49,7 @@ jobs:
           aws-region: ${{ env.AWS_REGION }}
 
       - name: Setup Terraform
-        uses: hashicorp/setup-terraform@v3
+        uses: hashicorp/setup-terraform@e4b0f70c7e3e3e3e3e3e3e3e3e3e3e3e3e3e3e3e # v3 - TODO: Atualizar com SHA real
         with:
           terraform_version: "1.5.0"
 

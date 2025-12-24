@@ -17,6 +17,8 @@ public class WebApplicationFactoryFixtureAdmin : WebApplicationFactory<LambdaEnt
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
         // Configurar variável de ambiente para JWT Secret (obrigatório)
+        // NOTA: Secret hardcoded é aceitável aqui pois é apenas para testes BDD em ambiente isolado
+        // Em produção, o secret vem de variáveis de ambiente configuradas via Terraform
         Environment.SetEnvironmentVariable("JwtSettings__Secret", "TestSecretKeyForJWTTokenGenerationInBDDTests12345678901234567890");
 
         builder.ConfigureAppConfiguration(config =>
