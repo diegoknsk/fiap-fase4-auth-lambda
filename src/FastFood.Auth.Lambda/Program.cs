@@ -34,16 +34,21 @@ builder.Services.AddControllers(options =>
 {
     // Adicionar convenção para filtrar controllers baseado no modo
     options.Conventions.Add(new ControllerFilterConvention(isCustomerMode, isAdminMode, isMigratorMode));
+    // Adicionar convenção para desabilitar ApiExplorer nas actions de controllers filtrados
+    options.Conventions.Add(new ActionFilterConvention(isCustomerMode, isAdminMode, isMigratorMode));
 });
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
-// Configurar DbContext com PostgreSQL
-// A connection string vem da variável de ambiente ConnectionStrings__DefaultConnection
-builder.Services.AddDbContext<AuthDbContext>(options =>
-    options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")
-        ?? throw new InvalidOperationException("ConnectionStrings__DefaultConnection não configurado")));
+// Configurar DbContext com PostgreSQL (apenas se houver connection string)
+// Para auth-admin-lambda, não precisa de banco, mas mantemos para compatibilidade
+var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
+if (!string.IsNullOrEmpty(connectionString))
+{
+    builder.Services.AddDbContext<AuthDbContext>(options =>
+        options.UseNpgsql(connectionString));
+}
 
 // Registrar serviços comuns
 builder.Services.AddScoped<ITokenService, TokenService>();
@@ -147,6 +152,8 @@ public class ControllerFilterConvention : IControllerModelConvention
             if (controllerName != "MigrationController")
             {
                 controller.Selectors.Clear();
+                // Desabilitar ApiExplorer para controllers filtrados
+                controller.ApiExplorer.IsVisible = false;
             }
             return;
         }
@@ -157,6 +164,8 @@ public class ControllerFilterConvention : IControllerModelConvention
             if (controllerName == "AdminController" || controllerName == "MigrationController")
             {
                 controller.Selectors.Clear();
+                // Desabilitar ApiExplorer para controllers filtrados
+                controller.ApiExplorer.IsVisible = false;
                 return;
             }
         }
@@ -167,6 +176,60 @@ public class ControllerFilterConvention : IControllerModelConvention
             if (controllerName == "CustomerController" || controllerName == "MigrationController")
             {
                 controller.Selectors.Clear();
+                // Desabilitar ApiExplorer para controllers filtrados
+                controller.ApiExplorer.IsVisible = false;
+                return;
+            }
+        }
+    }
+}
+
+/// <summary>
+/// Convenção para desabilitar ApiExplorer nas actions de controllers filtrados
+/// </summary>
+public class ActionFilterConvention : IActionModelConvention
+{
+    private readonly bool _isCustomerMode;
+    private readonly bool _isAdminMode;
+    private readonly bool _isMigratorMode;
+
+    public ActionFilterConvention(bool isCustomerMode, bool isAdminMode, bool isMigratorMode)
+    {
+        _isCustomerMode = isCustomerMode;
+        _isAdminMode = isAdminMode;
+        _isMigratorMode = isMigratorMode;
+    }
+
+    public void Apply(ActionModel action)
+    {
+        var controllerName = action.Controller.ControllerType.Name;
+
+        // Se estiver em modo Migrator, desabilitar ApiExplorer para outros controllers
+        if (_isMigratorMode)
+        {
+            if (controllerName != "MigrationController")
+            {
+                action.ApiExplorer.IsVisible = false;
+            }
+            return;
+        }
+
+        // Se estiver em modo Customer, desabilitar ApiExplorer para AdminController e MigrationController
+        if (_isCustomerMode)
+        {
+            if (controllerName == "AdminController" || controllerName == "MigrationController")
+            {
+                action.ApiExplorer.IsVisible = false;
+                return;
+            }
+        }
+
+        // Se estiver em modo Admin, desabilitar ApiExplorer para CustomerController e MigrationController
+        if (_isAdminMode)
+        {
+            if (controllerName == "CustomerController" || controllerName == "MigrationController")
+            {
+                action.ApiExplorer.IsVisible = false;
                 return;
             }
         }
