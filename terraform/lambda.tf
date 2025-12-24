@@ -50,18 +50,18 @@ module "auth_lambda" {
   }
 }
 
-# Lambda Function URL (apenas para auth-lambda)
+# Lambda Function URL para auth-lambda
 resource "aws_lambda_function_url" "lambda_url" {
   function_name      = module.auth_lambda.function_name
-  authorization_type = "NONE" # NONE = acesso público, AWS_IAM = requer autenticação IAM
+  authorization_type = "NONE"
 
   cors {
     allow_credentials = false
-    allow_origins     = ["*"] # Permite qualquer origem (ajuste conforme necessário)
-    allow_methods     = ["*"] # Permite todos os métodos HTTP
-    allow_headers     = ["*"] # Permite todos os headers
-    expose_headers    = ["*"] # Expõe todos os headers na resposta
-    max_age           = 86400 # Cache de preflight por 24 horas
+    allow_origins     = ["*"]
+    allow_methods     = ["*"]
+    allow_headers     = ["*"]
+    expose_headers    = ["*"]
+    max_age           = 86400
   }
 }
 
@@ -115,6 +115,21 @@ module "auth_admin_lambda" {
   # vpc_config = null (ou não definir)
 }
 
+# Lambda Function URL para auth-admin-lambda
+resource "aws_lambda_function_url" "lambda_admin_url" {
+  function_name      = module.auth_admin_lambda.function_name
+  authorization_type = "NONE"
+
+  cors {
+    allow_credentials = false
+    allow_origins     = ["*"]
+    allow_methods     = ["*"]
+    allow_headers     = ["*"]
+    expose_headers    = ["*"]
+    max_age           = 86400
+  }
+}
+
 # ============================================================================
 # LAMBDA 3: auth-migrator-lambda
 # Lambda para migração de dados (com VPC)
@@ -163,5 +178,20 @@ module "auth_migrator_lambda" {
   common_tags = {
     Service = "auth-migrator-lambda"
     Type    = "Migration"
+  }
+}
+
+# Lambda Function URL para auth-migrator-lambda
+resource "aws_lambda_function_url" "lambda_migrator_url" {
+  function_name      = module.auth_migrator_lambda.function_name
+  authorization_type = "NONE"
+
+  cors {
+    allow_credentials = false
+    allow_origins     = ["*"]
+    allow_methods     = ["*"]
+    allow_headers     = ["*"]
+    expose_headers    = ["*"]
+    max_age           = 86400
   }
 }

@@ -29,6 +29,11 @@ output "lambda_auth_admin_name" {
   value       = module.auth_admin_lambda.function_name
 }
 
+output "lambda_auth_admin_function_url" {
+  description = "URL pública da função Lambda auth-admin-lambda (Function URL)"
+  value       = aws_lambda_function_url.lambda_admin_url.function_url
+}
+
 # Outputs da Lambda auth-migrator-lambda
 output "lambda_auth_migrator_arn" {
   description = "ARN da função Lambda auth-migrator-lambda"
@@ -38,6 +43,11 @@ output "lambda_auth_migrator_arn" {
 output "lambda_auth_migrator_name" {
   description = "Nome da função Lambda auth-migrator-lambda"
   value       = module.auth_migrator_lambda.function_name
+}
+
+output "lambda_auth_migrator_function_url" {
+  description = "URL pública da função Lambda auth-migrator-lambda (Function URL)"
+  value       = aws_lambda_function_url.lambda_migrator_url.function_url
 }
 
 # Outputs do Security Group
