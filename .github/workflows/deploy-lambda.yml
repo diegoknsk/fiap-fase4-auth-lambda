@@ -160,6 +160,13 @@ jobs:
           TF_VAR_project_name: ${{ steps.project-name.outputs.project_name }}
           TF_VAR_env: ${{ secrets.ENV || 'dev' }}
           TF_VAR_lab_role: ${{ secrets.LAB_ROLE }}
+          TF_VAR_cognito_region: ${{ secrets.COGNITO_REGION }}
+          TF_VAR_cognito_user_pool_id: ${{ secrets.COGNITO_USER_POOL_ID }}
+          TF_VAR_cognito_client_id: ${{ secrets.COGNITO_CLIENT_ID }}
+          TF_VAR_rds_connection_string: ${{ secrets.RDS_CONNECTION_STRING }}
+          TF_VAR_jwt_secret: ${{ secrets.JWT_SECRET }}
+          TF_VAR_jwt_issuer: ${{ secrets.JWT_ISSUER }}
+          TF_VAR_jwt_audience: ${{ secrets.JWT_AUDIENCE }}
         run: |
           echo "🔍 Executando terraform plan..."
           echo "  - AWS Region: ${TF_VAR_aws_region}"
@@ -175,6 +182,13 @@ jobs:
           TF_VAR_project_name: ${{ steps.project-name.outputs.project_name }}
           TF_VAR_env: ${{ secrets.ENV || 'dev' }}
           TF_VAR_lab_role: ${{ secrets.LAB_ROLE }}
+          TF_VAR_cognito_region: ${{ secrets.COGNITO_REGION }}
+          TF_VAR_cognito_user_pool_id: ${{ secrets.COGNITO_USER_POOL_ID }}
+          TF_VAR_cognito_client_id: ${{ secrets.COGNITO_CLIENT_ID }}
+          TF_VAR_rds_connection_string: ${{ secrets.RDS_CONNECTION_STRING }}
+          TF_VAR_jwt_secret: ${{ secrets.JWT_SECRET }}
+          TF_VAR_jwt_issuer: ${{ secrets.JWT_ISSUER }}
+          TF_VAR_jwt_audience: ${{ secrets.JWT_AUDIENCE }}
         run: |
           echo "🚀 Executando terraform apply..."
           echo "  - AWS Region: ${TF_VAR_aws_region}"

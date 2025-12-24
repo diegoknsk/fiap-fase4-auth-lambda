@@ -1,4 +1,33 @@
 # ============================================================================
+# Locals para variáveis de ambiente
+# ============================================================================
+
+locals {
+  # Variáveis de ambiente para auth-lambda (RDS + Cognito + JWT)
+  auth_lambda_env = merge(
+    var.rds_connection_string != "" ? { ConnectionStrings__DefaultConnection = var.rds_connection_string } : {},
+    var.cognito_region != "" ? { COGNITO__REGION = var.cognito_region } : {},
+    var.cognito_user_pool_id != "" ? { COGNITO__USERPOOLID = var.cognito_user_pool_id } : {},
+    var.cognito_client_id != "" ? { COGNITO__CLIENTID = var.cognito_client_id } : {},
+    var.jwt_secret != "" ? { JwtSettings__Secret = var.jwt_secret } : {},
+    var.jwt_issuer != "" ? { JwtSettings__Issuer = var.jwt_issuer } : {},
+    var.jwt_audience != "" ? { JwtSettings__Audience = var.jwt_audience } : {}
+  )
+
+  # Variáveis de ambiente para auth-admin-lambda (Cognito)
+  auth_admin_lambda_env = merge(
+    var.cognito_region != "" ? { COGNITO__REGION = var.cognito_region } : {},
+    var.cognito_user_pool_id != "" ? { COGNITO__USERPOOLID = var.cognito_user_pool_id } : {},
+    var.cognito_client_id != "" ? { COGNITO__CLIENTID = var.cognito_client_id } : {}
+  )
+
+  # Variáveis de ambiente para auth-migrator-lambda (RDS)
+  auth_migrator_lambda_env = merge(
+    var.rds_connection_string != "" ? { ConnectionStrings__DefaultConnection = var.rds_connection_string } : {}
+  )
+}
+
+# ============================================================================
 # LAMBDA 1: auth-lambda
 # Lambda principal de autenticação (com VPC e Function URL)
 # ============================================================================
@@ -26,11 +55,8 @@ module "auth_lambda" {
   # O arquivo ZIP será atualizado via deploy (usar placeholder.zip inicial)
   source_code_hash = "placeholder" # Será atualizado no deploy
 
-  # Variáveis de ambiente (placeholder - serão configuradas no deploy)
-  environment_variables = {
-    # DATABASE_CONNECTION_STRING será injetado via Secrets Manager
-    # JWT_SECRET será injetado via Secrets Manager
-  }
+  # Variáveis de ambiente (RDS + Cognito + JWT)
+  environment_variables = local.auth_lambda_env
 
   # Sem limite de execuções concorrentes
   reserved_concurrent_executions = null
@@ -93,10 +119,8 @@ module "auth_admin_lambda" {
   # O arquivo ZIP será atualizado via deploy (usar placeholder.zip inicial)
   source_code_hash = "placeholder" # Será atualizado no deploy
 
-  # Variáveis de ambiente
-  environment_variables = {
-    # COGNITO_USER_POOL_ID será injetado via Secrets Manager ou variável de ambiente
-  }
+  # Variáveis de ambiente (Cognito)
+  environment_variables = local.auth_admin_lambda_env
 
   # Sem limite de execuções concorrentes
   reserved_concurrent_executions = null
@@ -158,10 +182,8 @@ module "auth_migrator_lambda" {
   # O arquivo ZIP será atualizado via deploy (usar placeholder.zip inicial)
   source_code_hash = "placeholder" # Será atualizado no deploy
 
-  # Variáveis de ambiente
-  environment_variables = {
-    # DATABASE_CONNECTION_STRING será injetado via Secrets Manager
-  }
+  # Variáveis de ambiente (RDS)
+  environment_variables = local.auth_migrator_lambda_env
 
   # Sem limite de execuções concorrentes
   reserved_concurrent_executions = null
