@@ -18,12 +18,12 @@ jobs:
           fetch-depth: 0
 
       - name: Setup .NET
-        uses: actions/setup-dotnet@0b28c3462aa0a17836c2d1e24e3b8c3e1b9c7b3e # v4
+        uses: actions/setup-dotnet@67a3573c9a986a3f9c594539f4ab511d57bb3ce9 # v4
         with:
           dotnet-version: "8.0.x"
 
       - name: Cache Sonar
-        uses: actions/cache@0a91c9f6736e49fd6c26b3b0e8c0e1b3e3e3e3e3e # v4
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
         with:
           path: ~/.sonar/cache
           key: ${{ runner.os }}-sonar

@@ -35,14 +35,14 @@ jobs:
 
       - name: Login to Amazon ECR
         id: login-ecr
-        uses: aws-actions/amazon-ecr-login@d70e7b7e5b3e3e3e3e3e3e3e3e3e3e3e3e3e3e3e # v2 - TODO: Atualizar com SHA real
+        uses: aws-actions/amazon-ecr-login@062b18b96a7aff071d4dc91bc00c4c1a7945b076 # v2
 
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@f95db51fddbe0c2c0606b6e48e8b23e1e3e3e3e3e # v3 - TODO: Atualizar com SHA real
+        uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3
 
       - name: Build and push auth-customer-lambda image
         id: build-customer
-        uses: docker/build-push-action@2eb1c1961a95fc732b99e0b3ad58f4a2e3e3e3e3e # v5 - TODO: Atualizar com SHA real
+        uses: docker/build-push-action@ca052bb54ab0790a636c9b5f226502c73d547a25 # v5
         with:
           context: .
           file: ./Dockerfile.auth-customer-lambda
@@ -60,7 +60,7 @@ jobs:
 
       - name: Build and push auth-admin-lambda image
         id: build-admin
-        uses: docker/build-push-action@2eb1c1961a95fc732b99e0b3ad58f4a2e3e3e3e3e # v5 - TODO: Atualizar com SHA real
+        uses: docker/build-push-action@ca052bb54ab0790a636c9b5f226502c73d547a25 # v5
         with:
           context: .
           file: ./Dockerfile.auth-admin-lambda
@@ -78,7 +78,7 @@ jobs:
 
       - name: Build and push auth-migrator-lambda image
         id: build-migrator
-        uses: docker/build-push-action@2eb1c1961a95fc732b99e0b3ad58f4a2e3e3e3e3e # v5 - TODO: Atualizar com SHA real
+        uses: docker/build-push-action@ca052bb54ab0790a636c9b5f226502c73d547a25 # v5
         with:
           context: .
           file: ./Dockerfile.auth-migrator-lambda
@@ -108,7 +108,7 @@ jobs:
         uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
 
       - name: Setup .NET
-        uses: actions/setup-dotnet@0b28c3462aa0a17836c2d1e24e3b8c3e1b9c7b3e # v4
+        uses: actions/setup-dotnet@67a3573c9a986a3f9c594539f4ab511d57bb3ce9 # v4
         with:
           dotnet-version: '8.0.x'
 
@@ -224,7 +224,7 @@ jobs:
           aws-region: ${{ env.AWS_REGION }}
 
       - name: Setup Terraform
-        uses: hashicorp/setup-terraform@e4b0f70c7e3e3e3e3e3e3e3e3e3e3e3e3e3e3e3e # v3 - TODO: Atualizar com SHA real
+        uses: hashicorp/setup-terraform@b9cd54a3c349d3f38e8881555d616ced269862dd # v3
         with:
           terraform_version: "1.5.0"
 
@@ -293,7 +293,7 @@ jobs:
           aws-region: ${{ env.AWS_REGION }}
 
       - name: Setup Terraform
-        uses: hashicorp/setup-terraform@e4b0f70c7e3e3e3e3e3e3e3e3e3e3e3e3e3e3e3e # v3 - TODO: Atualizar com SHA real
+        uses: hashicorp/setup-terraform@b9cd54a3c349d3f38e8881555d616ced269862dd # v3
         with:
           terraform_version: "1.5.0"
 
