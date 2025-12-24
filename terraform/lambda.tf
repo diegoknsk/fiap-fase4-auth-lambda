@@ -80,6 +80,7 @@ module "auth_lambda" {
 resource "aws_lambda_function_url" "lambda_url" {
   function_name      = module.auth_lambda.function_name
   authorization_type = "NONE"
+  invoke_mode        = "BUFFERED"
 
   cors {
     allow_credentials = false
@@ -91,14 +92,9 @@ resource "aws_lambda_function_url" "lambda_url" {
   }
 }
 
-# Política de recursos para permitir invocação pública da Function URL
-resource "aws_lambda_permission" "lambda_url_permission" {
-  statement_id  = "AllowPublicInvoke"
-  action        = "lambda:InvokeFunctionUrl"
-  function_name = module.auth_lambda.function_name
-  principal     = "*"
-  function_url_auth_type = "NONE"
-}
+# NOTA: Quando authorization_type = "NONE", a AWS cria automaticamente
+# a política de recursos que permite invocação pública.
+# Não é necessário criar aws_lambda_permission manualmente.
 
 # ============================================================================
 # LAMBDA 2: auth-admin-lambda
@@ -152,6 +148,7 @@ module "auth_admin_lambda" {
 resource "aws_lambda_function_url" "lambda_admin_url" {
   function_name      = module.auth_admin_lambda.function_name
   authorization_type = "NONE"
+  invoke_mode        = "BUFFERED"
 
   cors {
     allow_credentials = false
@@ -163,12 +160,13 @@ resource "aws_lambda_function_url" "lambda_admin_url" {
   }
 }
 
-# Política de recursos para permitir invocação pública da Function URL
+# Política de recursos explícita para garantir invocação pública
+# Mesmo com authorization_type = "NONE", às vezes a política automática não funciona
 resource "aws_lambda_permission" "lambda_admin_url_permission" {
-  statement_id  = "AllowPublicInvoke"
-  action        = "lambda:InvokeFunctionUrl"
-  function_name = module.auth_admin_lambda.function_name
-  principal     = "*"
+  statement_id       = "AllowPublicInvoke"
+  action             = "lambda:InvokeFunctionUrl"
+  function_name      = module.auth_admin_lambda.function_name
+  principal          = "*"
   function_url_auth_type = "NONE"
 }
 
@@ -225,6 +223,7 @@ module "auth_migrator_lambda" {
 resource "aws_lambda_function_url" "lambda_migrator_url" {
   function_name      = module.auth_migrator_lambda.function_name
   authorization_type = "NONE"
+  invoke_mode        = "BUFFERED"
 
   cors {
     allow_credentials = false
@@ -236,11 +235,6 @@ resource "aws_lambda_function_url" "lambda_migrator_url" {
   }
 }
 
-# Política de recursos para permitir invocação pública da Function URL
-resource "aws_lambda_permission" "lambda_migrator_url_permission" {
-  statement_id  = "AllowPublicInvoke"
-  action        = "lambda:InvokeFunctionUrl"
-  function_name = module.auth_migrator_lambda.function_name
-  principal     = "*"
-  function_url_auth_type = "NONE"
-}
+# NOTA: Quando authorization_type = "NONE", a AWS cria automaticamente
+# a política de recursos que permite invocação pública.
+# Não é necessário criar aws_lambda_permission manualmente.
