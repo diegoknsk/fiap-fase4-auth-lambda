@@ -282,3 +282,4 @@ public class CustomerRepositoryTests : IDisposable
 - Testar todos os tipos de Customer (Registered, Anonymous)
 
 
+

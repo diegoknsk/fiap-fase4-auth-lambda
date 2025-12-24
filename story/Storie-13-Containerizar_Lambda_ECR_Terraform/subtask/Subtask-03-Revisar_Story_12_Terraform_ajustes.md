@@ -69,3 +69,4 @@ Revisar a implementação da Story 12 (Terraform) para garantir que está prepar
 - Mudanças propostas são mínimas e não quebram funcionalidade existente
 - Story 12 está preparada para receber `ECR_IMAGE_URI` do CI/CD
 
+

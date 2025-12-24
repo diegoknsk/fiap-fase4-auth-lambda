@@ -1,4 +1,13 @@
-terraform {
+# ============================================================================
+# ⚠️ TERRAFORM DESATIVADO - ESTE ARQUIVO NÃO É MAIS USADO ⚠️
+# ============================================================================
+# 
+# O Terraform foi substituído por atualização direta via AWS CLI no workflow.
+# Este arquivo é mantido apenas como referência/documentação.
+# 
+# ============================================================================
+# 
+# terraform {
   required_version = ">= 1.0"
 
   required_providers {
@@ -7,9 +16,9 @@ terraform {
       version = "~> 5.0"
     }
   }
-}
+# }
 
-provider "aws" {
-  region = var.aws_region
-}
+# # provider "aws" {
+  # region = var.aws_region
+# }
 

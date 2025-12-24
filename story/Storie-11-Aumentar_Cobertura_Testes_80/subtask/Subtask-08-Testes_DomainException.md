@@ -266,3 +266,4 @@ public class DomainExceptionTests
 - Se `DomainException` implementa `ISerializable`, testar serialização
 
 
+

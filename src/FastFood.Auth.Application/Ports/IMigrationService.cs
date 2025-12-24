@@ -22,3 +22,4 @@ public interface IMigrationService
     Task<IEnumerable<string>> GetAppliedMigrationsAsync();
 }
 
+

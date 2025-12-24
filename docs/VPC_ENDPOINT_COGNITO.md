@@ -136,3 +136,4 @@ Se funcionar, o VPC Endpoint está configurado corretamente.
 - [VPC Endpoint for Cognito](https://docs.aws.amazon.com/cognito/latest/developerguide/vpc-endpoints.html)
 - [Lambda in VPC](https://docs.aws.amazon.com/lambda/latest/dg/configuration-vpc.html)
 
+

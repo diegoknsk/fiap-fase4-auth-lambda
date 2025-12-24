@@ -247,7 +247,7 @@ jobs:
             exit 1
           fi
           
-          # Obtém informações do Lambda
+          # Obtém informações completas do Lambda
           LAMBDA_INFO=$(aws lambda get-function \
             --function-name "${LAMBDA_FUNCTION_NAME}" \
             --region "${AWS_REGION}" \
@@ -255,19 +255,69 @@ jobs:
           
           PACKAGE_TYPE=$(echo "${LAMBDA_INFO}" | jq -r '.Configuration.PackageType // "unknown"')
           CURRENT_IMAGE_URI=$(echo "${LAMBDA_INFO}" | jq -r '.Configuration.ImageUri // "N/A"')
+          CODE_LOCATION=$(echo "${LAMBDA_INFO}" | jq -r '.Code.Location // "N/A"')
+          RUNTIME=$(echo "${LAMBDA_INFO}" | jq -r '.Configuration.Runtime // "N/A"')
+          HANDLER=$(echo "${LAMBDA_INFO}" | jq -r '.Configuration.Handler // "N/A"')
           
           echo "✅ Lambda encontrado na AWS"
-          echo "  - PackageType atual: ${PACKAGE_TYPE}"
-            echo "  - Image URI atual: ${CURRENT_IMAGE_URI}"
+          echo ""
+          echo "📊 Configuração atual do Lambda:"
+          echo "  - PackageType: ${PACKAGE_TYPE}"
+          echo "  - Runtime: ${RUNTIME}"
+          echo "  - Handler: ${HANDLER}"
+          echo "  - Image URI: ${CURRENT_IMAGE_URI}"
+          echo "  - Code Location: ${CODE_LOCATION}"
+          echo ""
           
-          # Aviso se não for Image, mas não bloqueia (o AWS CLI vai falhar se necessário)
+          # BLOQUEIA se não for Image - este workflow só funciona com Lambdas do tipo Image
           if [ "${PACKAGE_TYPE}" != "Image" ]; then
-            echo "⚠️ AVISO: Lambda não é do tipo Image (atual: ${PACKAGE_TYPE})"
-            echo "   O comando de atualização vai tentar converter para Image ou falhar com erro claro"
-            echo "   Se o Lambda for Zip, será necessário convertê-lo para Image primeiro no projeto principal"
-          else
-            echo "✅ Lambda é do tipo Image (container) - pronto para atualização"
+            echo "❌ ERRO CRÍTICO: Lambda não é do tipo Image!"
+            echo ""
+            echo "🔍 DIAGNÓSTICO:"
+            echo "   O Lambda foi criado como '${PACKAGE_TYPE}' no projeto principal."
+            echo "   Este workflow espera que o Lambda seja do tipo 'Image' (container)."
+            echo ""
+            echo "   Evidências:"
+            if [ "${PACKAGE_TYPE}" = "Zip" ]; then
+              echo "   ✓ PackageType = Zip (indica deploy via arquivo ZIP)"
+              if [ "${RUNTIME}" != "N/A" ] && [ "${RUNTIME}" != "null" ]; then
+                echo "   ✓ Runtime = ${RUNTIME} (presente apenas em Lambdas Zip)"
+              fi
+              if [ "${HANDLER}" != "N/A" ] && [ "${HANDLER}" != "null" ]; then
+                echo "   ✓ Handler = ${HANDLER} (presente apenas em Lambdas Zip)"
+              fi
+              if [ "${CURRENT_IMAGE_URI}" = "N/A" ] || [ "${CURRENT_IMAGE_URI}" = "null" ]; then
+                echo "   ✓ Image URI = N/A (Lambdas Zip não têm Image URI)"
+              fi
+            fi
+            echo ""
+            echo "🔧 SOLUÇÃO - Corrigir no Projeto Principal:"
+            echo ""
+            echo "   1. No projeto principal (onde o Lambda foi criado via Terraform):"
+            echo "      - Abra o arquivo Terraform que define o aws_lambda_function"
+            echo "      - Certifique-se de que tem: package_type = \"Image\""
+            echo "      - Certifique-se de que tem: image_uri = \"<uri-da-imagem-ecr>\""
+            echo "      - REMOVA: handler e runtime (não são usados em Image)"
+            echo ""
+            echo "   2. Exemplo de configuração correta no Terraform:"
+            echo "      resource \"aws_lambda_function\" \"lambda\" {"
+            echo "        function_name = \"seu-lambda-name\""
+            echo "        package_type  = \"Image\"  # ← DEVE SER Image"
+            echo "        image_uri     = \"<account>.dkr.ecr.<region>.amazonaws.com/<repo>:<tag>\""
+            echo "        role          = aws_iam_role.lambda_role.arn"
+            echo "        # NÃO inclua handler ou runtime para Image"
+            echo "      }"
+            echo ""
+            echo "   3. Execute terraform apply no projeto principal"
+            echo "      Isso vai converter o Lambda de Zip para Image"
+            echo ""
+            echo "   4. Depois disso, este workflow poderá atualizar a imagem normalmente"
+            echo ""
+            echo "❌ Falhando o workflow - Lambda precisa ser convertido para Image primeiro"
+            exit 1
           fi
+          
+          echo "✅ Lambda é do tipo Image (container) - pronto para atualização"
 
       - name: Verificar se imagem existe no ECR
         env:
@@ -318,13 +368,17 @@ jobs:
           echo ""
           echo "📋 Executando: aws lambda update-function-code --image-uri"
           echo "   Este comando atualiza APENAS a imagem (PackageType deve ser Image)"
+          echo ""
           
+          # Executa o comando e captura tanto stdout quanto stderr
+          set +e  # Não falhar imediatamente em caso de erro
           UPDATE_OUTPUT=$(aws lambda update-function-code \
             --function-name "${LAMBDA_FUNCTION_NAME}" \
             --image-uri "${ECR_IMAGE_URI}" \
             --region "${AWS_REGION}" \
             --output json 2>&1)
           UPDATE_EXIT_CODE=$?
+          set -e  # Reativar falha em erro
           
           if [ ${UPDATE_EXIT_CODE} -eq 0 ]; then
             echo "✅ Imagem do Lambda atualizada com sucesso!"
@@ -337,19 +391,49 @@ jobs:
             echo "⏳ Aguardando atualização completar..."
             aws lambda wait function-updated \
               --function-name "${LAMBDA_FUNCTION_NAME}" \
-              --region "${AWS_REGION}"
+              --region "${AWS_REGION}" || true
             
             echo "✅ Lambda atualizado e pronto para uso"
           else
-            echo "❌ Erro ao atualizar imagem do Lambda"
+            echo "❌ Erro ao atualizar imagem do Lambda (exit code: ${UPDATE_EXIT_CODE})"
+            echo ""
+            echo "📋 Mensagem de erro do AWS CLI:"
+            echo "${UPDATE_OUTPUT}"
             echo ""
             echo "📋 Possíveis causas:"
             echo "   1. Lambda não é do tipo Image (é Zip) - precisa ser convertido no projeto principal"
+            echo "      → Solução: Converter o Lambda de Zip para Image no projeto principal"
             echo "   2. Imagem ECR não existe ou não está acessível"
+            echo "      → Verifique se a imagem foi pushada corretamente no job build-and-push"
             echo "   3. Permissões IAM insuficientes"
+            echo "      → Verifique se a role do workflow tem permissão lambda:UpdateFunctionCode"
+            echo "   4. URI da imagem está incorreta"
+            echo "      → Verifique se a URI está no formato: <account>.dkr.ecr.<region>.amazonaws.com/<repo>:<tag>"
             echo ""
-            echo "Output do erro:"
-            echo "${UPDATE_OUTPUT}"
+            
+            # Tenta obter mais informações sobre o Lambda
+            echo "🔍 Informações atuais do Lambda:"
+            LAMBDA_CURRENT=$(aws lambda get-function \
+              --function-name "${LAMBDA_FUNCTION_NAME}" \
+              --region "${AWS_REGION}" \
+              --output json 2>&1 || echo "Erro ao obter informações do Lambda")
+            
+            if echo "${LAMBDA_CURRENT}" | jq -e '.Configuration' > /dev/null 2>&1; then
+              PACKAGE_TYPE=$(echo "${LAMBDA_CURRENT}" | jq -r '.Configuration.PackageType // "unknown"')
+              CURRENT_IMAGE=$(echo "${LAMBDA_CURRENT}" | jq -r '.Configuration.ImageUri // "N/A"')
+              echo "  - PackageType: ${PACKAGE_TYPE}"
+              echo "  - Image URI atual: ${CURRENT_IMAGE}"
+              
+              if [ "${PACKAGE_TYPE}" != "Image" ]; then
+                echo ""
+                echo "⚠️ PROBLEMA IDENTIFICADO: Lambda é do tipo '${PACKAGE_TYPE}', mas precisa ser 'Image'"
+                echo "   Este workflow só funciona com Lambdas do tipo Image (container)"
+                echo "   O Lambda precisa ser convertido de Zip para Image no projeto principal"
+              fi
+            else
+              echo "  (Não foi possível obter informações do Lambda)"
+            fi
+            
             exit 1
           fi
 

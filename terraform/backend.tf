@@ -1,8 +1,17 @@
+# ============================================================================
+# ⚠️ TERRAFORM DESATIVADO - ESTE ARQUIVO NÃO É MAIS USADO ⚠️
+# ============================================================================
+# 
+# O Terraform foi substituído por atualização direta via AWS CLI no workflow.
+# Este arquivo é mantido apenas como referência/documentação.
+# 
+# ============================================================================
+# 
 # Backend remoto S3 para armazenar o state do Terraform
 # IMPORTANTE: O bucket deve existir antes de executar terraform init
 # Configurar bucket, key e region conforme necessário
 
-terraform {
+# terraform {
   backend "s3" {
     # Configuração do backend será feita via variáveis de ambiente ou terraform init -backend-config
     # Exemplo de uso:
@@ -13,5 +22,5 @@ terraform {
     # export TF_BACKEND_KEY="lambda-auth/terraform.tfstate"
     # export TF_BACKEND_REGION="us-east-1"
   }
-}
+# }
 

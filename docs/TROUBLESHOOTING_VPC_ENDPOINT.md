@@ -7,10 +7,7 @@
 #### 1. Verificar se o VPC Endpoint está ativo
 
 ```bash
-aws ec2 describe-vpc-endpoints \
-  --vpc-endpoint-ids vpce-0148fe446877baea7 \
-  --region us-east-1 \
-  --query 'VpcEndpoints[0].[State,PrivateDnsEnabled]'
+aws ec2 describe-vpc-endpoints   --vpc-endpoint-ids vpce-0148fe446877baea7   --region us-east-1   --query 'VpcEndpoints[0].[State,PrivateDnsEnabled]'
 ```
 
 **Esperado:**
@@ -21,22 +18,19 @@ aws ec2 describe-vpc-endpoints \
 
 ```bash
 # Verificar em quais subnets o VPC Endpoint está
-aws ec2 describe-vpc-endpoints \
-  --vpc-endpoint-ids vpce-0148fe446877baea7 \
-  --region us-east-1 \
+aws ec2 describe-vpc-endpoints 
+  --vpc-endpoint-ids vpce-0148fe446877baea7 
+  --region us-east-1 
   --query 'VpcEndpoints[0].SubnetIds'
 ```
-
+aws ec2 describe-vpc-endpoints   --vpc-endpoint-ids vpce-0148fe446877baea7   --region us-east-1   --query 'VpcEndpoints[0].SubnetIds'
 **Importante:** O VPC Endpoint deve estar em pelo menos uma subnet de cada zona de disponibilidade onde o Lambda está.
 
 #### 3. Verificar subnets do Lambda
 
 ```bash
 # Verificar em quais subnets o Lambda está
-aws lambda get-function-configuration \
-  --function-name fiap-fase4-infra-auth-lambda \
-  --region us-east-1 \
-  --query 'VpcConfig.SubnetIds'
+aws lambda get-function-configuration   --function-name fiap-fase4-infra-auth-lambda   --region us-east-1   --query 'VpcConfig.SubnetIds'
 ```
 
 **Problema comum:** Se o Lambda estiver em uma subnet que não tem VPC Endpoint, ele não conseguirá acessar o Cognito.
@@ -47,10 +41,7 @@ O VPC precisa ter DNS resolution e DNS hostnames habilitados:
 
 ```bash
 # Verificar configurações DNS da VPC
-aws ec2 describe-vpcs \
-  --vpc-ids vpc-03796bd4448b4d1c2 \
-  --region us-east-1 \
-  --query 'Vpcs[0].[EnableDnsSupport,EnableDnsHostnames]'
+aws ec2 describe-vpcs   --vpc-ids vpc-03796bd4448b4d1c2   --region us-east-1   --query 'Vpcs[0].[EnableDnsSupport,EnableDnsHostnames]'
 ```
 
 **Esperado:**
@@ -170,4 +161,5 @@ Procure por:
 - Timeout errors
 - DNS resolution errors
 - Connection refused errors
+
 

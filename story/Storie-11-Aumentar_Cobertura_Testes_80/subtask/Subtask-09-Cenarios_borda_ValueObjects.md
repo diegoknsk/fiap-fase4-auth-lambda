@@ -329,3 +329,4 @@ public void Constructor_WithEmailWithMultipleDots_ShouldAccept()
 - Testar com caracteres especiais permitidos em emails
 
 
+

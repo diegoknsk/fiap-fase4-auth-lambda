@@ -35,3 +35,4 @@ Atualizar o recurso `aws_lambda_function` existente (criado como placeholder) pa
 - `terraform plan` mostra atualização do Lambda com nova image_uri
 - Recurso é idempotente (pode ser aplicado múltiplas vezes)
 
+

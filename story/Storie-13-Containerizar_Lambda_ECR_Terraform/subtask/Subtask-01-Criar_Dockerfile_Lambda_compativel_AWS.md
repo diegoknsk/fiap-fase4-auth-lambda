@@ -47,3 +47,4 @@ Criar Dockerfile otimizado para Lambda .NET 8 usando imagem base da AWS para Lam
 - Dockerfile está documentado com comentários explicativos
 - Dockerfile segue boas práticas de segurança (não usa root, layers otimizados)
 
+
