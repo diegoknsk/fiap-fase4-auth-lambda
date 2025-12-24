@@ -1,4 +1,4 @@
-name: Deploy Lambda to AWS
+name: Deploy Lambda to AWS (ZIP)
 
 on:
   push:
@@ -8,120 +8,122 @@ on:
 
 env:
   AWS_REGION: ${{ secrets.AWS_REGION }}
-  ECR_REPOSITORY_NAME: ${{ secrets.ECR_REPOSITORY_NAME }}
+  PROJECT_NAME: ${{ secrets.PROJECT_NAME || 'autenticacao' }}
 
 jobs:
-  build-and-push:
-    name: Build and Push Docker Image to ECR
+  build-and-package:
+    name: Build and Package .NET Lambda Functions
     runs-on: ubuntu-latest
     
     outputs:
-      ecr_image_uri: ${{ steps.vars.outputs.ecr_image_uri }}
+      lambda_auth_zip: ${{ steps.package.outputs.lambda_auth_zip }}
+      lambda_auth_admin_zip: ${{ steps.package.outputs.lambda_auth_admin_zip }}
+      lambda_auth_migrator_zip: ${{ steps.package.outputs.lambda_auth_migrator_zip }}
     
     steps:
       - name: Checkout code
         uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
 
-      - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@ff717079ee2060e4bcee96c4779b553acc87447c # v4
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
         with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-session-token: ${{ secrets.AWS_SESSION_TOKEN }}
-          aws-region: ${{ env.AWS_REGION }}
+          dotnet-version: '8.0.x'
 
-      - name: Login to Amazon ECR
-        id: login-ecr
-        uses: aws-actions/amazon-ecr-login@062b18b96a7aff071d4dc91bc00c4c1a7945b076 # v2
+      - name: Restore dependencies
+        run: dotnet restore
+
+      - name: Build Lambda (auth-lambda)
+        run: |
+          dotnet publish src/FastFood.Auth.Lambda/FastFood.Auth.Lambda.csproj \
+            -c Release \
+            -o publish/auth-lambda \
+            --self-contained false
+
+      - name: Build Lambda (auth-admin-lambda)
+        run: |
+          dotnet publish src/FastFood.Auth.Lambda/FastFood.Auth.Lambda.csproj \
+            -c Release \
+            -o publish/auth-admin-lambda \
+            --self-contained false
+
+      - name: Build Migrator Lambda (auth-migrator-lambda)
+        run: |
+          dotnet publish src/FastFood.Auth.Migrator/FastFood.Auth.Migrator.csproj \
+            -c Release \
+            -o publish/auth-migrator-lambda \
+            --self-contained false
+
+      - name: Create bootstrap script for auth-lambda
+        run: |
+          cat > publish/auth-lambda/bootstrap << 'EOF'
+          #!/bin/sh
+          set -euo pipefail
+          exec /var/lang/bin/dotnet FastFood.Auth.Lambda.dll
+          EOF
+          chmod +x publish/auth-lambda/bootstrap
+
+      - name: Create bootstrap script for auth-admin-lambda
+        run: |
+          cat > publish/auth-admin-lambda/bootstrap << 'EOF'
+          #!/bin/sh
+          set -euo pipefail
+          exec /var/lang/bin/dotnet FastFood.Auth.Lambda.dll
+          EOF
+          chmod +x publish/auth-admin-lambda/bootstrap
+
+      - name: Create bootstrap script for auth-migrator-lambda
+        run: |
+          cat > publish/auth-migrator-lambda/bootstrap << 'EOF'
+          #!/bin/sh
+          set -euo pipefail
+          exec /var/lang/bin/dotnet FastFood.Auth.Migrator.dll
+          EOF
+          chmod +x publish/auth-migrator-lambda/bootstrap
+
+      - name: Package Lambda functions
+        id: package
+        run: |
+          cd publish/auth-lambda
+          zip -r ../../lambda-auth.zip . -q
+          echo "lambda_auth_zip=lambda-auth.zip" >> $GITHUB_OUTPUT
+          
+          cd ../auth-admin-lambda
+          zip -r ../../lambda-auth-admin.zip . -q
+          echo "lambda_auth_admin_zip=lambda-auth-admin.zip" >> $GITHUB_OUTPUT
+          
+          cd ../auth-migrator-lambda
+          zip -r ../../lambda-auth-migrator.zip . -q
+          echo "lambda_auth_migrator_zip=lambda-auth-migrator.zip" >> $GITHUB_OUTPUT
+          
+          cd ../..
+          ls -lh *.zip
+
+      - name: Upload ZIP artifacts
+        uses: actions/upload-artifact@v4
         with:
-          registries: ${{ secrets.AWS_ACCOUNT_ID }}
+          name: lambda-zips
+          path: |
+            lambda-auth.zip
+            lambda-auth-admin.zip
+            lambda-auth-migrator.zip
+          retention-days: 1
 
-      - name: Set up variables
-        id: vars
-        env:
-          AWS_ACCOUNT_ID: ${{ secrets.AWS_ACCOUNT_ID }}
-        run: |
-          # Valida que AWS_ACCOUNT_ID está disponível
-          if [ -z "${AWS_ACCOUNT_ID}" ]; then
-            echo "❌ Erro: AWS_ACCOUNT_ID não está disponível!"
-            exit 1
-          fi
-          
-          # Tenta obter o registry do output do login, se não estiver disponível, constrói manualmente
-          ECR_REGISTRY="${{ steps.login-ecr.outputs.registry }}"
-          
-          if [ -z "${ECR_REGISTRY}" ] || [[ ! "${ECR_REGISTRY}" =~ ^[0-9]+\.dkr\.ecr\..+ ]]; then
-            echo "⚠️ Registry não encontrado no output ou inválido, construindo manualmente..."
-            ECR_REGISTRY="${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com"
-            echo "✅ Registry construído: ${ECR_REGISTRY}"
-          else
-            echo "✅ Registry obtido do login: ${ECR_REGISTRY}"
-          fi
-          
-          echo "🔍 Debug - AWS_ACCOUNT_ID: ${AWS_ACCOUNT_ID}"
-          echo "🔍 Debug - AWS_REGION: ${AWS_REGION}"
-          echo "🔍 Debug - ECR_REGISTRY: ${ECR_REGISTRY}"
-          echo "🔍 Debug - ECR_REPOSITORY_NAME: ${ECR_REPOSITORY_NAME}"
-          
-          ECR_REPOSITORY_URL="${ECR_REGISTRY}/${ECR_REPOSITORY_NAME}"
-          IMAGE_TAG="sha-${GITHUB_SHA::7}"
-          ECR_IMAGE_URI="${ECR_REPOSITORY_URL}:${IMAGE_TAG}"
-          
-          # Valida que a URI está completa
-          if [[ ! "${ECR_IMAGE_URI}" =~ ^[0-9]+\.dkr\.ecr\..+ ]]; then
-            echo "❌ Erro: ECR_IMAGE_URI construída está inválida: ${ECR_IMAGE_URI}"
-            exit 1
-          fi
-          
-          echo "🔍 Debug - ECR_REPOSITORY_URL: ${ECR_REPOSITORY_URL}"
-          echo "🔍 Debug - IMAGE_TAG: ${IMAGE_TAG}"
-          echo "🔍 Debug - ECR_IMAGE_URI: ${ECR_IMAGE_URI}"
-          
-          echo "ECR_REGISTRY=${ECR_REGISTRY}" >> "$GITHUB_ENV"
-          echo "ECR_REPOSITORY_URL=${ECR_REPOSITORY_URL}" >> "$GITHUB_ENV"
-          echo "IMAGE_TAG=${IMAGE_TAG}" >> "$GITHUB_ENV"
-          echo "ECR_IMAGE_URI=${ECR_IMAGE_URI}" >> "$GITHUB_ENV"
-          
-          echo "ecr_repository_url=${ECR_REPOSITORY_URL}" >> "$GITHUB_OUTPUT"
-          echo "image_tag=${IMAGE_TAG}" >> "$GITHUB_OUTPUT"
-          echo "ecr_image_uri=${ECR_IMAGE_URI}" >> "$GITHUB_OUTPUT"
-          
-          echo "✅ Output definido: ecr_image_uri=${ECR_IMAGE_URI}"
-
-      - name: Build Docker image
-        id: build
-        run: |
-          docker build -t ${{ env.ECR_IMAGE_URI }} .
-          echo "✅ Imagem buildada: ${{ env.ECR_IMAGE_URI }}"
-
-      - name: Tag image as latest
-        run: |
-          docker tag ${{ env.ECR_IMAGE_URI }} ${{ env.ECR_REPOSITORY_URL }}:latest
-
-      - name: Push image to ECR
-        run: |
-          docker push ${{ env.ECR_IMAGE_URI }}
-          docker push ${{ env.ECR_REPOSITORY_URL }}:latest
-
-      - name: Verify job output
-        run: |
-          echo "🔍 Verificando output do job..."
-          echo "Output do step vars: ${{ steps.vars.outputs.ecr_image_uri }}"
-          echo "Output do job será: ${{ steps.vars.outputs.ecr_image_uri }}"
-          if [ -z "${{ steps.vars.outputs.ecr_image_uri }}" ]; then
-            echo "⚠️ Aviso: Output do step vars está vazio!"
-            echo "Variável de ambiente ECR_IMAGE_URI: ${ECR_IMAGE_URI}"
-          else
-            echo "✅ Output do job está definido corretamente"
-          fi
-
-  update-lambda-image:
-    name: Atualizar Imagem do Lambda
-    needs: build-and-push
+  deploy-lambdas:
+    name: Deploy Lambda Functions
+    needs: build-and-package
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        lambda_mode: [Customer, Admin, Migrator]
+        lambda:
+          - name: auth-lambda
+            zip_file: lambda-auth.zip
+            function_name: ${{ env.PROJECT_NAME }}-auth-lambda
+          - name: auth-admin-lambda
+            zip_file: lambda-auth-admin.zip
+            function_name: ${{ env.PROJECT_NAME }}-auth-admin-lambda
+          - name: auth-migrator-lambda
+            zip_file: lambda-auth-migrator.zip
+            function_name: ${{ env.PROJECT_NAME }}-auth-migrator-lambda
       fail-fast: false
     
     steps:
@@ -136,105 +138,17 @@ jobs:
           aws-session-token: ${{ secrets.AWS_SESSION_TOKEN }}
           aws-region: ${{ env.AWS_REGION }}
 
-      - name: Configurar nome do Lambda por modo
-        id: lambda-config
-        env:
-          LAMBDA_MODE: ${{ matrix.lambda_mode }}
-          # Permitir override via secrets se necessário
-          LAMBDA_FUNCTION_NAME_CUSTOMER: ${{ secrets.LAMBDA_FUNCTION_NAME_CUSTOMER }}
-          LAMBDA_FUNCTION_NAME_ADMIN: ${{ secrets.LAMBDA_FUNCTION_NAME_ADMIN }}
-          LAMBDA_FUNCTION_NAME_MIGRATOR: ${{ secrets.LAMBDA_FUNCTION_NAME_MIGRATOR }}
-        run: |
-          LAMBDA_MODE="${{ matrix.lambda_mode }}"
-          LAMBDA_MODE_UPPER=$(echo "${LAMBDA_MODE}" | tr '[:lower:]' '[:upper:]')
-          
-          # Valores padrão baseados no modo
-          case "${LAMBDA_MODE_UPPER}" in
-            CUSTOMER)
-              DEFAULT_FUNCTION_NAME="fiap-fase4-infra-auth-lambda"
-              ;;
-            ADMIN)
-              DEFAULT_FUNCTION_NAME="fiap-fase4-infra-auth-admin-lambda"
-              ;;
-            MIGRATOR)
-              DEFAULT_FUNCTION_NAME="fiap-fase4-infra-auth-migrator-lambda"
-              ;;
-            *)
-              echo "❌ Erro: Modo Lambda inválido: ${LAMBDA_MODE}"
-              exit 1
-              ;;
-          esac
-          
-          # Construir nome da variável de override baseado no modo
-          FUNCTION_NAME_VAR="LAMBDA_FUNCTION_NAME_${LAMBDA_MODE_UPPER}"
-          
-          # Obter valor da variável de ambiente (override) ou usar padrão
-          LAMBDA_FUNCTION_NAME=$(eval echo \$${FUNCTION_NAME_VAR})
-          if [ -z "${LAMBDA_FUNCTION_NAME}" ]; then
-            LAMBDA_FUNCTION_NAME="${DEFAULT_FUNCTION_NAME}"
-            echo "ℹ️ Usando nome padrão para ${LAMBDA_MODE}: ${LAMBDA_FUNCTION_NAME}"
-          else
-            echo "ℹ️ Usando nome customizado para ${LAMBDA_MODE}: ${LAMBDA_FUNCTION_NAME}"
-          fi
-          
-          echo "🔍 Modo Lambda: ${LAMBDA_MODE}"
-          echo "🔍 Lambda Function Name: ${LAMBDA_FUNCTION_NAME}"
-          
-          echo "lambda_function_name=${LAMBDA_FUNCTION_NAME}" >> "$GITHUB_OUTPUT"
+      - name: Download ZIP artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: lambda-zips
+          path: .
 
-      - name: Obter URI da imagem ECR
-        id: setup-ecr-uri
+      - name: Verify Lambda exists
         env:
-          AWS_ACCOUNT_ID: ${{ secrets.AWS_ACCOUNT_ID }}
-          ECR_REPOSITORY_NAME: ${{ secrets.ECR_REPOSITORY_NAME }}
+          LAMBDA_FUNCTION_NAME: ${{ matrix.lambda.function_name }}
         run: |
-          echo "🔍 Debug - Outputs do job build-and-push:"
-          ECR_URI="${{ needs.build-and-push.outputs.ecr_image_uri }}"
-          echo "ecr_image_uri (direto): ${ECR_URI}"
-          echo ""
-          echo "🔍 Todos os outputs disponíveis (JSON):"
-          echo "${{ toJSON(needs.build-and-push.outputs) }}"
-          echo ""
-          
-          # Valida se a URI está completa (deve começar com número do account)
-          if [ -n "${ECR_URI}" ] && [[ "${ECR_URI}" =~ ^[0-9]+\.dkr\.ecr\..+ ]]; then
-            echo "✅ ECR_URI válida encontrada: ${ECR_URI}"
-            echo "ECR_IMAGE_URI=${ECR_URI}" >> "$GITHUB_ENV"
-            echo "ecr_image_uri=${ECR_URI}" >> "$GITHUB_OUTPUT"
-          else
-            echo "⚠️ ECR_URI está vazia, inválida ou incompleta do output do job!"
-            echo "URI recebida: '${ECR_URI}'"
-            echo "Tentando construir manualmente..."
-            # Constrói manualmente como fallback
-            if [ -z "${AWS_ACCOUNT_ID}" ]; then
-              echo "❌ Erro: AWS_ACCOUNT_ID não está disponível!"
-              exit 1
-            fi
-            if [ -z "${ECR_REPOSITORY_NAME}" ]; then
-              echo "❌ Erro: ECR_REPOSITORY_NAME não está disponível!"
-              exit 1
-            fi
-            IMAGE_TAG="sha-${GITHUB_SHA::7}"
-            ECR_URI="${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/${ECR_REPOSITORY_NAME}:${IMAGE_TAG}"
-            echo "ECR_IMAGE_URI=${ECR_URI}" >> "$GITHUB_ENV"
-            echo "ecr_image_uri=${ECR_URI}" >> "$GITHUB_OUTPUT"
-            echo "✅ ECR_URI construído manualmente: ${ECR_URI}"
-          fi
-          
-          # Validação final antes de continuar
-          FINAL_URI="${ECR_IMAGE_URI:-${ECR_URI}}"
-          if [[ ! "${FINAL_URI}" =~ ^[0-9]+\.dkr\.ecr\..+ ]]; then
-            echo "❌ Erro crítico: ECR_IMAGE_URI final está inválida: ${FINAL_URI}"
-            echo "Formato esperado: <account-id>.dkr.ecr.<region>.amazonaws.com/<repo>:<tag>"
-            exit 1
-          fi
-          echo "✅ Validação final: ECR_IMAGE_URI=${FINAL_URI}"
-
-      - name: Verificar Lambda existe
-        env:
-          LAMBDA_FUNCTION_NAME: ${{ steps.lambda-config.outputs.lambda_function_name }}
-        run: |
-          echo "🔍 Verificando Lambda antes de atualizar imagem..."
+          echo "🔍 Verificando Lambda antes de atualizar código..."
           echo "  - Lambda Function Name: ${LAMBDA_FUNCTION_NAME}"
           
           # Verifica se o Lambda existe na AWS
@@ -242,149 +156,61 @@ jobs:
             --function-name "${LAMBDA_FUNCTION_NAME}" \
             --region "${AWS_REGION}" > /dev/null 2>&1; then
             echo "❌ ERRO CRÍTICO: Lambda '${LAMBDA_FUNCTION_NAME}' NÃO existe na AWS!"
-            echo "   O Lambda deve ser criado no projeto principal antes de atualizar a imagem"
-            echo "   Falhando o workflow para evitar tentativa de criação"
+            echo "   O Lambda deve ser criado via Terraform antes de atualizar o código"
+            echo "   Execute: terraform apply no diretório terraform/"
             exit 1
           fi
           
-          # Obtém informações completas do Lambda
+          # Obtém informações do Lambda
           LAMBDA_INFO=$(aws lambda get-function \
             --function-name "${LAMBDA_FUNCTION_NAME}" \
             --region "${AWS_REGION}" \
             --output json 2>/dev/null)
           
           PACKAGE_TYPE=$(echo "${LAMBDA_INFO}" | jq -r '.Configuration.PackageType // "unknown"')
-          CURRENT_IMAGE_URI=$(echo "${LAMBDA_INFO}" | jq -r '.Configuration.ImageUri // "N/A"')
-          CODE_LOCATION=$(echo "${LAMBDA_INFO}" | jq -r '.Code.Location // "N/A"')
-          RUNTIME=$(echo "${LAMBDA_INFO}" | jq -r '.Configuration.Runtime // "N/A"')
-          HANDLER=$(echo "${LAMBDA_INFO}" | jq -r '.Configuration.Handler // "N/A"')
           
-          echo "✅ Lambda encontrado na AWS"
-          echo ""
-          echo "📊 Configuração atual do Lambda:"
-          echo "  - PackageType: ${PACKAGE_TYPE}"
-          echo "  - Runtime: ${RUNTIME}"
-          echo "  - Handler: ${HANDLER}"
-          echo "  - Image URI: ${CURRENT_IMAGE_URI}"
-          echo "  - Code Location: ${CODE_LOCATION}"
-          echo ""
-          
-          # BLOQUEIA se não for Image - este workflow só funciona com Lambdas do tipo Image
-          if [ "${PACKAGE_TYPE}" != "Image" ]; then
-            echo "❌ ERRO CRÍTICO: Lambda não é do tipo Image!"
-            echo ""
-            echo "🔍 DIAGNÓSTICO:"
-            echo "   O Lambda foi criado como '${PACKAGE_TYPE}' no projeto principal."
-            echo "   Este workflow espera que o Lambda seja do tipo 'Image' (container)."
-            echo ""
-            echo "   Evidências:"
-            if [ "${PACKAGE_TYPE}" = "Zip" ]; then
-              echo "   ✓ PackageType = Zip (indica deploy via arquivo ZIP)"
-              if [ "${RUNTIME}" != "N/A" ] && [ "${RUNTIME}" != "null" ]; then
-                echo "   ✓ Runtime = ${RUNTIME} (presente apenas em Lambdas Zip)"
-              fi
-              if [ "${HANDLER}" != "N/A" ] && [ "${HANDLER}" != "null" ]; then
-                echo "   ✓ Handler = ${HANDLER} (presente apenas em Lambdas Zip)"
-              fi
-              if [ "${CURRENT_IMAGE_URI}" = "N/A" ] || [ "${CURRENT_IMAGE_URI}" = "null" ]; then
-                echo "   ✓ Image URI = N/A (Lambdas Zip não têm Image URI)"
-              fi
-            fi
-            echo ""
-            echo "🔧 SOLUÇÃO - Corrigir no Projeto Principal:"
-            echo ""
-            echo "   1. No projeto principal (onde o Lambda foi criado via Terraform):"
-            echo "      - Abra o arquivo Terraform que define o aws_lambda_function"
-            echo "      - Certifique-se de que tem: package_type = \"Image\""
-            echo "      - Certifique-se de que tem: image_uri = \"<uri-da-imagem-ecr>\""
-            echo "      - REMOVA: handler e runtime (não são usados em Image)"
-            echo ""
-            echo "   2. Exemplo de configuração correta no Terraform:"
-            echo "      resource \"aws_lambda_function\" \"lambda\" {"
-            echo "        function_name = \"seu-lambda-name\""
-            echo "        package_type  = \"Image\"  # ← DEVE SER Image"
-            echo "        image_uri     = \"<account>.dkr.ecr.<region>.amazonaws.com/<repo>:<tag>\""
-            echo "        role          = aws_iam_role.lambda_role.arn"
-            echo "        # NÃO inclua handler ou runtime para Image"
-            echo "      }"
-            echo ""
-            echo "   3. Execute terraform apply no projeto principal"
-            echo "      Isso vai converter o Lambda de Zip para Image"
-            echo ""
-            echo "   4. Depois disso, este workflow poderá atualizar a imagem normalmente"
-            echo ""
-            echo "❌ Falhando o workflow - Lambda precisa ser convertido para Image primeiro"
+          if [ "${PACKAGE_TYPE}" != "Zip" ]; then
+            echo "❌ ERRO CRÍTICO: Lambda não é do tipo Zip!"
+            echo "   PackageType atual: ${PACKAGE_TYPE}"
+            echo "   Este workflow espera que o Lambda seja do tipo 'Zip'"
+            echo "   Execute: terraform apply no diretório terraform/ para corrigir"
             exit 1
           fi
           
-          echo "✅ Lambda é do tipo Image (container) - pronto para atualização"
+          echo "✅ Lambda encontrado e é do tipo Zip - pronto para atualização"
 
-      - name: Verificar se imagem existe no ECR
+      - name: Update Lambda function code
         env:
-          AWS_ACCOUNT_ID: ${{ secrets.AWS_ACCOUNT_ID }}
-          ECR_REPOSITORY_NAME: ${{ secrets.ECR_REPOSITORY_NAME }}
+          LAMBDA_FUNCTION_NAME: ${{ matrix.lambda.function_name }}
+          ZIP_FILE: ${{ matrix.lambda.zip_file }}
         run: |
-          echo "🔍 Verificando se a imagem existe no ECR..."
-          IMAGE_TAG="sha-${GITHUB_SHA::7}"
-          IMAGE_URI="${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/${ECR_REPOSITORY_NAME}:${IMAGE_TAG}"
-          echo "Verificando imagem: ${IMAGE_URI}"
-          
-          # Verifica se a imagem existe no ECR
-          if aws ecr describe-images \
-            --repository-name "${ECR_REPOSITORY_NAME}" \
-            --image-ids imageTag="${IMAGE_TAG}" \
-            --region "${AWS_REGION}" > /dev/null 2>&1; then
-            echo "✅ Imagem encontrada no ECR: ${IMAGE_URI}"
-          else
-            echo "❌ Erro: Imagem não encontrada no ECR: ${IMAGE_URI}"
-            echo "Verificando tags disponíveis..."
-            aws ecr describe-images \
-              --repository-name "${ECR_REPOSITORY_NAME}" \
-              --region "${AWS_REGION}" \
-              --query 'imageDetails[*].imageTags' \
-              --output table || true
-            exit 1
-          fi
-
-      - name: Atualizar imagem do Lambda
-        env:
-          LAMBDA_FUNCTION_NAME: ${{ steps.lambda-config.outputs.lambda_function_name }}
-          ECR_IMAGE_URI: ${{ env.ECR_IMAGE_URI }}
-        run: |
-          echo "🔄 Atualizando imagem do Lambda..."
+          echo "🔄 Atualizando código do Lambda..."
           echo "  - Lambda Function Name: ${LAMBDA_FUNCTION_NAME}"
-          echo "  - Nova Image URI: ${ECR_IMAGE_URI}"
+          echo "  - ZIP File: ${ZIP_FILE}"
           
-          # Valida URI antes de atualizar
-          if [[ ! "${ECR_IMAGE_URI}" =~ ^[0-9]+\.dkr\.ecr\..+ ]]; then
-            echo "❌ Erro: ECR_IMAGE_URI está em formato inválido: ${ECR_IMAGE_URI}"
+          # Verifica se o arquivo ZIP existe
+          if [ ! -f "${ZIP_FILE}" ]; then
+            echo "❌ Erro: Arquivo ZIP não encontrado: ${ZIP_FILE}"
             exit 1
           fi
           
-          # Atualiza apenas a imagem do Lambda usando AWS CLI
-          # Isso NÃO mexe no estado do Terraform do projeto principal
-          # IMPORTANTE: O Lambda DEVE ser do tipo Image (não Zip)
-          # Se for Zip, este comando vai falhar com erro claro do AWS
+          # Atualiza o código do Lambda usando AWS CLI
           echo ""
-          echo "📋 Executando: aws lambda update-function-code --image-uri"
-          echo "   Este comando atualiza APENAS a imagem (PackageType deve ser Image)"
+          echo "📋 Executando: aws lambda update-function-code --zip-file"
           echo ""
           
-          # Executa o comando e captura tanto stdout quanto stderr
-          set +e  # Não falhar imediatamente em caso de erro
           UPDATE_OUTPUT=$(aws lambda update-function-code \
             --function-name "${LAMBDA_FUNCTION_NAME}" \
-            --image-uri "${ECR_IMAGE_URI}" \
+            --zip-file "fileb://${ZIP_FILE}" \
             --region "${AWS_REGION}" \
             --output json 2>&1)
           UPDATE_EXIT_CODE=$?
-          set -e  # Reativar falha em erro
           
           if [ ${UPDATE_EXIT_CODE} -eq 0 ]; then
-            echo "✅ Imagem do Lambda atualizada com sucesso!"
+            echo "✅ Código do Lambda atualizado com sucesso!"
             echo ""
             echo "📊 Informações da atualização:"
-            echo "${UPDATE_OUTPUT}" | jq -r '. | "  - Function Name: \(.FunctionName)\n  - Image URI: \(.Code.ImageUri)\n  - Last Update Status: \(.LastUpdateStatus)\n  - State: \(.State)"' || echo "${UPDATE_OUTPUT}"
+            echo "${UPDATE_OUTPUT}" | jq -r '. | "  - Function Name: \(.FunctionName)\n  - Last Update Status: \(.LastUpdateStatus)\n  - State: \(.State)\n  - Code Size: \(.CodeSize) bytes"' || echo "${UPDATE_OUTPUT}"
             
             # Aguarda a atualização completar
             echo ""
@@ -395,51 +221,16 @@ jobs:
             
             echo "✅ Lambda atualizado e pronto para uso"
           else
-            echo "❌ Erro ao atualizar imagem do Lambda (exit code: ${UPDATE_EXIT_CODE})"
+            echo "❌ Erro ao atualizar código do Lambda (exit code: ${UPDATE_EXIT_CODE})"
             echo ""
             echo "📋 Mensagem de erro do AWS CLI:"
             echo "${UPDATE_OUTPUT}"
-            echo ""
-            echo "📋 Possíveis causas:"
-            echo "   1. Lambda não é do tipo Image (é Zip) - precisa ser convertido no projeto principal"
-            echo "      → Solução: Converter o Lambda de Zip para Image no projeto principal"
-            echo "   2. Imagem ECR não existe ou não está acessível"
-            echo "      → Verifique se a imagem foi pushada corretamente no job build-and-push"
-            echo "   3. Permissões IAM insuficientes"
-            echo "      → Verifique se a role do workflow tem permissão lambda:UpdateFunctionCode"
-            echo "   4. URI da imagem está incorreta"
-            echo "      → Verifique se a URI está no formato: <account>.dkr.ecr.<region>.amazonaws.com/<repo>:<tag>"
-            echo ""
-            
-            # Tenta obter mais informações sobre o Lambda
-            echo "🔍 Informações atuais do Lambda:"
-            LAMBDA_CURRENT=$(aws lambda get-function \
-              --function-name "${LAMBDA_FUNCTION_NAME}" \
-              --region "${AWS_REGION}" \
-              --output json 2>&1 || echo "Erro ao obter informações do Lambda")
-            
-            if echo "${LAMBDA_CURRENT}" | jq -e '.Configuration' > /dev/null 2>&1; then
-              PACKAGE_TYPE=$(echo "${LAMBDA_CURRENT}" | jq -r '.Configuration.PackageType // "unknown"')
-              CURRENT_IMAGE=$(echo "${LAMBDA_CURRENT}" | jq -r '.Configuration.ImageUri // "N/A"')
-              echo "  - PackageType: ${PACKAGE_TYPE}"
-              echo "  - Image URI atual: ${CURRENT_IMAGE}"
-              
-              if [ "${PACKAGE_TYPE}" != "Image" ]; then
-                echo ""
-                echo "⚠️ PROBLEMA IDENTIFICADO: Lambda é do tipo '${PACKAGE_TYPE}', mas precisa ser 'Image'"
-                echo "   Este workflow só funciona com Lambdas do tipo Image (container)"
-                echo "   O Lambda precisa ser convertido de Zip para Image no projeto principal"
-              fi
-            else
-              echo "  (Não foi possível obter informações do Lambda)"
-            fi
-            
             exit 1
           fi
 
-      - name: Verificar atualização do Lambda
+      - name: Verify Lambda update
         env:
-          LAMBDA_FUNCTION_NAME: ${{ steps.lambda-config.outputs.lambda_function_name }}
+          LAMBDA_FUNCTION_NAME: ${{ matrix.lambda.function_name }}
         run: |
           echo "🔍 Verificando informações finais do Lambda após atualização..."
           echo ""
@@ -451,7 +242,7 @@ jobs:
           
           if [ -n "${LAMBDA_INFO}" ]; then
             echo "📊 Informações do Lambda na AWS:"
-            echo "${LAMBDA_INFO}" | jq -r '.Configuration | "  - Function Name: \(.FunctionName)\n  - Function ARN: \(.FunctionArn)\n  - Image URI: \(.ImageUri)\n  - Last Modified: \(.LastModified)\n  - State: \(.State)\n  - Package Type: \(.PackageType)"'
+            echo "${LAMBDA_INFO}" | jq -r '.Configuration | "  - Function Name: \(.FunctionName)\n  - Function ARN: \(.FunctionArn)\n  - Last Modified: \(.LastModified)\n  - State: \(.State)\n  - Package Type: \(.PackageType)\n  - Code Size: \(.CodeSize) bytes"'
             echo ""
             echo "✅ Lambda atualizado com sucesso!"
           else

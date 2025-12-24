@@ -1,12 +1,14 @@
-# ============================================================================
-# ⚠️ TERRAFORM DESATIVADO - ESTE ARQUIVO NÃO É MAIS USADO ⚠️
-# ============================================================================
-# 
-# O Terraform foi substituído por atualização direta via AWS CLI no workflow.
-# Este arquivo é mantido apenas como referência/documentação.
-# 
-# ============================================================================
-# 
 # Data sources para localizar recursos existentes na AWS
-# VPC e Security Group são gerenciados em outro lugar, não são necessários aqui
 
+# VPC default
+data "aws_vpc" "default" {
+  default = true
+}
+
+# Subnets para EKS (ou equivalente) - usado pelas Lambdas em VPC
+data "aws_subnets" "eks_supported" {
+  filter {
+    name   = "vpc-id"
+    values = [data.aws_vpc.default.id]
+  }
+}

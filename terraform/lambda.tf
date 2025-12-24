@@ -1,101 +1,167 @@
 # ============================================================================
-# ⚠️ TERRAFORM DESATIVADO - ESTE ARQUIVO NÃO É MAIS USADO ⚠️
+# LAMBDA 1: auth-lambda
+# Lambda principal de autenticação (com VPC e Function URL)
 # ============================================================================
-# 
-# O Terraform foi substituído por atualização direta via AWS CLI no workflow.
-# A imagem do Lambda é atualizada usando: aws lambda update-function-code
-# 
-# Este arquivo é mantido apenas como referência/documentação.
-# 
+
+module "auth_lambda" {
+  source = "./modules/lambda"
+
+  function_name = "auth-lambda"
+  project_name  = var.project_name
+  env           = var.env
+
+  # Configurações para .NET 8 custom runtime
+  handler = "bootstrap"
+  runtime = "provided.al2"  # .NET 8 custom runtime
+
+  # IAM role usando LabRole (ou variável equivalente)
+  role_arn = var.lab_role
+
+  # Configurações de performance
+  timeout     = 900  # Máximo: 900 segundos (15 minutos)
+  memory_size = 512
+
+  # Tipo de pacote - ZIP (deploy direto via arquivo ZIP)
+  package_type = "Zip"
+  # O arquivo ZIP será atualizado via deploy (usar placeholder.zip inicial)
+  source_code_hash = "placeholder"  # Será atualizado no deploy
+
+  # Variáveis de ambiente (placeholder - serão configuradas no deploy)
+  environment_variables = {
+    # DATABASE_CONNECTION_STRING será injetado via Secrets Manager
+    # JWT_SECRET será injetado via Secrets Manager
+  }
+
+  # Sem limite de execuções concorrentes
+  reserved_concurrent_executions = null
+
+  # Configuração de VPC - usando Security Group "lambda_auth_sg"
+  vpc_config = {
+    security_group_ids = [aws_security_group.sg_lambda.id]
+    subnet_ids         = data.aws_subnets.eks_supported.ids
+  }
+
+  # Sem dependências de ECR (deploy via ZIP)
+  depends_on_resources = []
+
+  common_tags = {
+    Service = "auth-lambda"
+    Type    = "Authentication"
+  }
+}
+
+# Lambda Function URL (apenas para auth-lambda)
+resource "aws_lambda_function_url" "lambda_url" {
+  function_name      = module.auth_lambda.function_name
+  authorization_type = "NONE"  # NONE = acesso público, AWS_IAM = requer autenticação IAM
+
+  cors {
+    allow_credentials = false
+    allow_origins     = ["*"]  # Permite qualquer origem (ajuste conforme necessário)
+    allow_methods     = ["*"]  # Permite todos os métodos HTTP
+    allow_headers     = ["*"]  # Permite todos os headers
+    expose_headers    = ["*"]  # Expõe todos os headers na resposta
+    max_age           = 86400  # Cache de preflight por 24 horas
+  }
+}
+
 # ============================================================================
-# 
-# Recurso AWS Lambda Function configurado para usar imagem de container do ECR
-# Terraform não faz push de imagem, apenas atualiza o image_uri do Lambda
-# O push da imagem é responsabilidade do CI/CD (GitHub Actions)
-# 
-# Este recurso é idempotente: terraform apply pode ser executado múltiplas vezes
-# sem causar problemas, apenas atualizando o Lambda quando a image_uri mudar
+# LAMBDA 2: auth-admin-lambda
+# Lambda para administração do Cognito (SEM VPC)
+# ============================================================================
 
-# resource "aws_lambda_function" "lambda" {
-#   function_name = var.lambda_function_name
-#   package_type  = "Image"  # CRÍTICO: Lambda usa imagem de container, não Zip
-#   image_uri     = var.ecr_image_uri
-# 
-#   # Role IAM: obrigatória para o Lambda funcionar
-#   # Se o Lambda já existe, obtenha o ARN da role do Lambda existente
-#   role = var.lambda_role_arn
-#   
-#   # Para package_type "Image", handler e runtime NÃO são necessários
-#   # Esses campos são apenas para package_type "Zip"
-# 
-#   # Configurações de timeout e memória
-#   # Timeout aumentado para 60s devido a cold start em VPC e inicialização do DbContext
-#   timeout     = 60
-#   memory_size = 512
-# 
-#   # VPC e Security Group são gerenciados em outro lugar
-#   # O Terraform apenas atualiza a imagem do Lambda
-#   # CRÍTICO: Lambda deve ser criado apenas no projeto principal, não aqui
-#   lifecycle {
-#     ignore_changes = [
-#       vpc_config,
-#       role,           # Role pode ser diferente se gerenciada em outro lugar
-#       timeout,        # Timeout pode ser diferente
-#       memory_size,    # Memory pode ser diferente
-#       tags,           # Tags podem ser diferentes
-#       function_name,  # Nome não deve mudar
-#       package_type,   # Tipo não deve mudar
-#     ]
-#     # CRÍTICO: Previne destruição do Lambda - nunca deve ser apagado
-#     prevent_destroy = true
-#     # Evita recriar o Lambda - apenas atualiza a imagem
-#     create_before_destroy = false
-#   }
-# 
-#   # Variáveis de ambiente para configuração do Lambda
-#   environment {
-#     variables = {
-#       # Modo da Lambda: "Customer", "Admin" ou "Migrator" (default: "Customer")
-#       # Define qual controller será ativado na mesma imagem
-#       LAMBDA_MODE = var.lambda_mode
-# 
-#       # Cognito - Autenticação de administradores
-#       COGNITO__REGION     = var.cognito_region
-#       COGNITO__USERPOOLID = var.cognito_user_pool_id
-#       COGNITO__CLIENTID   = var.cognito_client_id
-# 
-#       # RDS Connection String - Passada diretamente, já vem completa do parâmetro
-#       ConnectionStrings__DefaultConnection = var.rds_connection_string
-# 
-#       # JWT Settings - Configuração de tokens JWT
-#       JwtSettings__Secret          = var.jwt_secret
-#       JwtSettings__Issuer          = var.jwt_issuer
-#       JwtSettings__Audience        = var.jwt_audience
-#       JwtSettings__ExpirationHours = tostring(var.jwt_expiration_hours)
-#     }
-#   }
-# 
-#   # Tags padrão do projeto
-#   tags = {
-#     Name      = var.lambda_function_name
-#     ManagedBy = "Terraform"
-#     Project   = "FastFood-Auth"
-#   }
-# }
+module "auth_admin_lambda" {
+  source = "./modules/lambda"
 
-# Lambda Function URL para acesso direto à API
-# Permite acesso HTTP direto sem necessidade de API Gateway
-# resource "aws_lambda_function_url" "lambda_url" {
-#   function_name      = aws_lambda_function.lambda.function_name
-#   authorization_type = "NONE"  # NONE = acesso público, AWS_IAM = requer autenticação IAM
-# 
-#   cors {
-#     allow_credentials = false
-#     allow_origins    = ["*"]  # Permite qualquer origem (ajuste conforme necessário)
-#     allow_methods    = ["*"]  # Permite todos os métodos HTTP
-#     allow_headers    = ["*"]  # Permite todos os headers
-#     expose_headers   = ["*"]  # Expõe todos os headers na resposta
-#     max_age          = 86400  # Cache de preflight por 24 horas
-#   }
-# }
+  function_name = "auth-admin-lambda"
+  project_name  = var.project_name
+  env           = var.env
 
+  # Configurações para .NET 8 custom runtime
+  handler = "bootstrap"
+  runtime = "provided.al2"
+
+  # IAM role usando LabRole
+  role_arn = var.lab_role
+
+  # Configurações de performance
+  timeout     = 30
+  memory_size = 512
+
+  # Tipo de pacote - ZIP (deploy direto via arquivo ZIP)
+  package_type = "Zip"
+  # O arquivo ZIP será atualizado via deploy (usar placeholder.zip inicial)
+  source_code_hash = "placeholder"  # Será atualizado no deploy
+
+  # Variáveis de ambiente
+  environment_variables = {
+    # COGNITO_USER_POOL_ID será injetado via Secrets Manager ou variável de ambiente
+  }
+
+  # Sem limite de execuções concorrentes
+  reserved_concurrent_executions = null
+
+  # Sem dependências de ECR (deploy via ZIP)
+  depends_on_resources = []
+
+  common_tags = {
+    Service = "auth-admin-lambda"
+    Type    = "Cognito-Admin"
+  }
+
+  # IMPORTANTE: Esta Lambda NÃO tem configuração de VPC
+  # Por padrão, o módulo Lambda não configura VPC, então a função fica fora da VPC
+  # Isso é necessário para integração com Cognito (triggers, etc.)
+  # vpc_config = null (ou não definir)
+}
+
+# ============================================================================
+# LAMBDA 3: auth-migrator-lambda
+# Lambda para migração de dados (com VPC)
+# ============================================================================
+
+module "auth_migrator_lambda" {
+  source = "./modules/lambda"
+
+  function_name = "auth-migrator-lambda"
+  project_name  = var.project_name
+  env           = var.env
+
+  # Configurações para .NET 8 custom runtime
+  handler = "bootstrap"
+  runtime = "provided.al2"
+
+  # IAM role usando LabRole
+  role_arn = var.lab_role
+
+  # Configurações de performance
+  timeout     = 900  # Máximo: 900 segundos (15 minutos)
+  memory_size = 512
+
+  # Tipo de pacote - ZIP (deploy direto via arquivo ZIP)
+  package_type = "Zip"
+  # O arquivo ZIP será atualizado via deploy (usar placeholder.zip inicial)
+  source_code_hash = "placeholder"  # Será atualizado no deploy
+
+  # Variáveis de ambiente
+  environment_variables = {
+    # DATABASE_CONNECTION_STRING será injetado via Secrets Manager
+  }
+
+  # Sem limite de execuções concorrentes
+  reserved_concurrent_executions = null
+
+  # Configuração de VPC - usando a mesma Security Group "lambda_auth_sg"
+  vpc_config = {
+    security_group_ids = [aws_security_group.sg_lambda.id]
+    subnet_ids         = data.aws_subnets.eks_supported.ids
+  }
+
+  # Sem dependências de ECR (deploy via ZIP)
+  depends_on_resources = []
+
+  common_tags = {
+    Service = "auth-migrator-lambda"
+    Type    = "Migration"
+  }
+}
