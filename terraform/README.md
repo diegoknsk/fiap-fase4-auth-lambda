@@ -132,9 +132,9 @@ A Function URL é criada apenas para `auth-lambda`:
 
 O Terraform expõe os seguintes outputs:
 
-- `lambda_auth_arn`: ARN da função Lambda auth-lambda
-- `lambda_auth_name`: Nome da função Lambda auth-lambda
-- `lambda_auth_function_url`: URL pública da Function URL
+- `lambda_auth_customer_arn`: ARN da função Lambda auth-customer-lambda
+- `lambda_auth_customer_name`: Nome da função Lambda auth-customer-lambda
+- `lambda_auth_customer_function_url`: URL pública da Function URL
 - `lambda_auth_admin_arn`: ARN da função Lambda auth-admin-lambda
 - `lambda_auth_admin_name`: Nome da função Lambda auth-admin-lambda
 - `lambda_auth_migrator_arn`: ARN da função Lambda auth-migrator-lambda

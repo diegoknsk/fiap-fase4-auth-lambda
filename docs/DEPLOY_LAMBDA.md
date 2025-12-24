@@ -27,9 +27,9 @@ O processo completo segue os seguintes passos:
 
 1. **Criação Inicial (Terraform)**
    - Executar `terraform apply` para criar:
-     - 3 funções Lambda (auth-lambda, auth-admin-lambda, auth-migrator-lambda)
+     - 3 funções Lambda (auth-customer-lambda, auth-admin-lambda, auth-migrator-lambda)
      - Security Group `lambda_auth_sg`
-     - Function URL para auth-lambda
+     - Function URL para auth-customer-lambda
    - As funções são criadas com `placeholder.zip` (arquivo vazio)
 
 2. **Build e Empacotamento (GitHub Actions - job `build-and-package`)**
@@ -52,8 +52,8 @@ O processo completo segue os seguintes passos:
 
 ## Funções Lambda
 
-### 1. auth-lambda
-- **Nome**: `{project_name}-auth-lambda` (padrão: `autenticacao-auth-lambda`)
+### 1. auth-customer-lambda
+- **Nome**: `{project_name}-auth-customer-lambda` (padrão: `autenticacao-auth-customer-lambda`)
 - **VPC**: Sim (com Security Group `lambda_auth_sg`)
 - **Function URL**: Sim (acesso público)
 - **Timeout**: 900s (15 minutos)
@@ -155,11 +155,11 @@ O Security Group `lambda_auth_sg` é criado com:
   - HTTPS (porta 443) de qualquer origem
 - **Egress**: Todo tráfego de saída permitido
 
-Este Security Group é usado pelas Lambdas `auth-lambda` e `auth-migrator-lambda` (que estão em VPC).
+Este Security Group é usado pelas Lambdas `auth-customer-lambda` e `auth-migrator-lambda` (que estão em VPC).
 
 ## Function URL
 
-A Function URL é criada apenas para `auth-lambda`:
+A Function URL é criada apenas para `auth-customer-lambda`:
 
 - **Authorization**: NONE (acesso público)
 - **CORS**: Configurado para permitir qualquer origem
@@ -184,7 +184,7 @@ terraform apply
 **Solução**: O Lambda deve ser do tipo `Zip`. Verifique se foi criado corretamente via Terraform:
 
 ```bash
-aws lambda get-function --function-name autenticacao-auth-lambda --query 'Configuration.PackageType'
+aws lambda get-function --function-name autenticacao-auth-customer-lambda --query 'Configuration.PackageType'
 ```
 
 Deve retornar: `"Zip"`
@@ -218,16 +218,16 @@ terraform output
 
 1. Build local:
 ```bash
-dotnet publish src/FastFood.Auth.Lambda/FastFood.Auth.Lambda.csproj -c Release -o publish/auth-lambda
-cd publish/auth-lambda
-zip -r ../../lambda-auth.zip .
+dotnet publish src/InterfacesExternas/FastFood.Auth.Lambda.Customer/FastFood.Auth.Lambda.Customer.csproj -c Release -o publish/auth-customer-lambda
+cd publish/auth-customer-lambda
+zip -r ../../lambda-auth-customer.zip .
 ```
 
 2. Deploy via AWS CLI:
 ```bash
 aws lambda update-function-code \
-  --function-name autenticacao-auth-lambda \
-  --zip-file fileb://lambda-auth.zip \
+  --function-name autenticacao-auth-customer-lambda \
+  --zip-file fileb://lambda-auth-customer.zip \
   --region us-east-1
 ```
 

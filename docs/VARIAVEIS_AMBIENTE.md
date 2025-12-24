@@ -376,10 +376,10 @@ Copie `appsettings.Development.json.example` para `appsettings.Development.json`
 
 ```bash
 # Windows PowerShell
-Copy-Item src/FastFood.Auth.Lambda/appsettings.Development.json.example src/FastFood.Auth.Lambda/appsettings.Development.json
+Copy-Item src/InterfacesExternas/FastFood.Auth.Lambda.Customer/appsettings.Development.json.example src/InterfacesExternas/FastFood.Auth.Lambda.Customer/appsettings.Development.json
 
 # Linux/Mac
-cp src/FastFood.Auth.Lambda/appsettings.Development.json.example src/FastFood.Auth.Lambda/appsettings.Development.json
+cp src/InterfacesExternas/FastFood.Auth.Lambda.Customer/appsettings.Development.json.example src/InterfacesExternas/FastFood.Auth.Lambda.Customer/appsettings.Development.json
 ```
 
 ⚠️ **Importante:** O arquivo `appsettings.Development.json` está no `.gitignore` e não será commitado.
