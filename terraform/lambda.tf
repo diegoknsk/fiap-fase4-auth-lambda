@@ -41,7 +41,7 @@ module "auth_lambda" {
     subnet_ids         = data.aws_subnets.eks_supported.ids
   }
 
-  # Sem dependências de ECR (deploy via ZIP)
+  # Deploy via ZIP (código atualizado via GitHub Actions)
   depends_on_resources = []
 
   common_tags = {
@@ -101,7 +101,7 @@ module "auth_admin_lambda" {
   # Sem limite de execuções concorrentes
   reserved_concurrent_executions = null
 
-  # Sem dependências de ECR (deploy via ZIP)
+  # Deploy via ZIP (código atualizado via GitHub Actions)
   depends_on_resources = []
 
   common_tags = {
@@ -157,7 +157,7 @@ module "auth_migrator_lambda" {
     subnet_ids         = data.aws_subnets.eks_supported.ids
   }
 
-  # Sem dependências de ECR (deploy via ZIP)
+  # Deploy via ZIP (código atualizado via GitHub Actions)
   depends_on_resources = []
 
   common_tags = {

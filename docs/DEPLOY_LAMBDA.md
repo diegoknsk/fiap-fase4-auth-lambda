@@ -1,741 +1,205 @@
-# Deploy Lambda via Terraform Mínimo
+# Deploy Lambda Functions via ZIP
 
 ## Visão Geral
 
-Este documento descreve o processo completo de deploy do Lambda via Terraform mínimo, onde o Terraform recebe a URI completa da imagem ECR (já com tag) como variável e atualiza o recurso `aws_lambda_function` apontando para a nova imagem.
+Este documento descreve o processo completo de deploy das 3 funções Lambda de autenticação usando deploy via ZIP. O Terraform cria a infraestrutura (Lambdas, Security Group, Function URL) e o GitHub Actions atualiza o código das funções via deploy direto de arquivos ZIP.
 
 ### Separação de Responsabilidades
 
 O processo de deploy é dividido em duas etapas distintas:
 
-1. **Push de Imagem (CI/CD - GitHub Actions)**: 
-   - Build da imagem Docker
-   - Push da imagem para o repositório ECR
-   - Responsabilidade: Pipeline de CI/CD
-
-2. **Deploy de Infraestrutura (Terraform)**:
-   - Atualização do Lambda com nova `image_uri`
-   - Gerenciamento do estado da infraestrutura
+1. **Criação de Infraestrutura (Terraform)**: 
+   - Criação das 3 funções Lambda
+   - Criação do Security Group `lambda_auth_sg`
+   - Criação da Function URL para auth-lambda
    - Responsabilidade: Terraform
 
-**Importante**: O Terraform **não faz push de imagens**. Ele apenas atualiza o Lambda para apontar para uma imagem que já existe no ECR.
+2. **Atualização de Código (GitHub Actions)**:
+   - Build e empacotamento do código .NET em ZIP
+   - Deploy do código via AWS CLI (`aws lambda update-function-code`)
+   - Responsabilidade: Pipeline de CI/CD
+
+**Importante**: O Terraform cria as funções Lambda com um arquivo `placeholder.zip` inicial. O código real é atualizado via GitHub Actions usando deploy direto via ZIP.
 
 ## Fluxo de Deploy
 
 O processo completo segue os seguintes passos:
 
-1. **Build da Imagem Docker** (GitHub Actions - job `build-and-push`)
+1. **Criação Inicial (Terraform)**
+   - Executar `terraform apply` para criar:
+     - 3 funções Lambda (auth-lambda, auth-admin-lambda, auth-migrator-lambda)
+     - Security Group `lambda_auth_sg`
+     - Function URL para auth-lambda
+   - As funções são criadas com `placeholder.zip` (arquivo vazio)
+
+2. **Build e Empacotamento (GitHub Actions - job `build-and-package`)**
    - O workflow faz checkout do código
-   - Executa `docker build` para criar a imagem
-   - Tag da imagem: `sha-<7-primeiros-caracteres-do-SHA>` (ex: `sha-abcdef1`)
-   - Exporta `ECR_IMAGE_URI` como output do job
+   - Executa `dotnet publish` para cada Lambda
+   - Cria scripts `bootstrap` para .NET 8 custom runtime
+   - Empacota tudo em arquivos ZIP:
+     - `lambda-auth.zip`
+     - `lambda-auth-admin.zip`
+     - `lambda-auth-migrator.zip`
 
-2. **Push para ECR** (GitHub Actions - job `build-and-push`)
-   - Login no ECR usando credenciais AWS
-   - Push da imagem com tag SHA: `docker push <ecr-uri>:sha-<7-primeiros-caracteres>`
-   - Push da imagem com tag `latest`: `docker push <ecr-uri>:latest`
-   - Exporta `ECR_IMAGE_URI` como output para uso no job `terraform-apply`
-
-3. **Deploy via Terraform** (GitHub Actions - job `terraform-apply`)
-   - Executa `terraform init` no diretório `terraform/`
-   - Executa `terraform plan` com variáveis:
-     - `aws_region`: Região AWS
-     - `lambda_function_name`: Nome da função Lambda
-     - `ecr_image_uri`: URI completa da imagem ECR (recebida do job `build-and-push`)
-     - `lambda_role_arn`: ARN da role IAM para o Lambda
-   - Executa `terraform apply` para atualizar o Lambda
+3. **Deploy de Código (GitHub Actions - job `deploy-lambdas`)**
+   - Faz download dos arquivos ZIP
+   - Atualiza cada função Lambda usando `aws lambda update-function-code --zip-file`
+   - Aguarda a atualização completar
 
 4. **Atualização do Lambda**
-   - Terraform atualiza o recurso `aws_lambda_function` com nova `image_uri`
-   - Lambda automaticamente faz pull da nova imagem do ECR
-   - Lambda fica disponível com a nova versão
-
-## Parâmetros Necessários
-
-### Secrets do GitHub (Configurar no GitHub Settings → Secrets and variables → Actions)
-
-Os seguintes secrets devem estar configurados no GitHub:
-
-#### Secrets Básicos (Obrigatórios)
-- `AWS_ACCESS_KEY_ID`: Credencial de acesso AWS
-- `AWS_SECRET_ACCESS_KEY`: Credencial secreta AWS
-- `AWS_SESSION_TOKEN`: Token de sessão AWS (obrigatório para AWS Academy - credenciais temporárias)
-- `AWS_REGION`: Região AWS onde o Lambda será deployado (ex: `us-east-1`)
-- `AWS_ACCOUNT_ID`: ID da conta AWS (ex: `118233104061`)
-- `ECR_REPOSITORY_NAME`: Nome do repositório ECR (ex: `auth-cpf-lambda`)
-- `LAMBDA_FUNCTION_NAME`: Nome da função Lambda (ex: `auth-cpf-lambda`)
-- `LAMBDA_ROLE_ARN`: ARN da role IAM para a função Lambda (ex: `arn:aws:iam::118233104061:role/lambda-execution-role`)
-
-#### Secrets de VPC e Security Group (Opcionais)
-- `LAMBDA_SECURITY_GROUP_NAME`: Nome do Security Group para o Lambda (opcional, default: `fiap-fase4-auth-sg`)
-- `LAMBDA_SECURITY_GROUP_ID`: ID do Security Group para o Lambda (opcional, tem prioridade sobre nome)
-
-**Nota:** Se nenhum dos dois for fornecido, o Terraform usará o nome padrão `fiap-fase4-auth-sg`. As subnets são descobertas automaticamente da VPC default.
-
-#### Secrets do Cognito (Obrigatórios)
-- `COGNITO_USER_POOL_ID`: ID do User Pool do Cognito (ex: `us-east-1_XXXXXXXXX`)
-- `COGNITO_REGION`: Região do Cognito (ex: `us-east-1`)
-- `COGNITO_CLIENT_ID`: Client ID do aplicativo Cognito
-
-#### Secrets do RDS (Obrigatório)
-- `RDS_CONNECTION_STRING`: Connection string completa do PostgreSQL no formato `Host=...;Port=...;Database=...;Username=...;Password=...` (sensitive)
-
-#### Secrets JWT (Obrigatórios)
-- `JWT_SECRET`: Chave secreta para assinar tokens JWT (mínimo 32 caracteres, sensitive)
-- `JWT_ISSUER`: Emissor do token JWT (ex: `FastFood.Auth`)
-- `JWT_AUDIENCE`: Audiência do token JWT (ex: `FastFood.API`)
-- `JWT_EXPIRATION_HOURS`: Tempo de expiração em horas (opcional, default: `24`)
-
-### Variáveis Terraform
-
-As seguintes variáveis são passadas para o Terraform via linha de comando:
-
-#### Variáveis Básicas (Obrigatórias)
-- `aws_region`: Região AWS (ex: `us-east-1`)
-- `lambda_function_name`: Nome da função Lambda (ex: `auth-cpf-lambda`)
-- `ecr_image_uri`: URI completa da imagem ECR com tag
-- `lambda_role_arn`: ARN da role IAM para a função Lambda (ex: `arn:aws:iam::123456789012:role/lambda-execution-role`)
-
-**Nota sobre `lambda_role_arn`**: Se o Lambda já existe e está sendo importado via `terraform import`, você pode obter o ARN da role do Lambda existente no console AWS ou via AWS CLI:
-```bash
-aws lambda get-function --function-name auth-cpf-lambda --query 'Configuration.Role' --output text
-```
-
-#### Variáveis de VPC e Security Group (Opcionais)
-- `lambda_security_group_name`: Nome do Security Group (opcional, default: `fiap-fase4-auth-sg`)
-- `lambda_security_group_id`: ID do Security Group (opcional, tem prioridade sobre nome)
-
-**Nota:** As subnets são descobertas automaticamente da VPC default, não requer parâmetro.
-
-#### Variáveis do Cognito (Obrigatórias)
-- `cognito_user_pool_id`: ID do User Pool do Cognito (ex: `us-east-1_XXXXXXXXX`)
-- `cognito_region`: Região do Cognito (ex: `us-east-1`)
-- `cognito_client_id`: Client ID do aplicativo Cognito
-
-#### Variáveis do RDS (Obrigatória)
-- `rds_connection_string`: Connection string completa do PostgreSQL (sensitive)
-
-#### Variáveis JWT (Obrigatórias)
-- `jwt_secret`: Chave secreta JWT (mínimo 32 caracteres, sensitive)
-- `jwt_issuer`: Emissor do token JWT (ex: `FastFood.Auth`)
-- `jwt_audience`: Audiência do token JWT (ex: `FastFood.API`)
-- `jwt_expiration_hours`: Tempo de expiração em horas (opcional, default: `24`)
-
-### Formato da URI ECR
-
-A URI completa da imagem ECR segue o formato:
-
-```
-<account-id>.dkr.ecr.<region>.amazonaws.com/<repository>:<tag>
-```
-
-**Exemplo real:**
-```
-118233104061.dkr.ecr.us-east-1.amazonaws.com/auth-cpf-lambda:sha-abcdef1
-```
-
-Onde:
-- `118233104061`: Account ID da AWS
-- `us-east-1`: Região AWS
-- `auth-cpf-lambda`: Nome do repositório ECR
-- `sha-abcdef1`: Tag da imagem (baseada nos primeiros 7 caracteres do commit SHA)
-
-## Configuração de VPC e Security Group
-
-O Lambda precisa estar configurado em uma VPC para acessar o banco de dados RDS. A configuração é feita automaticamente pelo Terraform:
-
-### Descoberta Automática
-
-- **VPC**: O Terraform usa automaticamente a VPC default da sua conta AWS
-- **Subnets**: As subnets são descobertas automaticamente da VPC default (não requer parâmetro)
-- **Security Group**: Pode ser localizado por nome ou ID
-
-### Parâmetros do Security Group
-
-O Security Group pode ser especificado de duas formas (em ordem de prioridade):
-
-1. **Por ID** (prioridade): Se `lambda_security_group_id` for fornecido, o Terraform busca pelo ID
-2. **Por Nome**: Se apenas `lambda_security_group_name` for fornecido, busca pelo nome
-3. **Padrão**: Se nenhum for fornecido, usa o nome padrão `fiap-fase4-auth-sg`
-
-### Como Obter o Security Group ID ou Nome
-
-**Via AWS Console:**
-1. Acesse o AWS Console
-2. Navegue até **VPC** > **Security Groups**
-3. Procure pelo Security Group que permite acesso ao RDS (porta 5432)
-4. Copie o **Security Group ID** (ex: `sg-0123456789abcdef0`) ou o **Name**
-
-**Via AWS CLI:**
-```bash
-# Listar Security Groups
-aws ec2 describe-security-groups --region us-east-1 --query 'SecurityGroups[*].[GroupId,GroupName]' --output table
-
-# Obter Security Group por nome
-aws ec2 describe-security-groups --region us-east-1 --filters "Name=group-name,Values=fiap-fase4-auth-sg" --query 'SecurityGroups[0].GroupId' --output text
-```
-
-### Requisitos do Security Group
-
-O Security Group deve permitir:
-- **Saída (Outbound)**: Tráfego para o RDS na porta 5432 (PostgreSQL)
-- **Entrada (Inbound)**: Geralmente não é necessário para Lambda acessar RDS
-
-**Nota:** O Lambda precisa estar na mesma VPC que o RDS para poder acessá-lo.
-
-## Configuração do Cognito
-
-O Lambda usa o AWS Cognito para autenticação de administradores. As seguintes informações são necessárias:
-
-### Parâmetros Obrigatórios
-
-- `cognito_user_pool_id`: ID do User Pool do Cognito
-- `cognito_region`: Região onde o User Pool está configurado
-- `cognito_client_id`: Client ID do aplicativo configurado no User Pool
-
-### Como Obter os Valores do Cognito
-
-**Via AWS Console:**
-
-1. **Cognito User Pool ID:**
-   - Acesse o AWS Console
-   - Navegue até **Amazon Cognito** > **User pools**
-   - Selecione seu User Pool
-   - O ID aparece no topo da página (formato: `us-east-1_XXXXXXXXX`)
-
-2. **Cognito Client ID:**
-   - No mesmo User Pool, vá em **App integration** > **App clients**
-   - Copie o **Client ID** (formato: string alfanumérica)
-
-3. **Cognito Region:**
-   - A região está visível no topo do console ou no próprio User Pool ID (ex: `us-east-1`)
-
-**Via AWS CLI:**
-```bash
-# Listar User Pools
-aws cognito-idp list-user-pools --max-results 10 --region us-east-1
-
-# Obter informações do User Pool
-aws cognito-idp describe-user-pool --user-pool-id us-east-1_XXXXXXXXX --region us-east-1
-
-# Listar App Clients
-aws cognito-idp list-user-pool-clients --user-pool-id us-east-1_XXXXXXXXX --region us-east-1
-```
-
-### Exemplos de Valores
-
-- `cognito_user_pool_id`: `us-east-1_AbCdEfGhIj`
-- `cognito_region`: `us-east-1`
-- `cognito_client_id`: `1b6gctiq6b27pjh53b0qdnudjl`
-
-## Configuração do RDS
-
-O Lambda precisa de uma connection string completa para se conectar ao banco de dados PostgreSQL no RDS.
-
-### Formato da Connection String
-
-A connection string deve seguir o formato:
-
-```
-Host=<endpoint-rds>;Port=<porta>;Database=<nome-banco>;Username=<usuario>;Password=<senha>
-```
-
-### Como Obter/Construir a Connection String
-
-**Componentes necessários:**
-
-1. **Host (Endpoint RDS):**
-   - Acesse o AWS Console
-   - Navegue até **RDS** > **Databases**
-   - Selecione seu banco de dados
-   - Copie o **Endpoint** (ex: `fastfood-auth-db.xxxxx.us-east-1.rds.amazonaws.com`)
-
-2. **Porta:**
-   - Geralmente `5432` para PostgreSQL
-
-3. **Database:**
-   - Nome do banco de dados criado (ex: `dbAuth`)
-
-4. **Username:**
-   - Usuário master do RDS (ex: `dbadmin`)
-
-5. **Password:**
-   - Senha configurada para o usuário master
-
-**Exemplo completo:**
-```
-Host=fastfood-auth-db.xxxxx.us-east-1.rds.amazonaws.com;Port=5432;Database=dbAuth;Username=dbadmin;Password=MinhaSenhaSegura123
-```
-
-**Via AWS CLI:**
-```bash
-# Obter endpoint do RDS
-aws rds describe-db-instances --region us-east-1 --query 'DBInstances[*].[DBInstanceIdentifier,Endpoint.Address,Endpoint.Port]' --output table
-```
-
-**⚠️ Importante:** A connection string é uma informação sensível e deve ser mantida em segredo. Use GitHub Secrets para armazená-la.
-
-## Configuração JWT
-
-O Lambda gera tokens JWT para autenticação de clientes. As seguintes configurações são necessárias:
-
-### Parâmetros Obrigatórios
-
-- `jwt_secret`: Chave secreta para assinar tokens JWT (mínimo 32 caracteres)
-- `jwt_issuer`: Emissor do token JWT (ex: `FastFood.Auth`)
-- `jwt_audience`: Audiência do token JWT (ex: `FastFood.API`)
-
-### Parâmetros Opcionais
-
-- `jwt_expiration_hours`: Tempo de expiração em horas (padrão: `24`)
-
-### Requisitos do JWT Secret
-
-- **Mínimo de 32 caracteres** (requisito do HMAC-SHA256)
-- **Chave forte e aleatória** (use gerador de chaves seguras)
-- **Nunca commitar** no código ou repositório
-
-### Exemplos de Valores
-
-- `jwt_secret`: `MySuperSecretKeyThatIsAtLeast32CharactersLongForHMACSHA256`
-- `jwt_issuer`: `FastFood.Auth`
-- `jwt_audience`: `FastFood.API`
-- `jwt_expiration_hours`: `24`
-
-### Gerar JWT Secret Seguro
-
-**Via PowerShell:**
-```powershell
--join ((48..57) + (65..90) + (97..122) | Get-Random -Count 32 | ForEach-Object {[char]$_})
-```
-
-**Via Linux/Mac:**
-```bash
-openssl rand -base64 32
-```
-
-## Como Obter Valores dos Recursos Existentes
-
-### Security Group
-
-**Opção 1: Por Nome (Recomendado)**
-- Use o nome do Security Group: `fiap-fase4-auth-sg`
-- O Terraform buscará automaticamente pelo nome
-
-**Opção 2: Por ID**
-- Obtenha o ID via AWS Console ou CLI
-- Use `lambda_security_group_id` no lugar do nome
-
-**Nota:** As subnets são descobertas automaticamente da VPC default, não requer ação.
-
-### Cognito User Pool
-
-1. Acesse AWS Console > Cognito > User pools
-2. Selecione seu User Pool
-3. Copie o ID (formato: `us-east-1_XXXXXXXXX`)
-4. Vá em **App integration** > **App clients** e copie o Client ID
-
-### RDS Connection String
-
-1. Acesse AWS Console > RDS > Databases
-2. Selecione seu banco de dados
-3. Copie o **Endpoint** e **Port**
-4. Use as credenciais configuradas no RDS
-5. Construa a connection string no formato: `Host=...;Port=...;Database=...;Username=...;Password=...`
-
-## Comandos Terraform
-
-### Inicialização
+   - AWS Lambda atualiza o código da função com o novo ZIP
+   - A função fica disponível com a nova versão do código
+
+## Funções Lambda
+
+### 1. auth-lambda
+- **Nome**: `{project_name}-auth-lambda` (padrão: `autenticacao-auth-lambda`)
+- **VPC**: Sim (com Security Group `lambda_auth_sg`)
+- **Function URL**: Sim (acesso público)
+- **Timeout**: 900s (15 minutos)
+- **Runtime**: .NET 8 custom runtime (`provided.al2`)
+- **Handler**: `bootstrap`
+
+### 2. auth-admin-lambda
+- **Nome**: `{project_name}-auth-admin-lambda` (padrão: `autenticacao-auth-admin-lambda`)
+- **VPC**: Não (fora da VPC para melhor integração com Cognito)
+- **Function URL**: Não
+- **Timeout**: 30s
+- **Runtime**: .NET 8 custom runtime (`provided.al2`)
+- **Handler**: `bootstrap`
+
+### 3. auth-migrator-lambda
+- **Nome**: `{project_name}-auth-migrator-lambda` (padrão: `autenticacao-auth-migrator-lambda`)
+- **VPC**: Sim (com Security Group `lambda_auth_sg`)
+- **Function URL**: Não
+- **Timeout**: 900s (15 minutos)
+- **Runtime**: .NET 8 custom runtime (`provided.al2`)
+- **Handler**: `bootstrap`
+
+## Configuração do Terraform
+
+### Variáveis Obrigatórias
+
+- `aws_region` (string): Região AWS onde os recursos serão criados
+- `lab_role` (string): ARN da role IAM LabRole para as funções Lambda
+- `env` (string): Ambiente (ex: `dev`, `staging`, `prod`)
+
+### Variáveis Opcionais
+
+- `project_name` (string, padrão: `"autenticacao"`): Nome do projeto (usado como prefixo)
+- `common_tags` (map, padrão: `{}`): Tags comuns para aplicar a todos os recursos
+
+### Exemplo de Uso
 
 ```bash
 cd terraform
 terraform init
-```
-
-**Nota**: Se usar backend S3, configure as variáveis de ambiente ou use `-backend-config`:
-
-```bash
-terraform init \
-  -backend-config="bucket=seu-bucket-terraform-state" \
-  -backend-config="key=lambda-auth/terraform.tfstate" \
-  -backend-config="region=us-east-1"
-```
-
-### Planejamento
-
-```bash
 terraform plan \
   -var="aws_region=us-east-1" \
-  -var="lambda_function_name=auth-cpf-lambda" \
-  -var="ecr_image_uri=118233104061.dkr.ecr.us-east-1.amazonaws.com/auth-cpf-lambda:sha-abcdef" \
-  -var="lambda_role_arn=arn:aws:iam::118233104061:role/lambda-execution-role" \
-  -var="lambda_security_group_name=fiap-fase4-auth-sg" \
-  -var="cognito_user_pool_id=us-east-1_AbCdEfGhIj" \
-  -var="cognito_region=us-east-1" \
-  -var="cognito_client_id=1b6gctiq6b27pjh53b0qdnudjl" \
-  -var="rds_connection_string=Host=fastfood-auth-db.xxxxx.us-east-1.rds.amazonaws.com;Port=5432;Database=dbAuth;Username=dbadmin;Password=MinhaSenhaSegura123" \
-  -var="jwt_secret=MySuperSecretKeyThatIsAtLeast32CharactersLongForHMACSHA256" \
-  -var="jwt_issuer=FastFood.Auth" \
-  -var="jwt_audience=FastFood.API" \
-  -var="jwt_expiration_hours=24"
-```
-
-### Aplicação
-
-```bash
-terraform apply \
-  -var="aws_region=us-east-1" \
-  -var="lambda_function_name=auth-cpf-lambda" \
-  -var="ecr_image_uri=118233104061.dkr.ecr.us-east-1.amazonaws.com/auth-cpf-lambda:sha-abcdef" \
-  -var="lambda_role_arn=arn:aws:iam::118233104061:role/lambda-execution-role" \
-  -var="lambda_security_group_name=fiap-fase4-auth-sg" \
-  -var="cognito_user_pool_id=us-east-1_AbCdEfGhIj" \
-  -var="cognito_region=us-east-1" \
-  -var="cognito_client_id=1b6gctiq6b27pjh53b0qdnudjl" \
-  -var="rds_connection_string=Host=fastfood-auth-db.xxxxx.us-east-1.rds.amazonaws.com;Port=5432;Database=dbAuth;Username=dbadmin;Password=MinhaSenhaSegura123" \
-  -var="jwt_secret=MySuperSecretKeyThatIsAtLeast32CharactersLongForHMACSHA256" \
-  -var="jwt_issuer=FastFood.Auth" \
-  -var="jwt_audience=FastFood.API" \
-  -var="jwt_expiration_hours=24"
-```
-
-Ou usando `-auto-approve` para aprovação automática:
-
-```bash
-terraform apply -auto-approve \
-  -var="aws_region=us-east-1" \
-  -var="lambda_function_name=auth-cpf-lambda" \
-  -var="ecr_image_uri=118233104061.dkr.ecr.us-east-1.amazonaws.com/auth-cpf-lambda:sha-abcdef" \
-  -var="lambda_role_arn=arn:aws:iam::118233104061:role/lambda-execution-role" \
-  -var="lambda_security_group_name=fiap-fase4-auth-sg" \
-  -var="cognito_user_pool_id=us-east-1_AbCdEfGhIj" \
-  -var="cognito_region=us-east-1" \
-  -var="cognito_client_id=1b6gctiq6b27pjh53b0qdnudjl" \
-  -var="rds_connection_string=Host=fastfood-auth-db.xxxxx.us-east-1.rds.amazonaws.com;Port=5432;Database=dbAuth;Username=dbadmin;Password=MinhaSenhaSegura123" \
-  -var="jwt_secret=MySuperSecretKeyThatIsAtLeast32CharactersLongForHMACSHA256" \
-  -var="jwt_issuer=FastFood.Auth" \
-  -var="jwt_audience=FastFood.API" \
-  -var="jwt_expiration_hours=24"
-```
-
-### Usando arquivo de variáveis (terraform.tfvars)
-
-Criar arquivo `terraform/terraform.tfvars`:
-
-```hcl
-aws_region          = "us-east-1"
-lambda_function_name = "auth-cpf-lambda"
-ecr_image_uri        = "118233104061.dkr.ecr.us-east-1.amazonaws.com/auth-cpf-lambda:sha-abcdef"
-lambda_role_arn      = "arn:aws:iam::118233104061:role/lambda-execution-role"
-
-# VPC e Security Group (opcional)
-lambda_security_group_name = "fiap-fase4-auth-sg"
-# lambda_security_group_id = "sg-xxxxxxxxxxxxxxxxx"  # Opcional, tem prioridade sobre nome
-
-# Cognito
-cognito_user_pool_id = "us-east-1_AbCdEfGhIj"
-cognito_region        = "us-east-1"
-cognito_client_id    = "1b6gctiq6b27pjh53b0qdnudjl"
-
-# RDS
-rds_connection_string = "Host=fastfood-auth-db.xxxxx.us-east-1.rds.amazonaws.com;Port=5432;Database=dbAuth;Username=dbadmin;Password=MinhaSenhaSegura123"
-
-# JWT
-jwt_secret          = "MySuperSecretKeyThatIsAtLeast32CharactersLongForHMACSHA256"
-jwt_issuer          = "FastFood.Auth"
-jwt_audience        = "FastFood.API"
-jwt_expiration_hours = 24
-```
-
-Então executar:
-
-```bash
-terraform plan
+  -var="lab_role=arn:aws:iam::123456789012:role/LabRole" \
+  -var="env=dev"
 terraform apply
 ```
 
-**Nota**: Não commitar `terraform.tfvars` com valores reais no repositório. Use `.gitignore` ou `terraform.tfvars.example`.
+## Configuração do GitHub Actions
 
-## Processo Idempotente e Reexecutável
+### Secrets Necessários
 
-O processo de deploy é **idempotente**, o que significa que:
+Os seguintes secrets devem estar configurados no GitHub:
 
-- `terraform apply` pode ser executado múltiplas vezes sem causar problemas
-- Se a `image_uri` não mudou, o Terraform não fará alterações
-- Se a `image_uri` mudou, o Terraform atualizará apenas o Lambda com a nova imagem
-- O processo pode ser reexecutado após mudanças sem problemas
+- `AWS_ACCESS_KEY_ID`: Credencial de acesso AWS
+- `AWS_SECRET_ACCESS_KEY`: Credencial secreta AWS
+- `AWS_SESSION_TOKEN`: Token de sessão AWS (obrigatório para AWS Academy)
+- `AWS_REGION`: Região AWS (ex: `us-east-1`)
+- `PROJECT_NAME` (opcional): Nome do projeto (padrão: `autenticacao`)
 
-### Exemplo de Reexecução
-
-1. Fazer alterações no código
-2. Commit e push para `main`
-3. GitHub Actions executa automaticamente:
-   - Build da nova imagem
-   - Push para ECR com novo SHA
-   - Terraform atualiza Lambda com nova imagem
-
-## Estrutura de Arquivos Terraform
-
-```
-terraform/
-├── providers.tf      # Configuração do provider AWS e versão do Terraform
-├── backend.tf        # Configuração do backend S3 (state remoto)
-├── variables.tf      # Variáveis de entrada (VPC, Cognito, RDS, JWT, etc.)
-├── data.tf           # Data sources para localizar recursos existentes (VPC, Security Group, Subnets)
-├── lambda.tf         # Recurso aws_lambda_function com VPC e variáveis de ambiente
-└── outputs.tf        # Outputs do Terraform (ARN, nome, etc.)
-```
-
-## Workflow GitHub Actions
+### Workflow
 
 O workflow `.github/workflows/deploy-lambda.yml` é executado:
 
-- **Automaticamente**: Após push na branch `main`
+- **Automaticamente**: Após push para `main` ou `dev`
 - **Manualmente**: Via GitHub Actions UI (workflow_dispatch)
 
 ### Jobs do Workflow
 
-1. **build-and-push**:
-   - Build da imagem Docker
-   - Push para ECR com tag SHA (primeiros 7 caracteres) e `latest`
-   - Exporta `ECR_IMAGE_URI` como output para uso no job seguinte
-   - Tag da imagem: `sha-<7-primeiros-caracteres-do-SHA>`
-   - Exemplo: `sha-abcdef1`
+1. **build-and-package**:
+   - Build do código .NET para cada Lambda
+   - Criação de scripts bootstrap
+   - Empacotamento em arquivos ZIP
+   - Upload dos ZIPs como artifacts
 
-2. **terraform-apply**:
-   - Executa Terraform para atualizar o Lambda
-   - Depende do job `build-and-push` (só executa após push bem-sucedido)
-   - Recebe `ECR_IMAGE_URI` do job anterior via `needs.build-and-push.outputs.ecr_image_uri`
+2. **deploy-lambdas**:
+   - Download dos artifacts ZIP
+   - Atualização do código de cada Lambda via AWS CLI
+   - Validação da atualização
+
+## Bootstrap Script
+
+Para .NET 8 custom runtime (`provided.al2`), cada Lambda precisa de um script `bootstrap`:
+
+```bash
+#!/bin/sh
+set -euo pipefail
+exec /var/lang/bin/dotnet FastFood.Auth.Lambda.dll
+```
+
+O script é criado automaticamente pelo workflow GitHub Actions durante o build.
+
+## Security Group
+
+O Security Group `lambda_auth_sg` é criado com:
+
+- **Nome fixo**: `lambda_auth_sg` (independente do project_name)
+- **Ingress**:
+  - HTTP (porta 80) de qualquer origem
+  - HTTPS (porta 443) de qualquer origem
+- **Egress**: Todo tráfego de saída permitido
+
+Este Security Group é usado pelas Lambdas `auth-lambda` e `auth-migrator-lambda` (que estão em VPC).
+
+## Function URL
+
+A Function URL é criada apenas para `auth-lambda`:
+
+- **Authorization**: NONE (acesso público)
+- **CORS**: Configurado para permitir qualquer origem
+- **Métodos**: Todos os métodos HTTP permitidos
+- **Headers**: Todos os headers permitidos
+
+A URL é exposta como output do Terraform: `lambda_auth_function_url`
 
 ## Troubleshooting
 
-### Erro: "Backend configuration not found"
-
-**Solução**: Configure o backend S3 antes de executar `terraform init`:
-
-```bash
-terraform init \
-  -backend-config="bucket=seu-bucket" \
-  -backend-config="key=terraform.tfstate" \
-  -backend-config="region=us-east-1"
-```
-
-### Erro: "Variable not set"
-
-**Solução**: Certifique-se de passar todas as variáveis obrigatórias:
-
-```bash
-terraform plan \
-  -var="aws_region=..." \
-  -var="lambda_function_name=..." \
-  -var="ecr_image_uri=..."
-```
-
-### Erro: "Image not found in ECR"
-
-**Solução**: Verifique se:
-1. A imagem foi pushada com sucesso para o ECR
-2. A URI está correta (account-id, região, repositório, tag)
-3. As credenciais AWS têm permissão para acessar o ECR
-
 ### Erro: "Lambda function not found"
 
-**Solução**: Certifique-se de que:
-1. A função Lambda existe na AWS
-2. O nome da função está correto (`lambda_function_name`)
-3. As credenciais AWS têm permissão para atualizar o Lambda
-
-### Terraform não detecta mudanças
-
-**Solução**: Verifique se a `image_uri` realmente mudou. O Terraform só atualiza se a URI for diferente da atual.
-
-### Erro: "Security Group not found"
-
-**Solução**: Verifique se:
-1. O Security Group existe na região especificada
-2. O nome ou ID está correto
-3. As credenciais AWS têm permissão para acessar EC2/VPC
-
-**Como verificar:**
-```bash
-aws ec2 describe-security-groups --region us-east-1 --filters "Name=group-name,Values=fiap-fase4-auth-sg"
-```
-
-### Erro: "VPC default not found"
-
-**Solução**: Certifique-se de que existe uma VPC default na sua conta AWS. Se não existir, você pode criar uma ou usar uma VPC específica (requer modificação do Terraform).
-
-### Erro: "No subnets found in VPC"
-
-**Solução**: Verifique se a VPC default tem subnets configuradas. O Lambda precisa de pelo menos uma subnet para ser associado à VPC.
-
-**Como verificar:**
-```bash
-aws ec2 describe-subnets --filters "Name=vpc-id,Values=<vpc-id>" --region us-east-1
-```
-
-### Erro: "Cognito User Pool not found"
-
-**Solução**: Verifique se:
-1. O User Pool ID está correto (formato: `us-east-1_XXXXXXXXX`)
-2. O User Pool existe na região especificada
-3. As credenciais AWS têm permissão para acessar Cognito
-
-### Erro: "RDS connection failed"
-
-**Solução**: Verifique se:
-1. A connection string está no formato correto
-2. O Lambda está na mesma VPC que o RDS
-3. O Security Group permite tráfego na porta 5432
-4. As credenciais do RDS estão corretas
-
-### Erro: "JWT Secret must be at least 32 characters"
-
-**Solução**: Use uma chave secreta com no mínimo 32 caracteres. Gere uma nova chave usando:
-```bash
-openssl rand -base64 32
-```
-
-### Erro: "Lambda cannot access RDS"
-
-**Solução**: Verifique se:
-1. O Lambda está configurado na VPC (verifique `vpc_config` no Terraform)
-2. O Security Group do Lambda permite saída (outbound) para o RDS na porta 5432
-3. O Security Group do RDS permite entrada (inbound) do Security Group do Lambda na porta 5432
-4. O Lambda e o RDS estão na mesma VPC
-
-### Erro: "502 Bad Gateway" ao acessar Function URL
-
-O erro **502 Bad Gateway** geralmente indica que a Lambda está crashando ou não consegue processar a requisição. Siga estes passos para diagnosticar:
-
-#### 1. Verificar Logs do CloudWatch
-
-O primeiro passo é verificar os logs da Lambda no CloudWatch:
+**Solução**: Certifique-se de que as funções Lambda foram criadas via Terraform primeiro:
 
 ```bash
-# Via AWS CLI - listar grupos de log
-aws logs describe-log-groups --log-group-name-prefix "/aws/lambda/fiap-fase4-infra-auth-lambda" --region us-east-1
-
-# Ver logs recentes
-aws logs tail /aws/lambda/fiap-fase4-infra-auth-lambda --follow --region us-east-1
+cd terraform
+terraform apply
 ```
 
-**Via AWS Console:**
-1. Acesse **CloudWatch** > **Log groups**
-2. Procure por `/aws/lambda/<nome-da-funcao>`
-3. Verifique os logs mais recentes para erros
+### Erro: "PackageType must be Zip"
 
-#### 2. Verificar Variáveis de Ambiente
-
-Certifique-se de que todas as variáveis de ambiente estão configuradas corretamente:
+**Solução**: O Lambda deve ser do tipo `Zip`. Verifique se foi criado corretamente via Terraform:
 
 ```bash
-# Via AWS CLI
-aws lambda get-function-configuration --function-name fiap-fase4-infra-auth-lambda --region us-east-1 --query 'Environment.Variables'
+aws lambda get-function --function-name autenticacao-auth-lambda --query 'Configuration.PackageType'
 ```
 
-**Verificar:**
-- `ConnectionStrings__DefaultConnection` - Connection string do RDS está correta?
-- `COGNITO__REGION`, `COGNITO__USERPOOLID`, `COGNITO__CLIENTID` - Configurações do Cognito estão corretas?
-- `JwtSettings__Secret` - Tem pelo menos 32 caracteres?
-- `JwtSettings__Issuer`, `JwtSettings__Audience` - Estão configurados?
+Deve retornar: `"Zip"`
 
-#### 3. Verificar Connection String do RDS
+### Erro: "ZIP file not found"
 
-A connection string deve estar no formato correto:
+**Solução**: Verifique se o job `build-and-package` foi executado com sucesso e os artifacts foram criados.
 
-```
-Host=<endpoint-rds>;Port=5432;Database=<nome-banco>;Username=<usuario>;Password=<senha>
-```
+### Terraform não detecta mudanças no código
 
-**Testar conexão manualmente:**
-```bash
-# Se tiver psql instalado
-psql "Host=<endpoint-rds>;Port=5432;Database=<nome-banco>;Username=<usuario>;Password=<senha>"
-```
+**Solução**: Isso é esperado! O Terraform usa `lifecycle { ignore_changes = [filename, source_code_hash] }` para permitir atualizações de código via GitHub Actions sem conflitos. O código é atualizado via `aws lambda update-function-code` no workflow.
 
-#### 4. Verificar Timeout e Memória
+## Validação
 
-Lambda em VPC tem cold start mais longo. Verifique se o timeout está adequado:
-
-```bash
-aws lambda get-function-configuration --function-name fiap-fase4-infra-auth-lambda --region us-east-1 --query '[Timeout,MemorySize]'
-```
-
-**Recomendações:**
-- **Timeout**: Mínimo 60 segundos para Lambda em VPC
-- **Memória**: 512 MB ou mais
-
-#### 5. Verificar VPC e Security Groups
-
-Lambda em VPC precisa de:
-- Subnets configuradas corretamente
-- Security Group permitindo saída (outbound) para RDS na porta 5432
-- NAT Gateway ou VPC Endpoint para acessar serviços AWS (Cognito, ECR, etc.)
-
-**Verificar Security Group:**
-```bash
-aws ec2 describe-security-groups --group-ids <security-group-id> --region us-east-1 --query 'SecurityGroups[0].IpPermissionsEgress'
-```
-
-#### 6. Verificar Permissões IAM
-
-A role do Lambda precisa de permissões para:
-- Acessar VPC
-- Acessar CloudWatch Logs
-- Acessar Cognito (se necessário)
-- Acessar Secrets Manager (se usar)
-
-#### 7. Problemas Comuns e Soluções
-
-**Problema: Connection String vazia ou incorreta**
-- **Sintoma**: Erro ao inicializar DbContext
-- **Solução**: Verifique a variável `ConnectionStrings__DefaultConnection` no Terraform
-
-**Problema: Cold Start muito longo**
-- **Sintoma**: Timeout na primeira requisição
-- **Solução**: Aumente o timeout para 60s ou mais, ou use Provisioned Concurrency
-
-**Problema: Lambda não consegue acessar RDS**
-- **Sintoma**: Timeout ou erro de conexão
-- **Solução**: Verifique Security Groups e VPC configuration
-
-**Problema: Erro ao inicializar serviços**
-- **Sintoma**: Erro no startup da aplicação
-- **Solução**: Verifique logs do CloudWatch para ver exceções na inicialização
-
-#### 8. Testar Localmente
-
-Antes de fazer deploy, teste localmente com as mesmas variáveis de ambiente:
-
-```bash
-# Configurar variáveis de ambiente
-export ConnectionStrings__DefaultConnection="Host=...;Port=5432;Database=...;Username=...;Password=..."
-export COGNITO__REGION="us-east-1"
-export COGNITO__USERPOOLID="us-east-1_XXXXXXXXX"
-export COGNITO__CLIENTID="..."
-export JwtSettings__Secret="..."
-export JwtSettings__Issuer="FastFood.Auth"
-export JwtSettings__Audience="FastFood.API"
-
-# Executar localmente
-dotnet run --project src/FastFood.Auth.Lambda
-```
-
-#### 9. Verificar Health Check
-
-Crie um endpoint simples para verificar se a Lambda está respondendo:
-
-```csharp
-[HttpGet("health")]
-public IActionResult Health() => Ok(new { status = "healthy" });
-```
-
-Acesse: `https://<function-url>/api/health`
-
-## Validação e Testes
-
-### Validar configuração Terraform
+### Validar Terraform
 
 ```bash
 cd terraform
@@ -743,101 +207,31 @@ terraform fmt -recursive
 terraform validate
 ```
 
-### Testar deploy localmente
-
-1. Build e push manual da imagem:
-```bash
-docker build -t auth-lambda:test .
-aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin <account-id>.dkr.ecr.us-east-1.amazonaws.com
-docker tag auth-lambda:test <account-id>.dkr.ecr.us-east-1.amazonaws.com/auth-cpf-lambda:test
-docker push <account-id>.dkr.ecr.us-east-1.amazonaws.com/auth-cpf-lambda:test
-```
-
-2. Deploy via Terraform:
-```bash
-cd terraform
-terraform plan -var="ecr_image_uri=<account-id>.dkr.ecr.us-east-1.amazonaws.com/auth-cpf-lambda:test" ...
-terraform apply ...
-```
-
-3. Verificar no console AWS que o Lambda foi atualizado
-
-### Verificar outputs do Terraform
+### Verificar Outputs
 
 ```bash
 cd terraform
 terraform output
 ```
 
-Isso mostrará todos os outputs, incluindo a `lambda_function_url` que pode ser usada para acessar a API diretamente.
+### Testar Deploy Manual
 
-## Acesso à API Lambda
-
-A Lambda está configurada com **Lambda Function URL**, permitindo acesso HTTP direto sem necessidade de API Gateway.
-
-### Obter a URL da Function
-
-Após o deploy, obtenha a URL através do output do Terraform:
-
+1. Build local:
 ```bash
-cd terraform
-terraform output lambda_function_url
+dotnet publish src/FastFood.Auth.Lambda/FastFood.Auth.Lambda.csproj -c Release -o publish/auth-lambda
+cd publish/auth-lambda
+zip -r ../../lambda-auth.zip .
 ```
 
-Ou via AWS Console:
-1. Acesse **AWS Lambda** > **Functions**
-2. Selecione sua função Lambda
-3. Vá na aba **Configuration** > **Function URL**
-4. Copie a URL (formato: `https://xxxxxxxxxxxx.lambda-url.us-east-1.on.aws/`)
-
-### Endpoints Disponíveis
-
-A API expõe os seguintes endpoints:
-
-#### Customer Endpoints
-- `POST /api/customer/anonymous` - Criar customer anônimo
-- `POST /api/customer/register` - Registrar customer por CPF
-- `POST /api/customer/identify` - Identificar customer existente por CPF
-
-#### Admin Endpoints
-- `POST /api/admin/login` - Autenticar admin via AWS Cognito
-
-### Exemplo de Uso
-
+2. Deploy via AWS CLI:
 ```bash
-# Criar customer anônimo
-curl -X POST https://xxxxxxxxxxxx.lambda-url.us-east-1.on.aws/api/customer/anonymous \
-  -H "Content-Type: application/json"
-
-# Registrar customer por CPF
-curl -X POST https://xxxxxxxxxxxx.lambda-url.us-east-1.on.aws/api/customer/register \
-  -H "Content-Type: application/json" \
-  -d '{"cpf": "12345678901"}'
-
-# Login de admin
-curl -X POST https://xxxxxxxxxxxx.lambda-url.us-east-1.on.aws/api/admin/login \
-  -H "Content-Type: application/json" \
-  -d '{"username": "admin", "password": "senha123"}'
+aws lambda update-function-code \
+  --function-name autenticacao-auth-lambda \
+  --zip-file fileb://lambda-auth.zip \
+  --region us-east-1
 ```
 
-### Configuração de CORS
+## Documentação Adicional
 
-A Function URL está configurada com CORS permitindo:
-- **Origins**: Qualquer origem (`*`)
-- **Methods**: Todos os métodos HTTP
-- **Headers**: Todos os headers
-
-**Nota de Segurança**: Para produção, considere restringir as origens permitidas no CORS e usar `authorization_type = "AWS_IAM"` para autenticação IAM.
-
-### Alternativa: API Gateway
-
-Se precisar de recursos avançados como rate limiting, custom domain, ou autenticação mais robusta, você pode configurar um API Gateway apontando para a Lambda. No entanto, a Function URL é suficiente para a maioria dos casos de uso.
-
-## Referências
-
-- [AWS Lambda Container Images](https://docs.aws.amazon.com/lambda/latest/dg/images-create.html)
-- [AWS Lambda Function URLs](https://docs.aws.amazon.com/lambda/latest/dg/lambda-urls.html)
-- [Terraform AWS Provider - Lambda Function](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/lambda_function)
-- [Terraform AWS Provider - Lambda Function URL](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/lambda_function_url)
-- [GitHub Actions - Deploy to AWS](https://docs.github.com/en/actions/deployment/deploying-to-your-cloud-provider/deploying-to-amazon-ecs)
-
+- [Terraform README](../terraform/README.md)
+- [GitHub Actions Workflow](../.github/workflows/deploy-lambda.yml)

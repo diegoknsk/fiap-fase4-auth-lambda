@@ -43,12 +43,12 @@ variable "memory_size" {
 }
 
 variable "package_type" {
-  description = "Tipo de pacote: Zip ou Image"
+  description = "Tipo de pacote: Zip (deploy via arquivo ZIP)"
   type        = string
   default     = "Zip"
   validation {
-    condition     = contains(["Zip", "Image"], var.package_type)
-    error_message = "package_type deve ser 'Zip' ou 'Image'."
+    condition     = var.package_type == "Zip"
+    error_message = "package_type deve ser 'Zip' (deploy via ZIP)."
   }
 }
 
