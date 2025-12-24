@@ -126,6 +126,17 @@ jobs:
           echo "project_name=${PROJECT_NAME}" >> $GITHUB_OUTPUT
           echo "Using project name: ${PROJECT_NAME}"
 
+      - name: Validate required secrets
+        run: |
+          if [ -z "${{ secrets.LAB_ROLE }}" ]; then
+            echo "❌ ERRO: Secret LAB_ROLE não está configurado!"
+            echo "   Configure o secret LAB_ROLE no GitHub (Settings → Secrets and variables → Actions)"
+            echo "   O valor deve ser o ARN completo da role IAM LabRole"
+            echo "   Exemplo: arn:aws:iam::123456789012:role/LabRole"
+            exit 1
+          fi
+          echo "✅ LAB_ROLE configurado: ${{ secrets.LAB_ROLE }}"
+
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@ff717079ee2060e4bcee96c4779b553acc87447c # v4
         with:
@@ -150,7 +161,13 @@ jobs:
           TF_VAR_project_name: ${{ steps.project-name.outputs.project_name }}
           TF_VAR_env: ${{ secrets.ENV || 'dev' }}
           TF_VAR_lab_role: ${{ secrets.LAB_ROLE }}
-        run: terraform plan
+        run: |
+          echo "🔍 Executando terraform plan..."
+          echo "  - AWS Region: ${TF_VAR_aws_region}"
+          echo "  - Project Name: ${TF_VAR_project_name}"
+          echo "  - Environment: ${TF_VAR_env}"
+          echo "  - Lab Role: ${TF_VAR_lab_role}"
+          terraform plan
 
       - name: Terraform Apply
         working-directory: terraform
@@ -159,7 +176,13 @@ jobs:
           TF_VAR_project_name: ${{ steps.project-name.outputs.project_name }}
           TF_VAR_env: ${{ secrets.ENV || 'dev' }}
           TF_VAR_lab_role: ${{ secrets.LAB_ROLE }}
-        run: terraform apply -auto-approve
+        run: |
+          echo "🚀 Executando terraform apply..."
+          echo "  - AWS Region: ${TF_VAR_aws_region}"
+          echo "  - Project Name: ${TF_VAR_project_name}"
+          echo "  - Environment: ${TF_VAR_env}"
+          echo "  - Lab Role: ${TF_VAR_lab_role}"
+          terraform apply -auto-approve
 
   deploy-lambdas:
     name: Deploy Lambda Functions
