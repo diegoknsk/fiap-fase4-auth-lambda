@@ -268,13 +268,26 @@ public class CognitoServiceTests
 
         // Act & Assert
         // Deve lançar exceção ao tentar autenticar (sem mock do cliente Cognito)
-        // Mas não deve lançar InvalidOperationException por falta de configuração
+        // Mas não deve lançar InvalidOperationException por falta de UserPoolId ou ClientId
+        // pois eles estão configurados via variáveis de ambiente
         var exception = await Record.ExceptionAsync(() =>
             service.AuthenticateAsync("test@example.com", "password123"));
 
-        // Assert - pode lançar exceção de conexão, mas não de configuração
+        // Assert - deve lançar exceção, mas não InvalidOperationException por falta de configuração
+        // Pode lançar InvalidOperationException por outros motivos (ex: credenciais AWS)
+        // ou outras exceções relacionadas ao Cognito (AmazonCognitoIdentityProviderException)
         Assert.NotNull(exception);
-        Assert.IsNotType<InvalidOperationException>(exception);
+        
+        // Verificar que não é InvalidOperationException por falta de UserPoolId ou ClientId
+        // Se for InvalidOperationException, a mensagem não deve mencionar UserPoolId ou ClientId não configurado
+        if (exception is InvalidOperationException invalidOpEx)
+        {
+            var message = invalidOpEx.Message;
+            // Verificar que a mensagem não menciona UserPoolId ou ClientId não configurado
+            var isConfigError = message.Contains("UserPoolId não configurado") || 
+                               message.Contains("ClientId não configurado");
+            Assert.False(isConfigError, $"Não deveria ser erro de configuração: {message}");
+        }
 
         // Cleanup
         Environment.SetEnvironmentVariable("COGNITO__USERPOOLID", null);
