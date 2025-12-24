@@ -115,8 +115,8 @@ jobs:
             echo "✅ Output do job está definido corretamente"
           fi
 
-  terraform-apply:
-    name: Deploy Lambda via Terraform
+  update-lambda-image:
+    name: Atualizar Imagem do Lambda
     needs: build-and-push
     runs-on: ubuntu-latest
     strategy:
@@ -136,12 +136,7 @@ jobs:
           aws-session-token: ${{ secrets.AWS_SESSION_TOKEN }}
           aws-region: ${{ env.AWS_REGION }}
 
-      - name: Setup Terraform
-        uses: hashicorp/setup-terraform@b9cd54a3c349d3f38e8881555d616ced269862dd # v3
-        with:
-          terraform_version: 1.6.0
-
-      - name: Configurar variáveis por modo Lambda
+      - name: Configurar nome do Lambda por modo
         id: lambda-config
         env:
           LAMBDA_MODE: ${{ matrix.lambda_mode }}
@@ -149,10 +144,7 @@ jobs:
           LAMBDA_FUNCTION_NAME_CUSTOMER: ${{ secrets.LAMBDA_FUNCTION_NAME_CUSTOMER }}
           LAMBDA_FUNCTION_NAME_ADMIN: ${{ secrets.LAMBDA_FUNCTION_NAME_ADMIN }}
           LAMBDA_FUNCTION_NAME_MIGRATOR: ${{ secrets.LAMBDA_FUNCTION_NAME_MIGRATOR }}
-          # Usar uma única role ARN para todos os lambdas
-          LAMBDA_ROLE_ARN: ${{ secrets.LAMBDA_ROLE_ARN }}
         run: |
-          # Manter o valor original do matrix (Customer, Admin, Migrator) para o Terraform
           LAMBDA_MODE="${{ matrix.lambda_mode }}"
           LAMBDA_MODE_UPPER=$(echo "${LAMBDA_MODE}" | tr '[:lower:]' '[:upper:]')
           
@@ -185,55 +177,12 @@ jobs:
             echo "ℹ️ Usando nome customizado para ${LAMBDA_MODE}: ${LAMBDA_FUNCTION_NAME}"
           fi
           
-          # Usar a mesma role ARN para todos (pode ser definida via secret ou será validada depois)
-          if [ -z "${LAMBDA_ROLE_ARN}" ]; then
-            echo "⚠️ Aviso: LAMBDA_ROLE_ARN não está configurado via secret"
-            echo "   O Terraform pode usar um valor padrão ou falhar se for obrigatório"
-          fi
-          
           echo "🔍 Modo Lambda: ${LAMBDA_MODE}"
           echo "🔍 Lambda Function Name: ${LAMBDA_FUNCTION_NAME}"
-          echo "🔍 Lambda Role ARN: ${LAMBDA_ROLE_ARN:-não configurado}"
           
-          # Passar o valor original (Customer, Admin, Migrator) para o Terraform
-          echo "lambda_mode=${LAMBDA_MODE}" >> "$GITHUB_OUTPUT"
           echo "lambda_function_name=${LAMBDA_FUNCTION_NAME}" >> "$GITHUB_OUTPUT"
-          echo "lambda_role_arn=${LAMBDA_ROLE_ARN}" >> "$GITHUB_OUTPUT"
 
-      - name: Terraform Init
-        working-directory: ./terraform
-        env:
-          TF_BACKEND_BUCKET: ${{ secrets.TF_BACKEND_BUCKET }}
-          TF_BACKEND_KEY: ${{ secrets.TF_BACKEND_KEY }}
-          TF_BACKEND_REGION: ${{ secrets.AWS_REGION }}
-          LAMBDA_MODE: ${{ steps.lambda-config.outputs.lambda_mode }}
-        run: |
-          if [ -z "$TF_BACKEND_BUCKET" ] || [ -z "$TF_BACKEND_KEY" ]; then
-            echo "❌ Erro: Secrets TF_BACKEND_BUCKET e TF_BACKEND_KEY devem estar configurados"
-            echo "Configure os secrets no GitHub: Settings → Secrets and variables → Actions"
-            echo "TF_BACKEND_BUCKET está vazio: $([ -z "$TF_BACKEND_BUCKET" ] && echo 'SIM' || echo 'NÃO')"
-            echo "TF_BACKEND_KEY está vazio: $([ -z "$TF_BACKEND_KEY" ] && echo 'SIM' || echo 'NÃO')"
-            exit 1
-          fi
-          
-          # Usa uma chave de estado diferente para cada Lambda (Customer, Admin, Migrator)
-          # Isso evita conflitos quando os 3 jobs executam em paralelo
-          LAMBDA_MODE_LOWER=$(echo "${LAMBDA_MODE}" | tr '[:upper:]' '[:lower:]')
-          BACKEND_KEY="${TF_BACKEND_KEY}-${LAMBDA_MODE_LOWER}"
-          
-          echo "🔧 Configurando backend S3..."
-          echo "Bucket: ${TF_BACKEND_BUCKET}"
-          echo "Key base: ${TF_BACKEND_KEY}"
-          echo "Key final: ${BACKEND_KEY} (modo: ${LAMBDA_MODE})"
-          echo "Region: ${TF_BACKEND_REGION}"
-          terraform init \
-            -input=false \
-            -reconfigure \
-            -backend-config="bucket=${TF_BACKEND_BUCKET}" \
-            -backend-config="key=${BACKEND_KEY}" \
-            -backend-config="region=${TF_BACKEND_REGION}"
-
-      - name: Debug - Verificar e configurar ECR_IMAGE_URI
+      - name: Obter URI da imagem ECR
         id: setup-ecr-uri
         env:
           AWS_ACCOUNT_ID: ${{ secrets.AWS_ACCOUNT_ID }}
@@ -281,146 +230,11 @@ jobs:
           fi
           echo "✅ Validação final: ECR_IMAGE_URI=${FINAL_URI}"
 
-      - name: Verificar e importar Lambda existente (se necessário)
-        working-directory: ./terraform
-        id: import-lambda
-        env:
-          LAMBDA_FUNCTION_NAME: ${{ steps.lambda-config.outputs.lambda_function_name }}
-          LAMBDA_ROLE_ARN: ${{ steps.lambda-config.outputs.lambda_role_arn }}
-          LAMBDA_MODE: ${{ steps.lambda-config.outputs.lambda_mode }}
-          ECR_IMAGE_URI: ${{ env.ECR_IMAGE_URI }}
-        run: |
-          echo "🔍 Verificando se Lambda '${LAMBDA_FUNCTION_NAME}' (modo: ${LAMBDA_MODE}) existe na AWS..."
-          
-          # Verifica se o Lambda existe na AWS
-          LAMBDA_EXISTS=false
-          if aws lambda get-function \
-            --function-name "${LAMBDA_FUNCTION_NAME}" \
-            --region "${AWS_REGION}" > /dev/null 2>&1; then
-            LAMBDA_EXISTS=true
-            echo "✅ Lambda encontrado na AWS: ${LAMBDA_FUNCTION_NAME}"
-          else
-            echo "ℹ️ Lambda não existe na AWS, será criado pelo Terraform"
-            echo "lambda_imported=false" >> "$GITHUB_OUTPUT"
-            echo "lambda_exists=false" >> "$GITHUB_OUTPUT"
-            exit 0
-          fi
-          
-          # Obtém informações completas do Lambda na AWS
-          echo ""
-          echo "🔍 Informações do Lambda na AWS:"
-          LAMBDA_FULL_INFO=$(aws lambda get-function \
-            --function-name "${LAMBDA_FUNCTION_NAME}" \
-            --region "${AWS_REGION}" \
-            --output json 2>/dev/null)
-          
-          if [ -n "${LAMBDA_FULL_INFO}" ]; then
-            # Extrai informações principais
-            LAMBDA_INFO=$(echo "${LAMBDA_FULL_INFO}" | jq -r '.Configuration | [.FunctionName, .FunctionArn, .Role, .LastModified, .PackageType, .ImageUri, .State] | @json')
-            echo "${LAMBDA_INFO}" | jq -r '.[]' | paste - - - - - - - | column -t -s $'\t' || echo "${LAMBDA_INFO}"
-            
-            CURRENT_IMAGE_URI=$(echo "${LAMBDA_FULL_INFO}" | jq -r '.Configuration.ImageUri // empty')
-            CURRENT_ROLE=$(echo "${LAMBDA_FULL_INFO}" | jq -r '.Configuration.Role // empty')
-            CURRENT_TAGS=$(echo "${LAMBDA_FULL_INFO}" | jq -r '.Tags // {}')
-            
-            echo ""
-            echo "  - Image URI atual: ${CURRENT_IMAGE_URI}"
-            echo "  - Role atual: ${CURRENT_ROLE}"
-            echo "  - Tags:"
-            echo "${CURRENT_TAGS}" | jq -r 'to_entries[] | "    - \(.key): \(.value)"' || echo "    (sem tags ou erro ao ler)"
-            
-            # Verifica se há tags indicando gerenciamento por outro Terraform
-            MANAGED_BY=$(echo "${CURRENT_TAGS}" | jq -r '.ManagedBy // empty')
-            if [ -n "${MANAGED_BY}" ] && [ "${MANAGED_BY}" != "Terraform" ]; then
-              echo ""
-              echo "⚠️ ATENÇÃO: Lambda pode estar sendo gerenciado por outro Terraform!"
-              echo "   Tag ManagedBy: ${MANAGED_BY}"
-              echo "   Este Terraform gerenciará apenas a image_uri"
-            fi
-          fi
-          
-          # Verifica se o Lambda já está no estado do Terraform
-          echo ""
-          echo "🔍 Verificando estado do Terraform..."
-          if terraform state show aws_lambda_function.lambda > /dev/null 2>&1; then
-            echo "✅ Lambda já está no estado do Terraform"
-            echo "lambda_imported=false" >> "$GITHUB_OUTPUT"
-            echo "lambda_exists=true" >> "$GITHUB_OUTPUT"
-            
-            # Mostra diferenças
-            echo ""
-            echo "📊 Estado atual no Terraform:"
-            terraform state show aws_lambda_function.lambda | grep -E "(function_name|image_uri|role)" || true
-          else
-            echo "⚠️ Lambda existe na AWS mas NÃO está no estado do Terraform"
-            echo "📥 Tentando importar Lambda para o estado do Terraform..."
-            
-            # Usa a URI atual do Lambda ou a nova URI do ECR
-            IMPORT_IMAGE_URI="${CURRENT_IMAGE_URI:-${ECR_IMAGE_URI}}"
-            IMPORT_ROLE="${CURRENT_ROLE:-${LAMBDA_ROLE_ARN}}"
-            
-            echo "  - Usando image_uri: ${IMPORT_IMAGE_URI}"
-            echo "  - Usando role: ${IMPORT_ROLE}"
-            
-            # Importa o Lambda para o estado do Terraform
-            # Nota: Para import, apenas variáveis básicas são necessárias
-            # As outras variáveis serão configuradas no próximo terraform apply
-            IMPORT_OUTPUT=$(terraform import \
-              -var="aws_region=${AWS_REGION}" \
-              -var="lambda_function_name=${LAMBDA_FUNCTION_NAME}" \
-              -var="lambda_mode=${LAMBDA_MODE}" \
-              -var="ecr_image_uri=${IMPORT_IMAGE_URI}" \
-              -var="lambda_role_arn=${IMPORT_ROLE}" \
-              -var="cognito_user_pool_id=dummy" \
-              -var="cognito_region=${AWS_REGION}" \
-              -var="cognito_client_id=dummy" \
-              -var="rds_connection_string=dummy" \
-              -var="jwt_secret=dummy" \
-              -var="jwt_issuer=dummy" \
-              -var="jwt_audience=dummy" \
-              aws_lambda_function.lambda "${LAMBDA_FUNCTION_NAME}" 2>&1)
-            IMPORT_EXIT_CODE=$?
-            
-            if [ ${IMPORT_EXIT_CODE} -eq 0 ]; then
-              echo "✅ Lambda importado com sucesso para o estado do Terraform"
-              echo "lambda_imported=true" >> "$GITHUB_OUTPUT"
-            else
-              echo "⚠️ Aviso: Falha ao importar Lambda"
-              echo "Output do import:"
-              echo "${IMPORT_OUTPUT}"
-              echo ""
-              
-              # Se o erro for porque já está no estado, isso é OK
-              if echo "${IMPORT_OUTPUT}" | grep -qi "already in state\|already managed"; then
-                echo "ℹ️ Lambda já está no estado (isso é esperado)"
-                echo "lambda_imported=true" >> "$GITHUB_OUTPUT"
-              else
-                echo "❌ Erro: Não foi possível importar o Lambda existente"
-                echo "   O Terraform tentaria criar um novo Lambda, o que causaria erro"
-                echo "   ou recriaria o Lambda existente, o que não é desejado"
-                echo ""
-                echo "📋 Solução:"
-                echo "   1. Verifique se o Lambda realmente existe: aws lambda get-function --function-name ${LAMBDA_FUNCTION_NAME}"
-                echo "   2. Verifique as permissões IAM do workflow"
-                echo "   3. Importe manualmente antes do próximo deploy"
-                echo ""
-                echo "❌ Falhando o workflow para evitar recriação do Lambda"
-                exit 1
-              fi
-            fi
-            echo "lambda_exists=true" >> "$GITHUB_OUTPUT"
-          fi
-          
-          echo ""
-          echo "🔍 Estado atual do Terraform:"
-          terraform state list 2>/dev/null | head -20 || echo "Estado vazio ou não inicializado"
-
-      - name: Verificar Lambda existe antes do Plan
-        working-directory: ./terraform
+      - name: Verificar Lambda existe e é do tipo Image
         env:
           LAMBDA_FUNCTION_NAME: ${{ steps.lambda-config.outputs.lambda_function_name }}
         run: |
-          echo "🔍 Verificação crítica: Lambda deve existir antes do Terraform Plan"
+          echo "🔍 Verificando Lambda antes de atualizar imagem..."
           echo "  - Lambda Function Name: ${LAMBDA_FUNCTION_NAME}"
           
           # Verifica se o Lambda existe na AWS
@@ -434,193 +248,30 @@ jobs:
           fi
           
           # Verifica se o Lambda é do tipo Image (não Zip)
-          LAMBDA_INFO=$(aws lambda get-function \
+          PACKAGE_TYPE=$(aws lambda get-function \
             --function-name "${LAMBDA_FUNCTION_NAME}" \
             --region "${AWS_REGION}" \
             --query 'Configuration.PackageType' \
             --output text 2>/dev/null)
           
-          if [ "${LAMBDA_INFO}" != "Image" ]; then
+          if [ "${PACKAGE_TYPE}" != "Image" ]; then
             echo "❌ ERRO CRÍTICO: Lambda '${LAMBDA_FUNCTION_NAME}' não é do tipo Image!"
-            echo "   PackageType atual: ${LAMBDA_INFO}"
+            echo "   PackageType atual: ${PACKAGE_TYPE}"
             echo "   Este workflow só funciona com Lambdas do tipo Image (container)"
             echo "   Falhando o workflow"
             exit 1
           fi
           
-          echo "✅ Lambda é do tipo Image (container)"
+          # Mostra informações do Lambda
+          CURRENT_IMAGE_URI=$(aws lambda get-function \
+            --function-name "${LAMBDA_FUNCTION_NAME}" \
+            --region "${AWS_REGION}" \
+            --query 'Configuration.ImageUri' \
+            --output text 2>/dev/null)
           
-          # Verifica se o Lambda está no estado do Terraform
-          if ! terraform state show aws_lambda_function.lambda > /dev/null 2>&1; then
-            echo "❌ ERRO CRÍTICO: Lambda NÃO está no estado do Terraform!"
-            echo "   O import deve ter funcionado antes de chegar aqui"
-            echo "   Falhando o workflow para evitar tentativa de criação"
-            exit 1
-          fi
-          
-          # Verifica se o package_type no estado está correto
-          STATE_PACKAGE_TYPE=$(terraform state show aws_lambda_function.lambda 2>/dev/null | grep -E "^\s+package_type" | awk '{print $3}' | tr -d '"' || echo "")
-          if [ -n "${STATE_PACKAGE_TYPE}" ] && [ "${STATE_PACKAGE_TYPE}" != "Image" ]; then
-            echo "⚠️ ATENÇÃO: package_type no estado do Terraform está incorreto: ${STATE_PACKAGE_TYPE}"
-            echo "   Tentando corrigir o estado..."
-            # Atualiza o estado para garantir que package_type seja Image
-            terraform state show aws_lambda_function.lambda > /tmp/lambda_state.txt 2>/dev/null || true
-            echo "   Estado atual do Lambda no Terraform:"
-            terraform state show aws_lambda_function.lambda | grep -E "(package_type|image_uri|function_name)" || true
-          fi
-          
-          echo "✅ Lambda existe na AWS e está no estado do Terraform"
-          echo "✅ Seguro para executar Terraform Plan (apenas atualizará image_uri)"
-
-      - name: Terraform Refresh (sincronizar estado com AWS)
-        working-directory: ./terraform
-        env:
-          LAMBDA_FUNCTION_NAME: ${{ steps.lambda-config.outputs.lambda_function_name }}
-          LAMBDA_ROLE_ARN: ${{ steps.lambda-config.outputs.lambda_role_arn }}
-          LAMBDA_MODE: ${{ steps.lambda-config.outputs.lambda_mode }}
-          ECR_IMAGE_URI: ${{ env.ECR_IMAGE_URI }}
-          COGNITO_USER_POOL_ID: ${{ secrets.COGNITO_USER_POOL_ID }}
-          COGNITO_REGION: ${{ secrets.COGNITO_REGION }}
-          COGNITO_CLIENT_ID: ${{ secrets.COGNITO_CLIENT_ID }}
-          RDS_CONNECTION_STRING: ${{ secrets.RDS_CONNECTION_STRING }}
-          JWT_SECRET: ${{ secrets.JWT_SECRET }}
-          JWT_ISSUER: ${{ secrets.JWT_ISSUER }}
-          JWT_AUDIENCE: ${{ secrets.JWT_AUDIENCE }}
-          JWT_EXPIRATION_HOURS: ${{ secrets.JWT_EXPIRATION_HOURS }}
-        run: |
-          echo "🔄 Sincronizando estado do Terraform com a AWS..."
-          echo "   Isso garante que o estado está atualizado com as configurações reais do Lambda"
-          
-          terraform refresh \
-            -var="aws_region=${AWS_REGION}" \
-            -var="lambda_function_name=${LAMBDA_FUNCTION_NAME}" \
-            -var="lambda_mode=${LAMBDA_MODE}" \
-            -var="ecr_image_uri=${ECR_IMAGE_URI}" \
-            -var="lambda_role_arn=${LAMBDA_ROLE_ARN}" \
-            -var="cognito_user_pool_id=${COGNITO_USER_POOL_ID}" \
-            -var="cognito_region=${COGNITO_REGION}" \
-            -var="cognito_client_id=${COGNITO_CLIENT_ID}" \
-            -var="rds_connection_string=${RDS_CONNECTION_STRING}" \
-            -var="jwt_secret=${JWT_SECRET}" \
-            -var="jwt_issuer=${JWT_ISSUER}" \
-            -var="jwt_audience=${JWT_AUDIENCE}" \
-            -var="jwt_expiration_hours=${JWT_EXPIRATION_HOURS:-24}" || true
-          
-          echo "✅ Estado sincronizado"
-
-      - name: Terraform Plan
-        working-directory: ./terraform
-        env:
-          LAMBDA_FUNCTION_NAME: ${{ steps.lambda-config.outputs.lambda_function_name }}
-          LAMBDA_ROLE_ARN: ${{ steps.lambda-config.outputs.lambda_role_arn }}
-          LAMBDA_MODE: ${{ steps.lambda-config.outputs.lambda_mode }}
-          ECR_IMAGE_URI: ${{ env.ECR_IMAGE_URI }}
-          COGNITO_USER_POOL_ID: ${{ secrets.COGNITO_USER_POOL_ID }}
-          COGNITO_REGION: ${{ secrets.COGNITO_REGION }}
-          COGNITO_CLIENT_ID: ${{ secrets.COGNITO_CLIENT_ID }}
-          RDS_CONNECTION_STRING: ${{ secrets.RDS_CONNECTION_STRING }}
-          JWT_SECRET: ${{ secrets.JWT_SECRET }}
-          JWT_ISSUER: ${{ secrets.JWT_ISSUER }}
-          JWT_AUDIENCE: ${{ secrets.JWT_AUDIENCE }}
-          JWT_EXPIRATION_HOURS: ${{ secrets.JWT_EXPIRATION_HOURS }}
-        run: |
-          echo "🔍 Verificando variáveis antes do plan..."
-          echo "  - AWS_REGION: ${AWS_REGION}"
-          echo "  - LAMBDA_FUNCTION_NAME: ${LAMBDA_FUNCTION_NAME}"
-          echo "  - LAMBDA_ROLE_ARN: ${LAMBDA_ROLE_ARN}"
-          echo "  - ECR_IMAGE_URI: ${ECR_IMAGE_URI}"
-          echo "  - COGNITO_USER_POOL_ID: ${COGNITO_USER_POOL_ID:+***configurado***}"
-          echo "  - COGNITO_REGION: ${COGNITO_REGION}"
-          echo "  - COGNITO_CLIENT_ID: ${COGNITO_CLIENT_ID:+***configurado***}"
-          echo "  - RDS_CONNECTION_STRING: ${RDS_CONNECTION_STRING:+***configurado***}"
-          echo "  - JWT_SECRET: ${JWT_SECRET:+***configurado***}"
-          echo "  - JWT_ISSUER: ${JWT_ISSUER}"
-          echo "  - JWT_AUDIENCE: ${JWT_AUDIENCE}"
-          echo "  - JWT_EXPIRATION_HOURS: ${JWT_EXPIRATION_HOURS:-24 (default)}"
-          echo ""
-          
-          # Validações obrigatórias
-          if [ -z "${ECR_IMAGE_URI}" ]; then
-            echo "❌ Erro: ECR_IMAGE_URI está vazio!"
-            exit 1
-          fi
-          
-          if [ -z "${COGNITO_USER_POOL_ID}" ]; then
-            echo "❌ Erro: COGNITO_USER_POOL_ID é obrigatório!"
-            exit 1
-          fi
-          
-          if [ -z "${COGNITO_REGION}" ]; then
-            echo "❌ Erro: COGNITO_REGION é obrigatório!"
-            exit 1
-          fi
-          
-          if [ -z "${COGNITO_CLIENT_ID}" ]; then
-            echo "❌ Erro: COGNITO_CLIENT_ID é obrigatório!"
-            exit 1
-          fi
-          
-          if [ -z "${RDS_CONNECTION_STRING}" ]; then
-            echo "❌ Erro: RDS_CONNECTION_STRING é obrigatório!"
-            exit 1
-          fi
-          
-          if [ -z "${JWT_SECRET}" ]; then
-            echo "❌ Erro: JWT_SECRET é obrigatório!"
-            exit 1
-          fi
-          
-          if [ -z "${JWT_ISSUER}" ]; then
-            echo "❌ Erro: JWT_ISSUER é obrigatório!"
-            exit 1
-          fi
-          
-          if [ -z "${JWT_AUDIENCE}" ]; then
-            echo "❌ Erro: JWT_AUDIENCE é obrigatório!"
-            exit 1
-          fi
-          
-          # Valida formato da URI
-          if [[ ! "${ECR_IMAGE_URI}" =~ ^[0-9]+\.dkr\.ecr\..+ ]]; then
-            echo "❌ Erro: ECR_IMAGE_URI está em formato inválido: ${ECR_IMAGE_URI}"
-            exit 1
-          fi
-          
-          # Valida JWT_SECRET tem pelo menos 32 caracteres
-          if [ ${#JWT_SECRET} -lt 32 ]; then
-            echo "⚠️ Aviso: JWT_SECRET deve ter no mínimo 32 caracteres (atual: ${#JWT_SECRET})"
-          fi
-          
-          echo "✅ Todas as variáveis estão válidas"
-          echo ""
-          echo "📋 Executando terraform plan..."
-          
-          # Constrói comando terraform plan com variáveis obrigatórias
-          TF_PLAN_ARGS=(
-            -var="aws_region=${AWS_REGION}"
-            -var="lambda_function_name=${LAMBDA_FUNCTION_NAME}"
-            -var="lambda_mode=${LAMBDA_MODE}"
-            -var="ecr_image_uri=${ECR_IMAGE_URI}"
-            -var="lambda_role_arn=${LAMBDA_ROLE_ARN}"
-            -var="cognito_user_pool_id=${COGNITO_USER_POOL_ID}"
-            -var="cognito_region=${COGNITO_REGION}"
-            -var="cognito_client_id=${COGNITO_CLIENT_ID}"
-            -var="rds_connection_string=${RDS_CONNECTION_STRING}"
-            -var="jwt_secret=${JWT_SECRET}"
-            -var="jwt_issuer=${JWT_ISSUER}"
-            -var="jwt_audience=${JWT_AUDIENCE}"
-          )
-          
-          # Adiciona variáveis opcionais se fornecidas
-          if [ -n "${JWT_EXPIRATION_HOURS}" ]; then
-            TF_PLAN_ARGS+=(-var="jwt_expiration_hours=${JWT_EXPIRATION_HOURS}")
-          fi
-          
-          terraform plan "${TF_PLAN_ARGS[@]}" -out=tfplan
-          
-          echo ""
-          echo "📊 Resumo do plano:"
-          terraform show -json tfplan | jq -r '.resource_changes[] | select(.type == "aws_lambda_function") | "  - \(.type).\(.name): \(.change.actions[])"' 2>/dev/null || echo "  (jq não disponível, pulando resumo)"
+          echo "✅ Lambda existe e é do tipo Image (container)"
+          echo "  - Image URI atual: ${CURRENT_IMAGE_URI}"
+          echo "  - PackageType: ${PACKAGE_TYPE}"
 
       - name: Verificar se imagem existe no ECR
         env:
@@ -649,139 +300,70 @@ jobs:
             exit 1
           fi
 
-      - name: Verificar Lambda existe antes do Apply
-        working-directory: ./terraform
+      - name: Atualizar imagem do Lambda
         env:
           LAMBDA_FUNCTION_NAME: ${{ steps.lambda-config.outputs.lambda_function_name }}
-        run: |
-          echo "🔍 Verificação crítica: Lambda deve existir antes do Terraform Apply"
-          echo "  - Lambda Function Name: ${LAMBDA_FUNCTION_NAME}"
-          
-          # Verifica se o Lambda existe na AWS
-          if ! aws lambda get-function \
-            --function-name "${LAMBDA_FUNCTION_NAME}" \
-            --region "${AWS_REGION}" > /dev/null 2>&1; then
-            echo "❌ ERRO CRÍTICO: Lambda '${LAMBDA_FUNCTION_NAME}' NÃO existe na AWS!"
-            echo "   O Lambda deve ser criado no projeto principal antes de atualizar a imagem"
-            echo "   Falhando o workflow para evitar tentativa de criação"
-            exit 1
-          fi
-          
-          # Verifica se o Lambda está no estado do Terraform
-          if ! terraform state show aws_lambda_function.lambda > /dev/null 2>&1; then
-            echo "❌ ERRO CRÍTICO: Lambda NÃO está no estado do Terraform!"
-            echo "   O import deve ter funcionado antes de chegar aqui"
-            echo "   Falhando o workflow para evitar tentativa de criação"
-            exit 1
-          fi
-          
-          echo "✅ Lambda existe na AWS e está no estado do Terraform"
-          echo "✅ Seguro para executar Terraform Apply (apenas atualizará image_uri)"
-
-      - name: Terraform Apply
-        working-directory: ./terraform
-        env:
-          LAMBDA_FUNCTION_NAME: ${{ steps.lambda-config.outputs.lambda_function_name }}
-          LAMBDA_ROLE_ARN: ${{ steps.lambda-config.outputs.lambda_role_arn }}
-          LAMBDA_MODE: ${{ steps.lambda-config.outputs.lambda_mode }}
           ECR_IMAGE_URI: ${{ env.ECR_IMAGE_URI }}
-          AWS_ACCOUNT_ID: ${{ secrets.AWS_ACCOUNT_ID }}
-          ECR_REPOSITORY_NAME: ${{ secrets.ECR_REPOSITORY_NAME }}
-          COGNITO_USER_POOL_ID: ${{ secrets.COGNITO_USER_POOL_ID }}
-          COGNITO_REGION: ${{ secrets.COGNITO_REGION }}
-          COGNITO_CLIENT_ID: ${{ secrets.COGNITO_CLIENT_ID }}
-          RDS_CONNECTION_STRING: ${{ secrets.RDS_CONNECTION_STRING }}
-          JWT_SECRET: ${{ secrets.JWT_SECRET }}
-          JWT_ISSUER: ${{ secrets.JWT_ISSUER }}
-          JWT_AUDIENCE: ${{ secrets.JWT_AUDIENCE }}
-          JWT_EXPIRATION_HOURS: ${{ secrets.JWT_EXPIRATION_HOURS }}
         run: |
-          echo "🔍 Verificando variáveis antes do apply..."
-          echo "ECR_IMAGE_URI recebida: '${ECR_IMAGE_URI}'"
+          echo "🔄 Atualizando imagem do Lambda..."
+          echo "  - Lambda Function Name: ${LAMBDA_FUNCTION_NAME}"
+          echo "  - Nova Image URI: ${ECR_IMAGE_URI}"
           
-          # Se a URI estiver vazia ou incompleta, reconstrói
-          if [ -z "${ECR_IMAGE_URI}" ] || [[ ! "${ECR_IMAGE_URI}" =~ ^[0-9]+\.dkr\.ecr\..+ ]]; then
-            echo "⚠️ ECR_IMAGE_URI está vazia ou incompleta, reconstruindo..."
-            if [ -z "${AWS_ACCOUNT_ID}" ] || [ -z "${ECR_REPOSITORY_NAME}" ]; then
-              echo "❌ Erro: AWS_ACCOUNT_ID ou ECR_REPOSITORY_NAME não estão disponíveis para reconstruir URI!"
-              exit 1
-            fi
-            IMAGE_TAG="sha-${GITHUB_SHA::7}"
-            ECR_IMAGE_URI="${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/${ECR_REPOSITORY_NAME}:${IMAGE_TAG}"
-            echo "✅ ECR_IMAGE_URI reconstruída: ${ECR_IMAGE_URI}"
-          fi
-          
-          # Validação final obrigatória
+          # Valida URI antes de atualizar
           if [[ ! "${ECR_IMAGE_URI}" =~ ^[0-9]+\.dkr\.ecr\..+ ]]; then
-            echo "❌ Erro crítico: ECR_IMAGE_URI final está inválida: ${ECR_IMAGE_URI}"
-            echo "Formato esperado: <account-id>.dkr.ecr.<region>.amazonaws.com/<repo>:<tag>"
+            echo "❌ Erro: ECR_IMAGE_URI está em formato inválido: ${ECR_IMAGE_URI}"
             exit 1
           fi
           
-          echo "✅ ECR_IMAGE_URI válida e completa: ${ECR_IMAGE_URI}"
+          # Atualiza apenas a imagem do Lambda usando AWS CLI
+          # Isso NÃO mexe no estado do Terraform do projeto principal
           echo ""
-          echo "🔍 Variáveis que serão passadas para Terraform:"
-          echo "  - aws_region: ${AWS_REGION}"
-          echo "  - lambda_function_name: ${LAMBDA_FUNCTION_NAME}"
-          echo "  - ecr_image_uri: ${ECR_IMAGE_URI}"
-          echo "  - lambda_role_arn: ${LAMBDA_ROLE_ARN}"
-          echo "  - cognito_user_pool_id: ${COGNITO_USER_POOL_ID:+***configurado***}"
-          echo "  - cognito_region: ${COGNITO_REGION}"
-          echo "  - cognito_client_id: ${COGNITO_CLIENT_ID:+***configurado***}"
-          echo "  - rds_connection_string: ${RDS_CONNECTION_STRING:+***configurado***}"
-          echo "  - jwt_secret: ${JWT_SECRET:+***configurado***}"
-          echo "  - jwt_issuer: ${JWT_ISSUER}"
-          echo "  - jwt_audience: ${JWT_AUDIENCE}"
-          echo "  - jwt_expiration_hours: ${JWT_EXPIRATION_HOURS:-24 (default)}"
-          echo ""
+          echo "📋 Executando: aws lambda update-function-code"
+          UPDATE_OUTPUT=$(aws lambda update-function-code \
+            --function-name "${LAMBDA_FUNCTION_NAME}" \
+            --image-uri "${ECR_IMAGE_URI}" \
+            --region "${AWS_REGION}" \
+            --output json 2>&1)
+          UPDATE_EXIT_CODE=$?
           
-          # Constrói comando terraform apply com variáveis obrigatórias
-          TF_APPLY_ARGS=(
-            -var="aws_region=${AWS_REGION}"
-            -var="lambda_function_name=${LAMBDA_FUNCTION_NAME}"
-            -var="lambda_mode=${LAMBDA_MODE}"
-            -var="ecr_image_uri=${ECR_IMAGE_URI}"
-            -var="lambda_role_arn=${LAMBDA_ROLE_ARN}"
-            -var="cognito_user_pool_id=${COGNITO_USER_POOL_ID}"
-            -var="cognito_region=${COGNITO_REGION}"
-            -var="cognito_client_id=${COGNITO_CLIENT_ID}"
-            -var="rds_connection_string=${RDS_CONNECTION_STRING}"
-            -var="jwt_secret=${JWT_SECRET}"
-            -var="jwt_issuer=${JWT_ISSUER}"
-            -var="jwt_audience=${JWT_AUDIENCE}"
-          )
-          
-          # Adiciona variáveis opcionais se fornecidas
-          if [ -n "${JWT_EXPIRATION_HOURS}" ]; then
-            TF_APPLY_ARGS+=(-var="jwt_expiration_hours=${JWT_EXPIRATION_HOURS}")
-          fi
-          
-          # Verifica se há um plano salvo e aplica, senão aplica diretamente
-          if [ -f "tfplan" ]; then
-            echo "📋 Aplicando plano salvo (tfplan)..."
-            terraform apply tfplan
+          if [ ${UPDATE_EXIT_CODE} -eq 0 ]; then
+            echo "✅ Imagem do Lambda atualizada com sucesso!"
+            echo ""
+            echo "📊 Informações da atualização:"
+            echo "${UPDATE_OUTPUT}" | jq -r '. | "  - Function Name: \(.FunctionName)\n  - Image URI: \(.Code.ImageUri)\n  - Last Update Status: \(.LastUpdateStatus)\n  - State: \(.State)"' || echo "${UPDATE_OUTPUT}"
+            
+            # Aguarda a atualização completar
+            echo ""
+            echo "⏳ Aguardando atualização completar..."
+            aws lambda wait function-updated \
+              --function-name "${LAMBDA_FUNCTION_NAME}" \
+              --region "${AWS_REGION}"
+            
+            echo "✅ Lambda atualizado e pronto para uso"
           else
-            echo "📋 Aplicando mudanças diretamente..."
-            terraform apply -auto-approve "${TF_APPLY_ARGS[@]}"
+            echo "❌ Erro ao atualizar imagem do Lambda"
+            echo "Output:"
+            echo "${UPDATE_OUTPUT}"
+            exit 1
           fi
-          
-          echo ""
-          echo "📊 Outputs do Terraform após apply:"
-          terraform output -json 2>/dev/null | jq -r 'to_entries[] | "  - \(.key): \(.value.value)"' || terraform output
 
-      - name: Debug - Informações finais do Lambda
-        working-directory: ./terraform
+      - name: Verificar atualização do Lambda
         env:
           LAMBDA_FUNCTION_NAME: ${{ steps.lambda-config.outputs.lambda_function_name }}
         run: |
-          echo "🔍 Informações finais do Lambda após deploy:"
+          echo "🔍 Verificando informações finais do Lambda após atualização..."
           echo ""
-          echo "📋 Estado do Terraform:"
-          terraform state show aws_lambda_function.lambda 2>/dev/null | grep -E "(function_name|arn|image_uri|last_modified)" || echo "  (Lambda não encontrado no estado)"
-          echo ""
-          echo "📋 Informações na AWS:"
-          aws lambda get-function \
+          
+          LAMBDA_INFO=$(aws lambda get-function \
             --function-name "${LAMBDA_FUNCTION_NAME}" \
             --region "${AWS_REGION}" \
-            --query 'Configuration.[FunctionName,FunctionArn,ImageUri,LastModified,State,StateReason]' \
-            --output table 2>/dev/null || echo "  (Erro ao consultar Lambda na AWS)"
+            --output json 2>/dev/null)
+          
+          if [ -n "${LAMBDA_INFO}" ]; then
+            echo "📊 Informações do Lambda na AWS:"
+            echo "${LAMBDA_INFO}" | jq -r '.Configuration | "  - Function Name: \(.FunctionName)\n  - Function ARN: \(.FunctionArn)\n  - Image URI: \(.ImageUri)\n  - Last Modified: \(.LastModified)\n  - State: \(.State)\n  - Package Type: \(.PackageType)"'
+            echo ""
+            echo "✅ Lambda atualizado com sucesso!"
+          else
+            echo "⚠️ Não foi possível obter informações do Lambda"
+          fi
