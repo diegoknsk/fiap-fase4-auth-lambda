@@ -64,9 +64,9 @@ module "auth_customer_lambda" {
   # Sem limite de execuções concorrentes
   reserved_concurrent_executions = null
 
-  # Configuração de VPC - usando Security Group "lambda_auth_sg"
+  # Configuração de VPC - usando Security Group "Sg_Lambdas_Auth"
   vpc_config = {
-    security_group_ids = [local.sg_lambda_id]
+    security_group_ids = [local.sg_lambdas_auth_id]
     subnet_ids         = data.aws_subnets.eks_supported.ids
   }
 
@@ -211,9 +211,9 @@ module "auth_migrator_lambda" {
   # Sem limite de execuções concorrentes
   reserved_concurrent_executions = null
 
-  # Configuração de VPC - usando a mesma Security Group "lambda_auth_sg"
+  # Configuração de VPC - usando Security Group "Sg_Lambdas_Auth"
   vpc_config = {
-    security_group_ids = [local.sg_lambda_id]
+    security_group_ids = [local.sg_lambdas_auth_id]
     subnet_ids         = data.aws_subnets.eks_supported.ids
   }
 

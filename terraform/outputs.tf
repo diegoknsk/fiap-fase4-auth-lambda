@@ -61,6 +61,17 @@ output "lambda_security_group_name" {
   value       = "lambda_auth_sg"
 }
 
+# Outputs do Security Group "Sg_Lambdas_Auth"
+output "sg_lambdas_auth_id" {
+  description = "ID do Security Group Sg_Lambdas_Auth (para Customer e Migrator Lambdas)"
+  value       = local.sg_lambdas_auth_id
+}
+
+output "sg_lambdas_auth_name" {
+  description = "Nome do Security Group Sg_Lambdas_Auth (fixo: Sg_Lambdas_Auth)"
+  value       = "Sg_Lambdas_Auth"
+}
+
 # Output do repositório ECR único
 output "ecr_lambda_images_repository_url" {
   description = "URL do repositório ECR único para todas as imagens Lambda"
