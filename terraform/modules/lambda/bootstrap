@@ -1,0 +1,2 @@
+#!/bin/sh
+exec /var/lang/bin/dotnet bootstrap.dll

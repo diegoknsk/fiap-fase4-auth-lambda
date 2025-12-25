@@ -37,16 +37,53 @@ builder.Services.AddAWSLambdaHosting(LambdaEventSource.HttpApi);
 
 ---
 
+## Estrutura de Diretórios do Projeto
+
+A estrutura do projeto segue uma organização clara separando camadas core, interfaces externas, testes e documentação:
+
+```
+projeto/
+├── src/
+│   ├── Core/                          # Camadas que utilizamos (lógica de negócio)
+│   │   ├── FastFood.Auth.Application  # UseCases, Ports, InputModels, OutputModels, Presenters
+│   │   ├── FastFood.Auth.Domain       # Entidades, VOs, validações, invariantes
+│   │   ├── FastFood.Auth.Infra        # Serviços externos: Cognito, Token, etc.
+│   │   └── FastFood.Auth.Infra.Persistence  # PostgreSQL com EF Core
+│   │
+│   └── InterfacesExternas/           # Camadas que usamos (adapters de entrada/saída)
+│       ├── FastFood.Auth.Lambda.Admin      # Lambda Admin (ASP.NET Core - API/Lambda host)
+│       ├── FastFood.Auth.Lambda.Customer  # Lambda Customer (ASP.NET Core - API/Lambda host)
+│       └── FastFood.Auth.Migrator         # Console app para executar migrations
+│
+├── src/tests/                         # Testes automatizados
+│   ├── FastFood.Auth.Tests.Unit      # Testes unitários
+│   └── FastFood.Auth.Tests.Bdd       # Testes BDD/SpecFlow
+│
+└── story/                             # Documentação de histórias técnicas
+    └── Storie-XX-Descricao/
+        ├── story.md
+        └── subtask/
+```
+
+### Regras de Organização
+
+- **Core**: Contém toda a lógica de negócio e regras de domínio. Estas são as camadas que o sistema utiliza para processar informações.
+- **InterfacesExternas**: Contém adapters de entrada/saída (APIs, Lambdas, Console Apps). Estas são as camadas que o sistema usa para se comunicar com o mundo externo.
+- **tests**: Todos os testes automatizados (unitários, integração, BDD).
+- **story**: Documentação técnica das histórias de desenvolvimento.
+
 ## Estrutura de Projetos
 
 ```
-FastFood.Auth.Lambda          (ASP.NET Core - API/Lambda host)
-FastFood.Auth.Application     (UseCases, Ports, InputModels, OutputModels, Presenters)
-FastFood.Auth.Domain          (Entidades, VOs, validações, invariantes)
-FastFood.Auth.Infra           (Serviços externos: Cognito, Token, etc.)
+FastFood.Auth.Lambda.Admin      (ASP.NET Core - API/Lambda host para Admin)
+FastFood.Auth.Lambda.Customer   (ASP.NET Core - API/Lambda host para Customer)
+FastFood.Auth.Application       (UseCases, Ports, InputModels, OutputModels, Presenters)
+FastFood.Auth.Domain            (Entidades, VOs, validações, invariantes)
+FastFood.Auth.Infra             (Serviços externos: Cognito, Token, etc.)
 FastFood.Auth.Infra.Persistence (PostgreSQL com EF Core)
-FastFood.Auth.Tests.Unit      (Testes unitários)
-FastFood.Auth.Tests.Bdd       (Testes BDD/SpecFlow)
+FastFood.Auth.Migrator          (Console app para executar migrations)
+FastFood.Auth.Tests.Unit        (Testes unitários)
+FastFood.Auth.Tests.Bdd         (Testes BDD/SpecFlow)
 ```
 
 ---
@@ -386,7 +423,125 @@ Controllers são **adapters de transporte** (HTTP/API Gateway).
 - **SEMPRE adicionar novos projetos ao arquivo de solução após criá-los**
 - Executar: `dotnet sln <arquivo-solucao> add <caminho-projeto>`
 - Projetos devem estar na raiz da solução (não em pastas virtuais)
-- Manter estrutura de diretórios físicos (src/, tests/)
+- Manter estrutura de diretórios físicos (src/Core/, src/InterfacesExternas/, src/tests/, story/)
+
+---
+
+## Containerização e Docker
+
+### Dockerfiles
+
+Todos os Dockerfiles devem seguir as seguintes regras de segurança e boas práticas:
+
+#### Multi-Stage Build (Obrigatório)
+
+- **Stage 1 (build)**: Usar `mcr.microsoft.com/dotnet/sdk:8.0` para compilar
+- **Stage 2 (runtime)**: Usar `public.ecr.aws/lambda/dotnet:8` para runtime Lambda
+- Otimiza o tamanho da imagem final (apenas runtime, sem SDK)
+
+#### Segurança (Correções SonarQube)
+
+- **USER não-root (OBRIGATÓRIO)**: Sempre executar como usuário não-root
+  ```dockerfile
+  # Rodar como não-root sem depender de groupadd/useradd.
+  # 1001:1001 é um UID/GID arbitrário não-root (não precisa existir no /etc/passwd).
+  RUN chown -R 1001:1001 "${LAMBDA_TASK_ROOT}"
+  USER 1001:1001
+  ```
+- **Justificativa**: Executar containers como root é um Security Hotspot crítico no SonarQube
+- **Solução**: Usar UID/GID arbitrário (1001:1001) que não precisa existir no /etc/passwd
+
+#### Estrutura Padrão de Dockerfile
+
+```dockerfile
+# Stage 1: Build
+FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
+WORKDIR /src
+
+# Copiar arquivos de projeto (.csproj) para restaurar dependências
+COPY ["src/Core/...", "src/Core/..."]
+COPY ["src/InterfacesExternas/...", "src/InterfacesExternas/..."]
+
+# Restaurar e publicar
+RUN dotnet restore "..."
+RUN dotnet publish "..." -c Release -o /app/publish --no-restore
+
+# Stage 2: Runtime - AWS Lambda .NET 8
+FROM public.ecr.aws/lambda/dotnet:8
+
+# Copiar aplicação publicada
+COPY --from=build /app/publish ${LAMBDA_TASK_ROOT}
+
+# Segurança: Rodar como não-root
+RUN chown -R 1001:1001 "${LAMBDA_TASK_ROOT}"
+USER 1001:1001
+
+ENV ASPNETCORE_ENVIRONMENT=Production
+ENV DOTNET_ENVIRONMENT=Production
+
+CMD ["Assembly::Namespace.Class::Method"]
+```
+
+#### Nomenclatura de Dockerfiles
+
+- `Dockerfile` - Dockerfile principal (se houver apenas um)
+- `Dockerfile.<nome-projeto>` - Dockerfiles específicos (ex: `Dockerfile.auth-admin-lambda`, `Dockerfile.auth-customer-lambda`)
+
+---
+
+## CI/CD e GitHub Actions
+
+### Uso de Versões (Correções SonarQube)
+
+**REGRA CRÍTICA**: Sempre usar **commit SHA hash completo** ao invés de tags de versão.
+
+#### ❌ INCORRETO (Security Hotspot)
+
+```yaml
+- uses: aws-actions/configure-aws-credentials@v4
+- uses: aws-actions/amazon-ecr-login@v2
+- uses: docker/setup-buildx-action@v3
+```
+
+#### ✅ CORRETO (Seguro e Reprodutível)
+
+```yaml
+# v4
+- uses: aws-actions/configure-aws-credentials@ff717079ee2060e4bcee96c4779b553acc87447c
+# v2
+- uses: aws-actions/amazon-ecr-login@a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6q7r8s9t0
+# v3
+- uses: docker/setup-buildx-action@1a2b3c4d5e6f7g8h9i0j1k2l3m4n5o6p7q8r9s0t
+```
+
+#### Justificativa
+
+- **Tags podem ser movidas/reescritas**: Tags Git podem ser deletadas e recriadas apontando para commits diferentes
+- **SHA é imutável**: Commit SHA hash é único e imutável, garantindo reprodutibilidade
+- **Segurança**: Previne ataques de supply chain onde tags maliciosas podem ser injetadas
+- **Rastreabilidade**: Permite rastrear exatamente qual versão da action foi usada
+
+#### Como Obter o SHA
+
+1. Acessar o repositório da action no GitHub
+2. Ir para a aba "Releases" ou "Commits"
+3. Encontrar o commit da versão desejada (ex: v4)
+4. Copiar o SHA completo do commit
+5. Usar no workflow mantendo comentário com a versão para referência
+
+#### Padrão Recomendado
+
+```yaml
+# Sempre manter comentário com versão para referência
+# v4.0.2
+- uses: actions/checkout@a5ac7e51b410bd4179b2a86c3b1a1c2d3e4f5g6h
+```
+
+### Workflows
+
+- Todos os workflows devem estar em `.github/workflows/`
+- Usar nomes descritivos: `build-and-push.yml`, `deploy-terraform.yml`, `run-tests.yml`
+- Sempre validar workflows com `act` ou GitHub Actions localmente antes de commitar
 
 ---
 
@@ -414,5 +569,165 @@ A arquitetura do AuthLambda deve ser **idêntica** à dos serviços HTTP (OrderH
 - ✅ Consistência entre todos os serviços do ecossistema
 
 > *"O Auth é um Lambda, mas arquiteturalmente é uma API ASP.NET Core como qualquer outra; só mudamos o host."*
+
+---
+
+## Principais Mudanças e Lições Aprendidas
+
+Esta seção documenta as principais mudanças arquiteturais e correções aplicadas durante o desenvolvimento, para serem reutilizadas em próximos projetos.
+
+### 1. Estrutura de Diretórios Separada
+
+**Mudança**: Separação clara entre camadas core e interfaces externas.
+
+**Estrutura Anterior**:
+```
+src/
+  FastFood.Auth.Lambda/
+  FastFood.Auth.Application/
+  FastFood.Auth.Domain/
+```
+
+**Estrutura Atual**:
+```
+src/
+  Core/                    # Camadas que utilizamos (lógica de negócio)
+    FastFood.Auth.Application/
+    FastFood.Auth.Domain/
+    FastFood.Auth.Infra/
+    FastFood.Auth.Infra.Persistence/
+  InterfacesExternas/      # Camadas que usamos (adapters)
+    FastFood.Auth.Lambda.Admin/
+    FastFood.Auth.Lambda.Customer/
+    FastFood.Auth.Migrator/
+```
+
+**Benefícios**:
+- Separação clara de responsabilidades
+- Facilita identificação de dependências
+- Melhor organização para projetos com múltiplas interfaces (APIs, Lambdas, Console Apps)
+
+### 2. Correção de Security Hotspots em Dockerfiles
+
+**Problema**: SonarQube identificou Security Hotspots críticos em Dockerfiles executando como root.
+
+**Solução Aplicada**:
+```dockerfile
+# Rodar como não-root sem depender de groupadd/useradd.
+# 1001:1001 é um UID/GID arbitrário não-root (não precisa existir no /etc/passwd).
+RUN chown -R 1001:1001 "${LAMBDA_TASK_ROOT}"
+USER 1001:1001
+```
+
+**Impacto**:
+- Elimina Security Hotspots do SonarQube
+- Segue boas práticas de segurança de containers
+- Não requer criação de usuário no sistema (usa UID/GID arbitrário)
+
+**Aplicar em**: Todos os Dockerfiles de novos projetos.
+
+### 3. Uso de Commit SHA em GitHub Actions
+
+**Problema**: Uso de tags de versão (`@v4`, `@v2`) em workflows do GitHub Actions é um Security Hotspot.
+
+**Solução Aplicada**:
+```yaml
+# ❌ ANTES (inseguro)
+- uses: aws-actions/configure-aws-credentials@v4
+
+# ✅ DEPOIS (seguro)
+# v4.0.2
+- uses: aws-actions/configure-aws-credentials@ff717079ee2060e4bcee96c4779b553acc87447c
+```
+
+**Impacto**:
+- Elimina Security Hotspots do SonarQube
+- Garante reprodutibilidade (SHA é imutável)
+- Previne ataques de supply chain
+- Melhora rastreabilidade
+
+**Aplicar em**: Todos os workflows do GitHub Actions em novos projetos.
+
+### 4. Organização Horizontal por Contexto
+
+**Mudança**: Application layer organizada horizontalmente por contexto (Customer, Admin) ao invés de verticalmente por tipo.
+
+**Estrutura Anterior** (Vertical):
+```
+Application/
+  Commands/
+    Admin/
+    Customer/
+  UseCases/
+    Admin/
+    Customer/
+```
+
+**Estrutura Atual** (Horizontal):
+```
+Application/
+  UseCases/
+    Customer/
+    Admin/
+  InputModels/
+    Customer/
+    Admin/
+  OutputModels/
+    Customer/
+    Admin/
+  Presenters/
+    Customer/
+    Admin/
+```
+
+**Benefícios**:
+- Facilita localização de código relacionado
+- Melhor coesão (tudo de Customer junto)
+- Mais fácil de entender e manter
+
+### 5. Presenters na Camada Application
+
+**Mudança**: Presenters movidos da camada Lambda (API) para a camada Application.
+
+**Justificativa**:
+- Application define o contrato de saída
+- API apenas consome o contrato
+- Elimina duplicação de ResponseModels
+- Centraliza transformações de dados
+
+**Aplicar em**: Todos os novos projetos seguindo Clean Architecture.
+
+### 6. Cobertura de Testes e Qualidade
+
+**Metas Estabelecidas**:
+- Cobertura mínima: **≥ 80%** (cobertura de linha)
+- Duplicação máxima: **≤ 3%**
+- Security Hotspots: **0** (ou justificados)
+- Quality Gate do SonarQube: **deve passar**
+
+**Ferramentas**:
+- SonarQube para análise estática
+- Coverlet para cobertura de código
+- xUnit para testes unitários
+- SpecFlow para testes BDD
+
+**Aplicar em**: Todos os novos projetos com as mesmas metas de qualidade.
+
+---
+
+## Checklist para Novos Projetos
+
+Ao iniciar um novo projeto, verificar:
+
+- [ ] Estrutura de diretórios separada (Core/ e InterfacesExternas/)
+- [ ] Dockerfiles com USER não-root (1001:1001)
+- [ ] GitHub Actions usando commit SHA ao invés de tags
+- [ ] Application layer organizada horizontalmente por contexto
+- [ ] Presenters na camada Application
+- [ ] Cobertura de testes ≥ 80%
+- [ ] Duplicação ≤ 3%
+- [ ] Quality Gate do SonarQube passando
+- [ ] Swagger habilitado e documentado
+- [ ] Testes BDD implementados
 
 

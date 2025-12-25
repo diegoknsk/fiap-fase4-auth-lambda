@@ -42,6 +42,7 @@ resource "aws_security_group" "sg_lambda" {
 
   lifecycle {
     create_before_destroy = true
+    prevent_destroy       = true
   }
 }
 
@@ -54,7 +55,9 @@ resource "aws_security_group" "sg_lambda" {
 
 # Usar o Security Group existente ou o criado
 locals {
-  sg_lambda_id = length(data.aws_security_groups.sg_lambda_existing.ids) > 0 ? data.aws_security_groups.sg_lambda_existing.ids[0] : (length(aws_security_group.sg_lambda) > 0 ? aws_security_group.sg_lambda[0].id : data.aws_security_groups.sg_lambda_existing.ids[0])
+  # Se o SG já existe na AWS, usa o data source
+  # Se não existe, usa o resource criado pelo Terraform
+  sg_lambda_id = length(data.aws_security_groups.sg_lambda_existing.ids) > 0 ? data.aws_security_groups.sg_lambda_existing.ids[0] : aws_security_group.sg_lambda[0].id
   
   # COMENTADO TEMPORARIAMENTE - será reativado depois
   # # Se o SG já existe, verifica se as regras já estão presentes
@@ -109,3 +112,60 @@ locals {
 #     create_before_destroy = true
 #   }
 # }
+
+# ============================================================================
+# Security Group "Sg_Lambdas_Auth" para Lambdas Customer e Migrator
+# Nome fixo: Sg_Lambdas_Auth (independente do project_name)
+# Criada de forma idempotente e não removida no destroy
+# ============================================================================
+
+# Tenta buscar o Security Group existente
+data "aws_security_groups" "sg_lambdas_auth_existing" {
+  filter {
+    name   = "group-name"
+    values = ["Sg_Lambdas_Auth"]
+  }
+  filter {
+    name   = "vpc-id"
+    values = [data.aws_vpc.default.id]
+  }
+}
+
+# Cria o Security Group apenas se não existir
+resource "aws_security_group" "sg_lambdas_auth" {
+  count       = length(data.aws_security_groups.sg_lambdas_auth_existing.ids) > 0 ? 0 : 1
+  name        = "Sg_Lambdas_Auth"
+  description = "Security group for Lambda Functions Customer and Migrator - allows connection with RDS"
+  vpc_id      = data.aws_vpc.default.id
+
+  # Egress: permitir todo tráfego de saída
+  egress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+    description = "Allow all outbound traffic"
+  }
+
+  tags = merge(
+    {
+      Name        = "Sg_Lambdas_Auth"
+      Environment = var.env
+      Project     = var.project_name
+      ManagedBy   = "Terraform"
+    },
+    var.common_tags
+  )
+
+  lifecycle {
+    create_before_destroy = true
+    prevent_destroy       = true
+  }
+}
+
+# Usar o Security Group existente ou o criado
+locals {
+  # Se o SG já existe na AWS, usa o data source
+  # Se não existe, usa o resource criado pelo Terraform
+  sg_lambdas_auth_id = length(data.aws_security_groups.sg_lambdas_auth_existing.ids) > 0 ? data.aws_security_groups.sg_lambdas_auth_existing.ids[0] : aws_security_group.sg_lambdas_auth[0].id
+}
