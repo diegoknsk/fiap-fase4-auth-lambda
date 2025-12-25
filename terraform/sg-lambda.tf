@@ -42,6 +42,7 @@ resource "aws_security_group" "sg_lambda" {
 
   lifecycle {
     create_before_destroy = true
+    prevent_destroy       = true
   }
 }
 
@@ -54,7 +55,9 @@ resource "aws_security_group" "sg_lambda" {
 
 # Usar o Security Group existente ou o criado
 locals {
-  sg_lambda_id = length(data.aws_security_groups.sg_lambda_existing.ids) > 0 ? data.aws_security_groups.sg_lambda_existing.ids[0] : (length(aws_security_group.sg_lambda) > 0 ? aws_security_group.sg_lambda[0].id : data.aws_security_groups.sg_lambda_existing.ids[0])
+  # Se o SG já existe na AWS, usa o data source
+  # Se não existe, usa o resource criado pelo Terraform
+  sg_lambda_id = length(data.aws_security_groups.sg_lambda_existing.ids) > 0 ? data.aws_security_groups.sg_lambda_existing.ids[0] : aws_security_group.sg_lambda[0].id
   
   # COMENTADO TEMPORARIAMENTE - será reativado depois
   # # Se o SG já existe, verifica se as regras já estão presentes
@@ -162,5 +165,7 @@ resource "aws_security_group" "sg_lambdas_auth" {
 
 # Usar o Security Group existente ou o criado
 locals {
-  sg_lambdas_auth_id = length(data.aws_security_groups.sg_lambdas_auth_existing.ids) > 0 ? data.aws_security_groups.sg_lambdas_auth_existing.ids[0] : (length(aws_security_group.sg_lambdas_auth) > 0 ? aws_security_group.sg_lambdas_auth[0].id : data.aws_security_groups.sg_lambdas_auth_existing.ids[0])
+  # Se o SG já existe na AWS, usa o data source
+  # Se não existe, usa o resource criado pelo Terraform
+  sg_lambdas_auth_id = length(data.aws_security_groups.sg_lambdas_auth_existing.ids) > 0 ? data.aws_security_groups.sg_lambdas_auth_existing.ids[0] : aws_security_group.sg_lambdas_auth[0].id
 }

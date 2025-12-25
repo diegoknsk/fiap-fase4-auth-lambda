@@ -74,9 +74,9 @@ Como [papel], quero [ação], para [benefício].
 
 ## Subtasks
 
-- [Subtask 01: Nome da subtask](./subtask/Subtask-01-Nome_da_subtask.md)
-- [Subtask 02: Nome da subtask](./subtask/Subtask-02-Nome_da_subtask.md)
-- [Subtask 03: Nome da subtask](./subtask/Subtask-03-Nome_da_subtask.md)
+- [ ] [Subtask 01: Nome da subtask](./subtask/Subtask-01-Nome_da_subtask.md) - *Data de Conclusão: [DD/MM/AAAA]*
+- [ ] [Subtask 02: Nome da subtask](./subtask/Subtask-02-Nome_da_subtask.md) - *Data de Conclusão: [DD/MM/AAAA]*
+- [ ] [Subtask 03: Nome da subtask](./subtask/Subtask-03-Nome_da_subtask.md) - *Data de Conclusão: [DD/MM/AAAA]*
 
 ## Critérios de Aceite da História
 
@@ -122,6 +122,12 @@ Como [papel], quero [ação], para [benefício].
    - Cada subtask deve ser uma ação específica e testável
    - Ordem deve fazer sentido lógico (dependências)
    - Links devem usar caminho relativo: `./subtask/Subtask-XX-Nome.md`
+   - **Marcação de Conclusão (OBRIGATÓRIO)**:
+     - Usar checkbox `- [ ]` para subtasks não concluídas
+     - Usar checkbox `- [x]` para subtasks concluídas
+     - **Sempre preencher a data de conclusão** quando marcar como concluída
+     - Formato: `- [x] [Subtask XX: Nome](./subtask/Subtask-XX-Nome.md) - *Data de Conclusão: DD/MM/AAAA*`
+   - **Atualização Contínua**: As subtasks devem ser marcadas como concluídas à medida que são desenvolvidas, não apenas no final da história
 
 7. **Critérios de Aceite:**
    - Mínimo 5 critérios, ideal 7-10
@@ -161,13 +167,17 @@ Subtask-XX-Nome_Da_Subtask.md
 ```markdown
 # Subtask XX: Nome da Subtask
 
+## Status
+- **Estado:** 🔄 Em desenvolvimento | ✅ Concluída
+- **Data de Conclusão:** [DD/MM/AAAA] (preencher quando concluída)
+
 ## Descrição
 [Uma ou duas frases explicando exatamente o que será feito nesta subtask]
 
 ## Passos de implementação
-- [Passo 1 específico e acionável]
-- [Passo 2 específico e acionável]
-- [Passo 3 específico e acionável]
+- [ ] [Passo 1 específico e acionável]
+- [ ] [Passo 2 específico e acionável]
+- [ ] [Passo 3 específico e acionável]
 
 ## Como testar
 - [Teste 1: Como validar este passo]
@@ -175,27 +185,37 @@ Subtask-XX-Nome_Da_Subtask.md
 - [Teste 3: Verificação manual ou automatizada]
 
 ## Critérios de aceite
-- [Critério 1 específico e mensurável]
-- [Critério 2 específico e mensurável]
-- [Critério 3 específico e mensurável]
+- [ ] [Critério 1 específico e mensurável]
+- [ ] [Critério 2 específico e mensurável]
+- [ ] [Critério 3 específico e mensurável]
 ```
 
 ### Regras de Escrita da Subtask
 
-1. **Descrição:**
+1. **Status:**
+   - Campo obrigatório que indica o estado atual da subtask
+   - Estados possíveis: 🔄 Em desenvolvimento | ✅ Concluída
+   - Quando uma subtask for concluída, deve-se:
+     - Alterar o estado para "✅ Concluída"
+     - Preencher a data de conclusão no formato DD/MM/AAAA
+   - Este campo deve ser atualizado assim que a subtask for finalizada
+   - **IMPORTANTE**: A subtask também deve ser marcada como concluída na lista de subtasks do `story.md`
+
+2. **Descrição:**
    - Máximo 2-3 frases
    - Deve ser clara sobre O QUE será feito
    - Não precisa explicar COMO (isso vai nos passos)
 
-2. **Passos de implementação:**
+3. **Passos de implementação:**
    - Mínimo 3 passos, ideal 5-8 passos
    - Cada passo deve ser:
      - Específico (não genérico)
      - Acionável (pode ser executado)
      - Sequencial (ordem lógica)
-   - Usar formato de lista com `-`
+   - Usar formato de checklist: `- [ ]` para passos não concluídos, `- [x]` para passos concluídos
+   - Marcar passos como concluídos à medida que são implementados
    - Incluir nomes de arquivos, recursos, ou comandos quando relevante
-   - Exemplo: `- Criar arquivo terraform/modules/eks/main.tf`
+   - Exemplo: `- [x] Criar arquivo terraform/modules/eks/main.tf`
 
 3. **Como testar:**
    - Mínimo 3 formas de teste/validação
@@ -212,8 +232,8 @@ Subtask-XX-Nome_Da_Subtask.md
      - Específico (ex: "Arquivo main.tf criado" não "Código criado")
      - Mensurável (pode ser verificado)
      - Testável (pode ser validado)
-   - Usar formato de lista com `-`
-   - Não usar formato de checklist (`- [ ]`) nas subtasks
+   - Usar formato de checklist: `- [ ]` para critérios não atendidos, `- [x]` para critérios atendidos
+   - Marcar critérios como atendidos à medida que são validados
 
 ## ✅ Princípios de Qualidade
 
@@ -277,17 +297,23 @@ Antes de considerar uma história completa, verificar:
 - [ ] Objetivo claro e objetivo
 - [ ] Escopo técnico completo (tecnologias, arquivos, recursos)
 - [ ] Mínimo 3 subtasks listadas
+- [ ] Subtasks com checkboxes para marcação de conclusão
+- [ ] Datas de conclusão preenchidas para subtasks concluídas
 - [ ] Links das subtasks funcionando
 - [ ] Mínimo 5 critérios de aceite
 - [ ] Todos os critérios são específicos e mensuráveis
 
 ### Conteúdo das Subtasks
+- [ ] Cada subtask tem Status preenchido (Estado e Data de Conclusão quando aplicável)
 - [ ] Cada subtask tem descrição clara
 - [ ] Cada subtask tem mínimo 3 passos de implementação
+- [ ] Passos de implementação usam checkboxes para rastreamento
 - [ ] Cada subtask tem mínimo 3 formas de teste
 - [ ] Cada subtask tem mínimo 3 critérios de aceite
+- [ ] Critérios de aceite usam checkboxes para validação
 - [ ] Subtasks são simples e testáveis individualmente
 - [ ] Ordem das subtasks faz sentido lógico
+- [ ] Subtasks concluídas estão marcadas no story.md e na própria subtask
 
 ### Qualidade
 - [ ] Nomenclatura consistente
@@ -331,10 +357,10 @@ Criar manifests Kubernetes completos para o OrderHub incluindo Deployment, Servi
 
 ## Subtasks
 
-- [Subtask 01: Criar namespace orderhub](./subtask/Subtask-01-Criar_namespace_orderhub.md)
-- [Subtask 02: Criar deployment para OrderHub](./subtask/Subtask-02-Criar_deployment_orderhub.md)
-- [Subtask 03: Criar service LoadBalancer para OrderHub](./subtask/Subtask-03-Criar_service_orderhub.md)
-- [Subtask 04: Criar HPA para OrderHub](./subtask/Subtask-04-Criar_hpa_orderhub.md)
+- [x] [Subtask 01: Criar namespace orderhub](./subtask/Subtask-01-Criar_namespace_orderhub.md) - *Data de Conclusão: 10/12/2024*
+- [x] [Subtask 02: Criar deployment para OrderHub](./subtask/Subtask-02-Criar_deployment_orderhub.md) - *Data de Conclusão: 11/12/2024*
+- [x] [Subtask 03: Criar service LoadBalancer para OrderHub](./subtask/Subtask-03-Criar_service_orderhub.md) - *Data de Conclusão: 12/12/2024*
+- [ ] [Subtask 04: Criar HPA para OrderHub](./subtask/Subtask-04-Criar_hpa_orderhub.md) - *Data de Conclusão: [DD/MM/AAAA]*
 
 ## Critérios de Aceite da História
 
@@ -352,15 +378,19 @@ Criar manifests Kubernetes completos para o OrderHub incluindo Deployment, Servi
 ```markdown
 # Subtask 01: Criar namespace orderhub
 
+## Status
+- **Estado:** ✅ Concluída
+- **Data de Conclusão:** 10/12/2024
+
 ## Descrição
 Criar arquivo YAML para namespace Kubernetes que será usado pelo microsserviço OrderHub, garantindo isolamento de recursos.
 
 ## Passos de implementação
-- Criar diretório `k8s/app/orderhub/`
-- Criar arquivo `namespace.yaml` no diretório
-- Adicionar recurso `kind: Namespace` com `name: orderhub`
-- Adicionar labels padrão: `app: orderhub`, `env: dev`
-- Adicionar comentários explicativos no arquivo
+- [x] Criar diretório `k8s/app/orderhub/`
+- [x] Criar arquivo `namespace.yaml` no diretório
+- [x] Adicionar recurso `kind: Namespace` com `name: orderhub`
+- [x] Adicionar labels padrão: `app: orderhub`, `env: dev`
+- [x] Adicionar comentários explicativos no arquivo
 
 ## Como testar
 - Executar `kubectl apply --dry-run=client -f k8s/app/orderhub/namespace.yaml` (deve passar sem erros)
@@ -369,12 +399,70 @@ Criar arquivo YAML para namespace Kubernetes que será usado pelo microsserviço
 - Executar `kubectl get namespace orderhub` após aplicar (deve retornar o namespace)
 
 ## Critérios de aceite
-- Arquivo `k8s/app/orderhub/namespace.yaml` criado
-- Namespace tem nome `orderhub`
-- Labels padrão aplicadas (app, env)
-- `kubectl apply --dry-run=client` passa sem erros
-- Sintaxe YAML válida
+- [x] Arquivo `k8s/app/orderhub/namespace.yaml` criado
+- [x] Namespace tem nome `orderhub`
+- [x] Labels padrão aplicadas (app, env)
+- [x] `kubectl apply --dry-run=client` passa sem erros
+- [x] Sintaxe YAML válida
 ```
+
+## 📈 Rastreamento de Progresso
+
+### Atualização de Subtasks Durante Desenvolvimento
+
+**Regra fundamental**: As subtasks devem ser atualizadas **durante o desenvolvimento**, não apenas no final.
+
+#### Quando Marcar uma Subtask como Concluída
+
+1. **Ao finalizar a implementação**:
+   - Todos os passos de implementação foram executados
+   - Todos os testes foram executados e passaram
+   - Todos os critérios de aceite foram validados
+
+2. **Atualizações necessárias**:
+   - Marcar checkbox da subtask no `story.md`: `- [x]`
+   - Adicionar data de conclusão no `story.md`: `- *Data de Conclusão: DD/MM/AAAA*`
+   - Atualizar Status na própria subtask:
+     ```markdown
+     ## Status
+     - **Estado:** ✅ Concluída
+     - **Data de Conclusão:** DD/MM/AAAA
+     ```
+   - Marcar passos de implementação como concluídos: `- [x]`
+   - Marcar critérios de aceite como atendidos: `- [x]`
+
+#### Exemplo de Fluxo de Trabalho
+
+1. **Início da Subtask**:
+   ```markdown
+   ## Status
+   - **Estado:** 🔄 Em desenvolvimento
+   - **Data de Conclusão:** [DD/MM/AAAA]
+   ```
+
+2. **Durante o desenvolvimento**:
+   - Marcar passos como concluídos à medida que são implementados
+   - Marcar critérios como atendidos à medida que são validados
+
+3. **Conclusão da Subtask**:
+   ```markdown
+   ## Status
+   - **Estado:** ✅ Concluída
+   - **Data de Conclusão:** 15/12/2024
+   ```
+   - E atualizar no `story.md`:
+   ```markdown
+   - [x] [Subtask 01: Nome](./subtask/Subtask-01-Nome.md) - *Data de Conclusão: 15/12/2024*
+   ```
+
+### Atualização da Story
+
+A story deve ser marcada como concluída apenas quando:
+- Todas as subtasks foram concluídas
+- Todos os critérios de aceite da história foram atendidos
+- A data de conclusão deve ser a data da última subtask concluída ou a data de validação final
+
+---
 
 ## 🚫 Erros Comuns a Evitar
 
