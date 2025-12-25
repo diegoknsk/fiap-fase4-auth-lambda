@@ -6,6 +6,14 @@ on:
       - main
   workflow_dispatch: # Permite execução manual
 
+# IMPORTANTE: Garante que apenas uma execução ocorra por vez
+# Quando uma PR é aceita e múltiplos eventos são disparados,
+# o GitHub Actions pode criar múltiplas execuções, mas apenas uma rodará.
+# As outras serão canceladas imediatamente antes de iniciar os jobs.
+concurrency:
+  group: deploy-lambda-main
+  cancel-in-progress: true
+
 env:
   AWS_REGION: ${{ secrets.AWS_REGION }}
   AWS_ACCOUNT_ID: ${{ secrets.AWS_ACCOUNT_ID || '058264347413' }}
