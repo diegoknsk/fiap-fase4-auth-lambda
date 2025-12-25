@@ -7,6 +7,7 @@
 resource "aws_ecr_repository" "lambda_images" {
   name                 = "fiap-fase4-auth-lambda"
   image_tag_mutability = "MUTABLE"
+  force_delete         = true
 
   image_scanning_configuration {
     scan_on_push = true
