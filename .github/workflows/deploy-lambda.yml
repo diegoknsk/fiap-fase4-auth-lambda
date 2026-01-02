@@ -240,7 +240,7 @@ jobs:
 
       - name: Terraform Init
         working-directory: terraform
-        run: terraform init
+        run: terraform init -reconfigure -upgrade
 
       - name: Check if ECR repository exists
         id: check-ecr
@@ -313,7 +313,7 @@ jobs:
 
       - name: Terraform Init
         working-directory: terraform
-        run: terraform init
+        run: terraform init -reconfigure -upgrade
 
       - name: Terraform Plan
         working-directory: terraform
