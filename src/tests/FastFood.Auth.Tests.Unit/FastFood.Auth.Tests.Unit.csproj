@@ -34,6 +34,7 @@
     <ProjectReference Include="..\..\Core\FastFood.Auth.Infra.Persistence\FastFood.Auth.Infra.Persistence.csproj" />
     <ProjectReference Include="..\..\InterfacesExternas\FastFood.Auth.Lambda.Customer\FastFood.Auth.Lambda.Customer.csproj" />
     <ProjectReference Include="..\..\InterfacesExternas\FastFood.Auth.Lambda.Admin\FastFood.Auth.Lambda.Admin.csproj" />
+    <ProjectReference Include="..\..\InterfacesExternas\FastFood.Auth.Migrator\FastFood.Auth.Migrator.csproj" />
   </ItemGroup>
 
   <ItemGroup>
