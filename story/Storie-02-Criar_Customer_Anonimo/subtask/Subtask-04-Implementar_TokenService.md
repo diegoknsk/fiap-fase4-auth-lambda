@@ -35,4 +35,3 @@ Implementar classe TokenService que implementa ITokenService para gerar tokens J
 
 ## Nota
 ⚠️ **Atualização**: Esta subtask foi refatorada na Subtask 09. O TokenService foi movido de `Infra.Persistence` para o projeto dedicado `FastFood.Auth.Infra`, seguindo melhor separação de responsabilidades.
-
