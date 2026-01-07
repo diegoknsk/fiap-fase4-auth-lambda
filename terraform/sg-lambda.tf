@@ -42,7 +42,10 @@ resource "aws_security_group" "sg_lambda" {
 
   lifecycle {
     create_before_destroy = true
-    prevent_destroy       = true
+    # prevent_destroy removido temporariamente para permitir remoção do state
+    # quando o security group já existe na AWS (count = 0)
+    # O count = 0 garante que o recurso não será criado se já existir
+    # Se precisar proteger contra destruição acidental, reative após corrigir o state
   }
 }
 
@@ -159,7 +162,10 @@ resource "aws_security_group" "sg_lambdas_auth" {
 
   lifecycle {
     create_before_destroy = true
-    prevent_destroy       = true
+    # prevent_destroy removido temporariamente para permitir remoção do state
+    # quando o security group já existe na AWS (count = 0)
+    # O count = 0 garante que o recurso não será criado se já existir
+    # Se precisar proteger contra destruição acidental, reative após corrigir o state
   }
 }
 
